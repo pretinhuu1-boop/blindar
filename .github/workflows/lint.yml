@@ -1,0 +1,91 @@
+name: lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate-schemas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate JSON schemas are valid JSON
+        run: |
+          for f in schemas/*.json; do
+            echo "Checking $f"
+            jq empty "$f"
+          done
+      - name: Validate schemas are draft-07
+        run: |
+          for f in schemas/*.json; do
+            schema=$(jq -r '."$schema" // empty' "$f")
+            if [ "$schema" != "http://json-schema.org/draft-07/schema#" ]; then
+              echo "FAIL: $f does not declare draft-07"
+              exit 1
+            fi
+          done
+
+  validate-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: VERSION is semver
+        run: |
+          v=$(cat VERSION | tr -d '[:space:]')
+          if ! echo "$v" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "FAIL: VERSION '$v' is not semver"
+            exit 1
+          fi
+          echo "VERSION = $v"
+
+  markdown-links:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check internal links resolve
+        run: |
+          # Para cada link relativo .md em README/SKILL/USAGE, verifica que o destino existe
+          fail=0
+          for src in README.md SKILL.md USAGE.md AI-ENTRYPOINT.md CONTRACT.md MULTI-AI.md ROADMAP.md; do
+            [ -f "$src" ] || continue
+            # Extrai links markdown ](path)
+            grep -oE '\]\([^)#]+\)' "$src" | sed 's/](//; s/)//' | while read link; do
+              # Pula urls absolutas
+              echo "$link" | grep -qE '^https?://' && continue
+              # Pula ancoras puras
+              echo "$link" | grep -qE '^#' && continue
+              # Resolve relativo ao diretorio do source
+              target="$link"
+              if [ ! -e "$target" ]; then
+                echo "BROKEN: $src -> $link"
+                fail=1
+              fi
+            done
+          done
+          exit $fail
+
+  powershell-syntax:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse all .ps1 files
+        shell: pwsh
+        run: |
+          $errors = @()
+          Get-ChildItem -Recurse -Filter *.ps1 | ForEach-Object {
+            $tokens = $null
+            $errs = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$tokens, [ref]$errs) | Out-Null
+            if ($errs.Count -gt 0) {
+              $errors += "$($_.Name): $($errs.Count) parse errors"
+              $errs | ForEach-Object { Write-Host "  $_" }
+            }
+          }
+          if ($errors.Count -gt 0) {
+            Write-Host "PS1 parse failures:" -ForegroundColor Red
+            $errors | ForEach-Object { Write-Host $_ }
+            exit 1
+          }
+          Write-Host "All .ps1 files parse OK" -ForegroundColor Green

@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/pretinhuu1-boop/blindar/blob/main/schemas/verdict.schema.json",
+  "title": "blindar verify verdict",
+  "description": "Output do verificador adversarial (default-refute). Determina se finding entra na fila.",
+  "type": "object",
+  "required": ["isReal", "confidence", "rationale"],
+  "properties": {
+    "isReal": {
+      "type": "boolean",
+      "description": "true = finding confirmado, vira novo round. false = refutado, descartado."
+    },
+    "confidence": {
+      "enum": ["high", "medium", "low"],
+      "description": "Confiança no veredito. low → tratar como refuted por default."
+    },
+    "rationale": {
+      "type": "string",
+      "description": "Por que confirmou ou refutou. Evidência concreta esperada."
+    },
+    "refuted_reason": {
+      "type": "string",
+      "description": "Se isReal=false, qual a razão técnica da refutação"
+    },
+    "reproducible": {
+      "type": "boolean",
+      "description": "O finding tem repro estavel verificado?"
+    }
+  }
+}

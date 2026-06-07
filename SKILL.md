@@ -224,8 +224,17 @@ Ver [`VERSION`](VERSION) e [`CHANGELOG.md`](CHANGELOG.md).
 ## Para humanos
 
 - [`README.md`](README.md) — apresentação, instalação, uso
+- [`USAGE.md`](USAGE.md) — guia completo passo-a-passo
 - [`CHECKLIST.md`](CHECKLIST.md) — validação pós-download
 - [`MULTI-AI.md`](MULTI-AI.md) — como rodar em qualquer AI
+- [`ROADMAP.md`](ROADMAP.md) — o que ainda não está pronto, honestamente
+
+## Para AIs (você que está lendo isso)
+
+- [`AI-ENTRYPOINT.md`](AI-ENTRYPOINT.md) — **leia primeiro**, decision tree
+- [`CONTRACT.md`](CONTRACT.md) — estrutura `.blindar/` no projeto-alvo
+- [`schemas/`](schemas/) — JSON schemas pra output validável
+- Estado no projeto-alvo: `.blindar/state.json` (ver CONTRACT.md)
 
 ## Origem
 

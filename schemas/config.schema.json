@@ -1,0 +1,66 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/pretinhuu1-boop/blindar/blob/main/schemas/config.schema.json",
+  "title": "blindar config (per project)",
+  "description": "Overrides de defaults do skill, por projeto. Vive em .blindar/config.yml ou .blindar/config.json. Tudo opcional — defaults do SKILL.md valem se omitido.",
+  "type": "object",
+  "properties": {
+    "round_size_loc": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 200,
+      "default": 80,
+      "description": "Limite de LOC por round."
+    },
+    "adversarial_cadence": {
+      "type": "number",
+      "minimum": 1,
+      "default": 10,
+      "description": "A cada quantos rounds rodar adversarial review."
+    },
+    "target_framework": {
+      "enum": ["iso27001", "nist-csf", "cis", "asvs-l1", "asvs-l2", "asvs-l3", "pci-dss", "soc2", null],
+      "default": null,
+      "description": "Framework alvo. Gera coverage report no relatório final."
+    },
+    "skip_agents": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "security", "access-control", "cryptography", "frontend",
+          "network-security", "observability", "backup-recovery",
+          "patch-management", "supply-chain", "pentest", "performance",
+          "frontend-performance", "resilience", "scalability",
+          "compliance", "compliance-lgpd-br", "devops"
+        ]
+      },
+      "default": [],
+      "description": "Agents que NÃO devem ser ativados (ex: projeto CLI-only pula 'frontend')."
+    },
+    "branch": {
+      "type": "string",
+      "default": "main",
+      "description": "Branch base onde rounds são mergeados."
+    },
+    "max_budget_usd": {
+      "type": ["number", "null"],
+      "default": null,
+      "description": "Cap opcional de gasto. null = sem cap."
+    },
+    "dry_run": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se true, simula sem criar branches/PRs/commits reais."
+    },
+    "termination": {
+      "type": "object",
+      "description": "Overrides dos critérios de termination.",
+      "properties": {
+        "max_crit_confirmed": { "type": "number", "minimum": 0, "default": 0 },
+        "max_high_acknowledged": { "type": "number", "minimum": 0, "default": 2 },
+        "min_critical_coverage_pct": { "type": "number", "minimum": 0, "maximum": 100, "default": 80 },
+        "min_ci_green_streak": { "type": "number", "minimum": 0, "default": 3 }
+      }
+    }
+  }
+}

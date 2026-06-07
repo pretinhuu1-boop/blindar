@@ -107,9 +107,25 @@ blindar/
 │
 ├── stacks.md             ← adaptações por stack
 │
+├── schemas/              ← JSON schemas (saídas validáveis pra qualquer AI)
+│   ├── inventory.schema.json
+│   ├── threat.schema.json
+│   ├── arch.schema.json
+│   ├── findings.schema.json
+│   ├── verdict.schema.json
+│   ├── state.schema.json   ← .blindar/state.json no projeto-alvo
+│   └── config.schema.json  ← .blindar/config.yml no projeto-alvo
+│
+├── AI-ENTRYPOINT.md      ← AI lê primeiro (decision tree determinístico)
+├── CONTRACT.md           ← estrutura `.blindar/` no projeto-alvo
+├── ROADMAP.md            ← o que ficou de fora e por quê
+│
+├── .github/              ← issue templates, PR template, CI lint
+│
 └── scripts/
     ├── check-update.ps1  ← compara VERSION local vs remoto (TTL 24h)
     ├── install.ps1       ← instala em ~/.claude/skills/blindar
+    ├── preflight.ps1     ← valida pré-reqs no projeto-alvo (1 comando)
     └── release.ps1       ← bump + tag + GH release (uso do dono)
 ```
 

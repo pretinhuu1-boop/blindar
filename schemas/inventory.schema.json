@@ -1,0 +1,62 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/pretinhuu1-boop/blindar/blob/main/schemas/inventory.schema.json",
+  "title": "blindar inventory",
+  "description": "Superfície de ataque enumerada na Fase 1 (Discovery).",
+  "type": "object",
+  "required": ["endpoints", "externals", "daemons"],
+  "properties": {
+    "endpoints": {
+      "type": "array",
+      "description": "Endpoints HTTP expostos pelo projeto.",
+      "items": {
+        "type": "object",
+        "required": ["method", "path", "auth"],
+        "properties": {
+          "method": { "enum": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"] },
+          "path": { "type": "string", "description": "Path do endpoint, ex: /api/users/:id" },
+          "auth": { "enum": ["none", "session", "token", "mtls", "internal"] },
+          "rate_limited": { "type": "boolean" },
+          "notes": { "type": "string" }
+        }
+      }
+    },
+    "cli_entrypoints": {
+      "type": "array",
+      "description": "Comandos CLI / scripts executáveis.",
+      "items": { "type": "string" }
+    },
+    "externals": {
+      "type": "array",
+      "description": "Serviços externos consumidos.",
+      "items": {
+        "type": "object",
+        "required": ["name", "kind"],
+        "properties": {
+          "name": { "type": "string" },
+          "kind": { "enum": ["llm", "payment", "oauth", "email", "sms", "storage", "queue", "monitoring", "other"] },
+          "has_breaker": { "type": "boolean" },
+          "timeout_ms": { "type": "number", "minimum": 0 }
+        }
+      }
+    },
+    "daemons": {
+      "type": "array",
+      "description": "Processos em background do projeto.",
+      "items": {
+        "type": "object",
+        "required": ["name", "purpose"],
+        "properties": {
+          "name": { "type": "string" },
+          "purpose": { "type": "string" },
+          "schedule": { "type": "string", "description": "cron expr ou descrição" }
+        }
+      }
+    },
+    "workers": {
+      "type": "array",
+      "description": "Workers de fila (consumers).",
+      "items": { "type": "string" }
+    }
+  }
+}

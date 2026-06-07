@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/pretinhuu1-boop/blindar/blob/main/schemas/threat.schema.json",
+  "title": "blindar threat catalog",
+  "description": "Catálogo de ATKs (Attack Techniques) aplicáveis. Vai pro sec.html matrix.",
+  "type": "object",
+  "required": ["atks"],
+  "properties": {
+    "atks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "cat", "sev", "title", "cov"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^ATK-[A-Z0-9_-]+$",
+            "description": "Identificador único, ex: ATK-001, ATK-AUTH-MFA"
+          },
+          "cat": {
+            "enum": [
+              "web_api", "auth_session", "llm_agent", "supply_chain",
+              "cve_deps", "frontend", "infra", "compliance", "resilience",
+              "performance", "scalability", "frontend_performance",
+              "compliance_br", "network", "crypto", "observability",
+              "backup_recovery", "patch_mgmt", "pentest"
+            ]
+          },
+          "sev": { "enum": ["crit", "high", "med", "low"] },
+          "cov": { "enum": ["covered", "partial", "gap", "na"] },
+          "title": { "type": "string" },
+          "vector": {
+            "type": "string",
+            "description": "Descrição curta do vetor de ataque"
+          },
+          "coveredBy": {
+            "type": "string",
+            "description": "PR / commit / arquivo que cobriu este ATK"
+          },
+          "frameworks": {
+            "type": "array",
+            "description": "Mapeamento pra frameworks. Ex: ['ISO 27001 A.9.4', 'NIST CSF PR.AC-1']",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}

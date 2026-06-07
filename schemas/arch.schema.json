@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/pretinhuu1-boop/blindar/blob/main/schemas/arch.schema.json",
+  "title": "blindar architecture classification",
+  "description": "Classificação de arquitetura do projeto. Determina categorias extras na matrix.",
+  "type": "object",
+  "required": ["topology", "deploy_target", "stack"],
+  "properties": {
+    "topology": {
+      "enum": ["monolith", "modular_monolith", "microservices", "serverless"]
+    },
+    "rendering": {
+      "enum": ["spa", "ssr", "ssg", "hybrid", "n/a"],
+      "description": "Tipo de renderização (frontend). n/a se backend-only."
+    },
+    "primary_db": {
+      "type": ["string", "null"],
+      "description": "Postgres, MySQL, MongoDB, SQLite, etc. null se sem DB."
+    },
+    "cache": {
+      "type": ["string", "null"],
+      "description": "Redis, Memcached, etc."
+    },
+    "queue": {
+      "type": ["string", "null"],
+      "description": "RabbitMQ, SQS, Kafka, Celery, BullMQ, etc."
+    },
+    "deploy_target": {
+      "type": "string",
+      "description": "Vercel, AWS Lambda, ECS, Kubernetes, VPS, etc."
+    },
+    "shared_resources": {
+      "type": "array",
+      "description": "Recursos compartilhados entre instâncias (DB connection pool, locks, caches).",
+      "items": { "type": "string" }
+    },
+    "daemons_count": {
+      "type": "number",
+      "description": "Quantos processos em background. Influencia agente resilience."
+    },
+    "stack": {
+      "type": "object",
+      "required": ["primary_lang"],
+      "properties": {
+        "primary_lang": {
+          "type": "string",
+          "description": "Linguagem principal. Mapeia pra stacks.md"
+        },
+        "framework": { "type": "string" },
+        "runtime_version": { "type": "string" }
+      }
+    },
+    "compliance_signals": {
+      "type": "array",
+      "description": "Sinais detectados que ativam agents específicos.",
+      "items": {
+        "enum": ["br_pii", "card_processing", "health_data", "minors_data", "biometrics"]
+      }
+    }
+  }
+}

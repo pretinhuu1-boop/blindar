@@ -1,0 +1,66 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/pretinhuu1-boop/blindar/blob/main/schemas/state.schema.json",
+  "title": "blindar state (per project)",
+  "description": "Estado do ciclo blindar dentro do projeto-alvo. Vive em .blindar/state.json. Permite resumability determinística.",
+  "type": "object",
+  "required": ["blindar_version", "phase", "rounds_completed"],
+  "properties": {
+    "blindar_version": {
+      "type": "string",
+      "description": "Versão do skill quando o estado foi escrito. Permite migração futura."
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "last_updated": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "phase": {
+      "enum": ["baseline", "discovery", "bootstrap", "rounds", "adversarial", "checklist", "report", "done"],
+      "description": "Fase atual do pipeline (00 a 06)."
+    },
+    "rounds_completed": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Total de rounds da Fase 3 concluídos (PR mergeado)."
+    },
+    "rounds_since_last_adversarial": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Contador pra disparar Fase 4 a cada N rounds (default 10)."
+    },
+    "current_round": {
+      "type": ["object", "null"],
+      "description": "Round em andamento, null se entre rounds.",
+      "properties": {
+        "atk_id": { "type": "string" },
+        "agent": { "type": "string", "description": "Qual agent.md está implementando" },
+        "branch": { "type": "string", "description": "Nome da branch sec/*" },
+        "pr_number": { "type": ["number", "null"] },
+        "started_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "termination_check": {
+      "type": "object",
+      "description": "Status dos critérios de termination.",
+      "properties": {
+        "zero_crit_confirmed": { "type": "boolean" },
+        "high_count_acknowledged": { "type": "number" },
+        "critical_categories_coverage_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+        "runbooks_generated": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "ci_green_streak": { "type": "number", "description": "PRs consecutivos com CI verde" },
+        "production_checklist_passed": { "type": "boolean" }
+      }
+    },
+    "framework_target": {
+      "type": ["string", "null"],
+      "description": "Framework alvo se declarado em config (iso27001, nist-csf, asvs-l2, etc.)"
+    }
+  }
+}

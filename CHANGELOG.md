@@ -3,6 +3,76 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.5.0] — 2026-06-07
+
+Foco: **facilitar a vida da AI** + **ponta-a-ponta determinístico** +
+**termination clara**.
+
+### Adicionou — contratos formais
+
+- `schemas/` — 7 JSON schemas (draft-07) pra saídas validáveis:
+  - `inventory.schema.json`, `threat.schema.json`, `arch.schema.json`
+    — discovery (Fase 1)
+  - `findings.schema.json`, `verdict.schema.json` — adversarial (Fase 4)
+  - `state.schema.json`, `config.schema.json` — `.blindar/` no projeto-alvo
+- `CONTRACT.md` — define a estrutura `.blindar/` que o skill mantém no
+  projeto-alvo: `state.json` (resumability determinística),
+  `config.yml` (overrides), `accept-risk.md`, `discovery/`, `checkpoints/`
+- `.gitignore` recomendado pro projeto-alvo documentado
+
+### Adicionou — entrypoint pra AI
+
+- `AI-ENTRYPOINT.md` — UMA página que a AI lê primeiro com decision tree
+  determinístico:
+  - Identificação de modo (nativo Workflow vs manual)
+  - Pre-flight check
+  - Resume vs fresh start
+  - Pipeline step-by-step
+  - Termination check
+  - Regras invioláveis
+- Toda decisão tem regra explícita — sem "criatividade" necessária pra
+  completar o ciclo
+
+### Adicionou — preflight automatizado
+
+- `scripts/preflight.ps1` — 1 comando que valida todos os 8 pré-reqs no
+  projeto-alvo: repo git, branch viva, working tree limpo, CI, stack,
+  gh autenticado, `.blindar/` dir, migração de accept-risk.md
+- Flag `-Fix` corrige o que dá pra automatizar (criar `.blindar/`, migrar
+  accept-risk.md da raiz)
+
+### Adicionou — repo health
+
+- `.github/workflows/lint.yml` — CI que valida:
+  - JSON schemas são draft-07 válidos
+  - VERSION é semver
+  - Links markdown internos não quebram
+  - `.ps1` files têm sintaxe válida
+- `.github/ISSUE_TEMPLATE/bug.md` e `feature.md`
+- `.github/PULL_REQUEST_TEMPLATE.md` reforça princípios do skill
+  ("pago em PR vermelho mergeado")
+
+### Adicionou — honestidade documentada
+
+- `ROADMAP.md` — lista clara do que ficou de fora da v0.5.0 e por quê
+  (bash scripts, examples, minimal mode, dry-run, monorepo, etc.)
+- SKILL.md e README.md atualizados com seções "Para AIs" e estrutura
+  do repo refletindo schemas/ + entrypoint + contract
+
+### Migração de versões anteriores
+
+Projetos com `accept-risk.md` na raiz: rode `scripts/preflight.ps1 -Fix`
+na pasta do projeto-alvo. Move pra `.blindar/accept-risk.md`. Sem perda
+de dados.
+
+### Não mudou
+
+- Pipeline de 6 fases.
+- Agentes (17, mesmo conteúdo).
+- Frameworks mapeados.
+- Templates.
+- Defaults do skill.
+
 ## [0.4.2] — 2026-06-07
 
 ### Adicionou
