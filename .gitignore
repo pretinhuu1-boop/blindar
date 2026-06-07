@@ -1,0 +1,20 @@
+# Backup do SKILL.md monolítico (mantido localmente, fora do repo)
+SKILL.md.backup-*
+
+# Cache do auto-update
+.last-check
+.update-cache
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editores
+.vscode/
+.idea/
+*.swp
+*~
+
+# Logs locais
+*.log

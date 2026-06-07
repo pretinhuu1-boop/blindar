@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="pt-BR"><head>
+<meta charset="utf-8">
+<title>sec — {project_name}</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 1200px; margin: 0 auto;
+         padding: 24px; background: #0a0a0a; color: #e5e5e5; }
+  .hero-tag { display: inline-block; padding: 6px 12px; background: #fef3c7;
+              color: #78350f; border-radius: 4px; font-size: 13px; font-weight: 600; }
+  h1 { color: #fff; margin: 16px 0 24px; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid #333; }
+  .tab { padding: 8px 16px; cursor: pointer; color: #999; border-bottom: 2px solid transparent; }
+  .tab.active { color: #fff; border-bottom-color: #fbbf24; }
+  .panel { display: none; } .panel.active { display: block; }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+  th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #2a2a2a; }
+  th { background: #1a1a1a; color: #fbbf24; font-size: 12px; text-transform: uppercase; }
+  .sev-crit { color: #ef4444; font-weight: 600; }
+  .sev-high { color: #f97316; font-weight: 600; }
+  .sev-med  { color: #eab308; } .sev-low { color: #84cc16; }
+  .cov-covered { color: #22c55e; }
+  .cov-partial { color: #fbbf24; }
+  .cov-gap     { color: #ef4444; font-weight: 600; }
+  .matrix-row { display: grid; grid-template-columns: 200px 1fr 80px; gap: 12px;
+                padding: 8px 0; border-bottom: 1px solid #2a2a2a; align-items: center; }
+  .bar { height: 12px; border-radius: 6px; overflow: hidden; display: flex; background: #2a2a2a; }
+  .bar-covered { background: #22c55e; }
+  .bar-partial { background: #fbbf24; }
+  .bar-gap     { background: #ef4444; }
+</style>
+</head><body>
+
+<span class="hero-tag" id="hero-tag">RELATÓRIO INICIADO · v0.1 · baseline</span>
+<h1>sec — {project_name}</h1>
+
+<div class="tabs">
+  <div class="tab active" data-panel="matrix">Matrix</div>
+  <div class="tab" data-panel="atks">ATKs</div>
+  <div class="tab" data-panel="rounds">Next Rounds</div>
+  <div class="tab" data-panel="endpoints">Endpoints</div>
+  <div class="tab" data-panel="metrics">Métricas</div>
+</div>
+
+<div id="matrix" class="panel active"><div id="matrix-rows"></div></div>
+<div id="atks" class="panel"><table><thead><tr>
+  <th>ID</th><th>Cat</th><th>Sev</th><th>Cov</th><th>Title</th><th>By</th>
+</tr></thead><tbody id="atks-rows"></tbody></table></div>
+<div id="rounds" class="panel"><div id="rounds-list"></div></div>
+<div id="endpoints" class="panel"><table><thead><tr>
+  <th>Method</th><th>Path</th><th>Auth</th><th>Notes</th>
+</tr></thead><tbody id="endpoints-rows"></tbody></table></div>
+<div id="metrics" class="panel"><pre id="metrics-data"></pre></div>
+
+<script>
+// ─── DATA — atualizado a cada round ─────────────────────────────
+const ATKS = [];
+const MATRIX = [];
+const NEXT_ROUNDS = [];
+const ENDPOINTS = [];
+const METRICS = { pytest: 0, bundle_kb: 0, rounds_completed: 0, last_updated: "" };
+
+// ─── RENDER ────────────────────────────────────────────────────
+function renderMatrix() {
+  document.getElementById('matrix-rows').innerHTML = MATRIX.map(c => {
+    const t = Math.max(c.total, 1);
+    const pC = (c.covered/t)*100, pP = (c.partial/t)*100, pG = (c.gap/t)*100;
+    return `<div class="matrix-row">
+      <div>${c.label} (${c.covered+c.partial}/${c.total})</div>
+      <div class="bar">
+        <div class="bar-covered" style="width:${pC}%"></div>
+        <div class="bar-partial" style="width:${pP}%"></div>
+        <div class="bar-gap" style="width:${pG}%"></div>
+      </div>
+      <div style="text-align:right; color:#999">${Math.round(pC+pP)}%</div>
+    </div>`;
+  }).join('');
+}
+function renderAtks() {
+  document.getElementById('atks-rows').innerHTML = ATKS.map(a => `
+    <tr><td><b>${a.id}</b></td><td>${a.cat}</td>
+        <td class="sev-${a.sev}">${a.sev}</td>
+        <td class="cov-${a.cov}">${a.cov}</td>
+        <td>${a.title}</td>
+        <td style="color:#999;font-size:11px">${a.coveredBy || '—'}</td></tr>
+  `).join('');
+}
+function renderRounds() {
+  document.getElementById('rounds-list').innerHTML = NEXT_ROUNDS.map(r => `
+    <div style="background:#1a1a1a;padding:12px;margin-bottom:8px;border-radius:4px">
+      <b style="color:#fbbf24">${r.id}</b> ${r.title}
+      <div style="color:#999;font-size:12px;margin-top:4px">
+        target: ${r.target} · covers: ${(r.gaps_covered||[]).join(', ')}
+      </div></div>`).join('');
+}
+function renderEndpoints() {
+  document.getElementById('endpoints-rows').innerHTML = ENDPOINTS.map(e => `
+    <tr><td><b>${e.method}</b></td><td><code>${e.path}</code></td>
+        <td>${e.auth}</td>
+        <td style="color:#999;font-size:12px">${e.notes||''}</td></tr>`).join('');
+}
+function renderMetrics() {
+  document.getElementById('metrics-data').textContent = JSON.stringify(METRICS, null, 2);
+}
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
+  document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+  t.classList.add('active');
+  document.getElementById(t.dataset.panel).classList.add('active');
+}));
+renderMatrix(); renderAtks(); renderRounds(); renderEndpoints(); renderMetrics();
+</script>
+</body></html>
