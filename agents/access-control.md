@@ -56,6 +56,44 @@ Backward compatible. Fail-closed (default-deny).
 - Attack: brute force 10x → lockout ativa; tentativa de elevation
   (user calls admin endpoint) → 403
 
+## Auth edges (v0.6.0)
+
+Padrões adicionais cobertos em projetos pós-MVP:
+
+### Reset de senha
+
+- **Enumeration**: resposta NÃO diferencia "email não existe" de
+  "email existe + enviamos link". Sempre 200 com mensagem genérica.
+- **Token reuse**: link de reset usável só 1x, expira em ≤30min.
+- **Não invalida sessões ativas**: ⚠ pós-reset, **TODAS** sessões da
+  conta são revogadas (não só a que está fazendo o reset).
+- **Rate-limit**: máximo 3 requests/email/hora.
+
+### Mudança de email
+
+- **Confirmação no email NOVO** antes de aplicar.
+- **Aviso no email ANTIGO** com link "não fui eu, reverter".
+- **Sessões antigas revogadas** após mudança confirmada.
+
+### Recovery codes (MFA)
+
+- Hash dos códigos (mesmo padrão que senha), nunca plaintext.
+- Cada código usado 1x → consumido.
+- Operação privilegiada após uso de recovery code dispara step-up
+  (re-autenticação forte).
+
+### Step-up auth
+
+Operações sensíveis (mudar senha, adicionar MFA, criar API key,
+deletar conta) exigem **re-autenticação na sessão atual** mesmo já
+logado.
+
+### Session fixation pós-login
+
+Sessão pré-autenticada é **invalidada** ao autenticar; nova sessão é
+emitida. Sem isso, atacante que conhece o token de sessão pré-login
+pode "subir" pra sessão autenticada.
+
 ## Mapeamento de frameworks
 
 | Framework | Controle |

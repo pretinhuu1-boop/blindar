@@ -191,6 +191,61 @@ Sobreposição: ambos usam pools, backpressure, breakers. Roteamento:
 | **Postgres** | Connection pool é crítico; PgBouncer praticamente obrigatório |
 | **MongoDB** | Sharding key escolha define se escala ou não — irreversível |
 
+## Benchmark obrigatório (v0.6.0)
+
+Cada mudança de scalability **mede antes e depois**.
+
+### DB benchmark
+
+```sql
+-- Antes
+EXPLAIN (ANALYZE, BUFFERS) <query>;
+-- ... aplica index/refactor ...
+-- Depois
+EXPLAIN (ANALYZE, BUFFERS) <query>;
+```
+
+PR description carrega ambos. Se "depois" não for ≥ 30% melhor, fix
+não justifica.
+
+### Cache benchmark
+
+```bash
+# Antes (sem cache): mede p95 com k6
+k6 run --vus 100 --duration 2m loadtest.js
+# Aplica cache
+# Depois
+k6 run --vus 100 --duration 2m loadtest.js
+```
+
+Reduction esperada: p95 cache hit ≥ 80% mais rápida que miss.
+
+### Connection pool
+
+```python
+# Mede pool exhaustion sob carga
+import asyncio
+async def hammer():
+    tasks = [client.get('/api/heavy') for _ in range(500)]
+    return await asyncio.gather(*tasks, return_exceptions=True)
+
+# Conta quantas tasks ficaram "waiting for pool" > 1s
+```
+
+### Stampede
+
+Simula expiração simultânea:
+
+```python
+# Invalida key, dispara 50 requests imediatos
+await cache.delete(key)
+results = await asyncio.gather(*[get_resource(key) for _ in range(50)])
+# Verifica: 1 hit no DB, 49 esperaram e receberam mesma resposta
+```
+
+Spec completa em
+[`docs/specs/load-test-harness.md`](../docs/specs/load-test-harness.md).
+
 ## Mapeamento de frameworks
 
 | Framework | Item relacionado |

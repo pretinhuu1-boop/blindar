@@ -90,6 +90,8 @@ Operador acompanha em tempo real abrindo `sec.html` no browser.
 | 4 — Adversarial review | [`pipeline/04-adversarial-review.md`](pipeline/04-adversarial-review.md) | ~10 min (a cada 10 rounds) |
 | 5 — Production checklist | [`pipeline/05-production-checklist.md`](pipeline/05-production-checklist.md) | ~3 min |
 | 6 — Relatório final | [`pipeline/06-final-report.md`](pipeline/06-final-report.md) | ~2 min |
+| 7 — **Maintenance** (opt-in, trimestral) | [`pipeline/07-maintenance.md`](pipeline/07-maintenance.md) | ~5 min |
+| 8 — **Drift detection** (subfase de 7) | [`pipeline/08-drift-detection.md`](pipeline/08-drift-detection.md) | ~3 min |
 
 ## Roster de agentes
 
@@ -100,6 +102,8 @@ Agentes de **segurança** (sempre carregados primeiro):
 | Controle de acesso (auth/MFA/RBAC) | [`agents/access-control.md`](agents/access-control.md) |
 | Criptografia (TLS / at-rest / secrets) | [`agents/cryptography.md`](agents/cryptography.md) |
 | Segurança aplicacional geral | [`agents/security.md`](agents/security.md) |
+| Lógica de negócio (ASVS V11) | [`agents/business-logic.md`](agents/business-logic.md) |
+| Secrets em runtime (memória/env/log) | [`agents/runtime-secrets.md`](agents/runtime-secrets.md) |
 | Frontend / CSP / XSS | [`agents/frontend.md`](agents/frontend.md) |
 | Rede em código (WAF/rate-limit/IaC) | [`agents/network-security.md`](agents/network-security.md) |
 | Observabilidade / audit / logs | [`agents/observability.md`](agents/observability.md) |

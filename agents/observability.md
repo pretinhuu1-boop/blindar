@@ -59,6 +59,43 @@ infra coleta.
 - Edge: erro emite log nível ERROR + métrica error_count++
 - Attack: tentativa de log com CPF/senha → redacted automaticamente
 
+## RUM contínuo pós-launch (v0.6.0)
+
+Frontend perf não é só lab — precisa medição de campo real.
+
+### Setup mínimo
+
+```javascript
+import {onLCP, onINP, onCLS, onTTFB, onFCP} from 'web-vitals';
+
+const send = (metric) => {
+  navigator.sendBeacon('/api/rum', JSON.stringify({
+    name: metric.name,
+    value: metric.value,
+    rating: metric.rating,  // good | needs-improvement | poor
+    page: location.pathname,
+    timestamp: Date.now()
+  }));
+};
+
+[onLCP, onINP, onCLS, onTTFB, onFCP].forEach(fn => fn(send));
+```
+
+### Endpoint `/api/rum`
+
+Recebe beacons, agrega p75 por métrica/página/dia em DB analítica.
+
+### Alertas
+
+- **p75 LCP > 2.5s por 3 dias** → issue/alert
+- **p75 INP > 200ms por 3 dias** → issue/alert
+- **CLS p75 > 0.1** → issue/alert
+
+### Drift detection
+
+Se métrica piora > 20% vs baseline da release → bug real. Vira round
+na Fase 3 (categoria `frontend_performance`).
+
 ## Mapeamento de frameworks
 
 | Framework | Controle |

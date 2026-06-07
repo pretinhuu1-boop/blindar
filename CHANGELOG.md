@@ -3,6 +3,98 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.6.0] — 2026-06-07
+
+Endereça 25/30 itens do brainstorm de melhorias (ver
+[`ROADMAP.md`](ROADMAP.md)).
+
+### Adicionou — 2 agentes novos (Tier 1 segurança)
+
+- `agents/business-logic.md` (#1) — OWASP ASVS V11 completa:
+  race em saldo/cupom/inventário, IDOR previsível, workflow abuse,
+  input bounds (qty negativa, float-money), refund/reversal,
+  account takeover via reset/email, resource exhaustion lógica.
+- `agents/runtime-secrets.md` (#5) — vazamento em runtime:
+  env leakage, token em URL, heap/memory dump, process listing,
+  debugger em prod, backup com secret, crash reports.
+
+### Adicionou — 2 fases de pipeline (Tier 5 continuidade)
+
+- `pipeline/07-maintenance.md` (#19) — opt-in trimestral. Pipeline
+  reduzido: drift + CVE + stale check. Sem rounds extensivos.
+- `pipeline/08-drift-detection.md` (#21) — detecta defesas
+  removidas em PRs posteriores (grep guard sumido, teste
+  deletado, header dropped, audit chain quebrada).
+
+### Adicionou — 7 specs em `docs/specs/`
+
+Cada spec define forma, implementação proposta e razão de ainda
+não estar implementado:
+
+- `evidence-package.md` (#15)
+- `atk-sbom.md` (#17)
+- `reproducibility.md` (#16)
+- `load-test-harness.md` (#6)
+- `notifications.md` (#24)
+- `api-contract.md` (#3)
+- `race-fuzzing.md` (#4)
+
+### Adicionou — scripts bash + validator (Tier 3 atrito)
+
+- `scripts/preflight.sh`, `install.sh`, `check-update.sh` — Linux/macOS
+  agora têm paridade com Windows.
+- `scripts/validate.ps1` + `scripts/validate.sh` (#12) — wrapper
+  básico que valida JSON contra `schemas/*.json` sem dep externa.
+
+### Mudou — schemas/config.schema.json
+
+- `target_framework` agora aceita **string OR array** (#18 multi-target):
+  ```yaml
+  target_framework: [iso27001, soc2]   # múltiplos coverage reports
+  ```
+- Novos flags: `dry_run` (#10), `minimal_mode` (#11),
+  `maintenance_mode` (#19), `load_test`, `notifications`.
+
+### Mudou — agentes existentes com seções v0.6.0
+
+- `access-control.md` (#2): auth edges — reset enumeration, session
+  fixation, mudança de email com reconfirmação, step-up auth,
+  recovery code hashing.
+- `patch-management.md` (#20): CVE feed subscription
+  (GitHub Advisory, OSV.dev, NVD) + SLA por severity.
+- `observability.md` (#8): RUM contínuo pós-launch + drift detection
+  de Web Vitals.
+- `scalability.md` (#9): benchmark obrigatório antes/depois pra DB,
+  cache, pool, stampede.
+- `devops.md` (#7): IaC fixes como PRs separados (branch `iac/*`).
+
+### Mudou — AI-ENTRYPOINT.md
+
+Novo Passo 0 — identificação de modo: FULL / DRY-RUN / MINIMAL /
+MAINTENANCE. Decision tree determinístico por modo.
+
+### Deferred com razão explícita
+
+7 itens (#13 MULTI-AI ref impl, #23 web dashboard, #25 IDE plugin,
+#26 CLI standalone, #27 examples, #28 catálogo comunitário,
+#29 stack starters, #30 compat matrix) requerem trabalho fora do
+escopo de um chat session — projetos full, infra comunitária,
+extensões IDE. Documentados em ROADMAP.md com razão.
+
+### % projetada com v0.6.0
+
+- Segurança: 85-90% → **89-92%** (business-logic + runtime-secrets +
+  auth edges)
+- Escalabilidade: 70-80% → **80-85%** (benchmarking + IaC + maintenance)
+- Fluidez: 75-85% → **82-87%** (RUM + drift detection)
+
+### Não mudou
+
+- Pipeline original (Fases 0-6).
+- Agentes pre-existentes (mesmo comportamento, só ganharam seções v0.6).
+- Schemas existentes (só `config.schema.json` evoluiu).
+- Defaults.
+
 ## [0.5.0] — 2026-06-07
 
 Foco: **facilitar a vida da AI** + **ponta-a-ponta determinístico** +

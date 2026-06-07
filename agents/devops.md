@@ -31,6 +31,35 @@ Add missing. Cada gate falha o PR em regressão.
 - **README seção "production deploy"** com comandos exatos, não "depende
   da equipe".
 
+## IaC fixes como PRs separados (v0.6.0)
+
+Quando projeto tem Terraform/Pulumi/CDK, skill **abre PR separado**
+pra fixes de IaC. Não mistura código de app com mudança de infra.
+
+### Padrões cobertos
+
+- **Security groups deny-by-default** (ver
+  [`network-security.md`](network-security.md))
+- **DB sem IP público**
+- **S3 buckets sem listing público** (presigned URL pra acesso)
+- **Encryption at rest habilitado** (RDS, EBS, S3)
+- **VPC com subnets pública/privada/data**
+- **WAF rules pra OWASP Top 10** (AWS WAF, Cloudflare)
+- **CloudTrail/Audit logs habilitados**
+- **IAM least-privilege** (não usar AdministratorAccess em prod)
+
+### Estrutura do PR
+
+Branch: `iac/<gap-slug>` (não `sec/*` que é app)
+Título: `iac: <descricao>`
+Body: diff de plan + impacto (recursos afetados, downtime esperado)
+Reviewer: marca @<infra-team> se time tem squad separado
+
+### Gate
+
+Mesmo gate da Fase 3: CI verde (incluindo `terraform plan` sem erro),
+revisão manual antes de aplicar (porque IaC vira real ao mergear).
+
 ## Output
 
 Cada gate vira um job na CI que **falha o PR em regressão**. Não é

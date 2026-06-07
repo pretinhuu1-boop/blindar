@@ -53,6 +53,44 @@ Implement (≤80 LOC + config CI):
 - Renovate/Dependabot abriu pelo menos 1 PR no último mês (se não, está
   desconfigurado)
 
+## CVE feed subscription (v0.6.0)
+
+Além de Renovate/Dependabot que reagem a updates, o agente recomenda:
+
+### Subscrição ativa de feeds
+
+| Fonte | Coverage |
+|---|---|
+| **GitHub Advisory Database** | npm, pip, Maven, NuGet, RubyGems, Composer, Go, Rust |
+| **OSV.dev** | meta-feed agregado (Google) — superset do GH Advisory |
+| **NVD** (NIST CVE feed) | catálogo formal de CVE |
+| **Snyk vuln DB** | comercial, complementa em zero-day |
+
+### Implementação sugerida
+
+GitHub Actions agendado (diário) que:
+
+```yaml
+- run: |
+    osv-scanner --lockfile=package-lock.json --json > vulns.json
+    HIGH=$(jq '[.results[].vulnerabilities[] | select(.severity[].score >= 7)] | length' vulns.json)
+    if [ "$HIGH" -gt 0 ]; then
+      gh issue create --title "CVE HIGH+ detectada" --body "$(cat vulns.json)"
+    fi
+```
+
+### Integração com maintenance mode
+
+Fase 7 ([`pipeline/07-maintenance.md`](../pipeline/07-maintenance.md))
+roda esse check periodicamente e abre rounds focados em CVEs novas.
+
+### SLA por severity (reforço)
+
+- **crit** (CVSS ≥ 9.0): ≤ 24h pra fix ou acknowledged em accept-risk
+- **high** (CVSS 7.0-8.9): ≤ 7d
+- **med** (CVSS 4.0-6.9): ≤ 30d
+- **low** (CVSS < 4.0): próximo bump regular
+
 ## Mapeamento de frameworks
 
 | Framework | Controle |

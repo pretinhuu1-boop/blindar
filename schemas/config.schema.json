@@ -19,9 +19,20 @@
       "description": "A cada quantos rounds rodar adversarial review."
     },
     "target_framework": {
-      "enum": ["iso27001", "nist-csf", "cis", "asvs-l1", "asvs-l2", "asvs-l3", "pci-dss", "soc2", null],
-      "default": null,
-      "description": "Framework alvo. Gera coverage report no relatório final."
+      "description": "Framework(s) alvo. Pode ser string única (legacy) ou array (multi-target, v0.6.0+).",
+      "oneOf": [
+        {
+          "enum": ["iso27001", "nist-csf", "cis", "asvs-l1", "asvs-l2", "asvs-l3", "pci-dss", "soc2", null]
+        },
+        {
+          "type": "array",
+          "items": {
+            "enum": ["iso27001", "nist-csf", "cis", "asvs-l1", "asvs-l2", "asvs-l3", "pci-dss", "soc2"]
+          },
+          "uniqueItems": true
+        }
+      ],
+      "default": null
     },
     "skip_agents": {
       "type": "array",
@@ -50,7 +61,35 @@
     "dry_run": {
       "type": "boolean",
       "default": false,
-      "description": "Se true, simula sem criar branches/PRs/commits reais."
+      "description": "Se true, simula sem criar branches/PRs/commits reais. v0.6.0+."
+    },
+    "minimal_mode": {
+      "type": "boolean",
+      "default": false,
+      "description": "Pula discovery completa, usa template de ATKs por stack. Para projetos <5k LOC. v0.6.0+."
+    },
+    "maintenance_mode": {
+      "type": "boolean",
+      "default": false,
+      "description": "Pipeline reduzido (Fases 0+7+8): drift + CVE + stale check. Sem rounds extensivos. v0.6.0+."
+    },
+    "load_test": {
+      "type": ["object", "null"],
+      "description": "Config opcional de load test no termination (Fase 5). Ver docs/specs/load-test-harness.md",
+      "properties": {
+        "expected_rps": { "type": "number" },
+        "test_factor": { "type": "number", "default": 3 },
+        "slo_p95_ms": { "type": "number" },
+        "slo_error_rate_pct": { "type": "number" }
+      }
+    },
+    "notifications": {
+      "type": ["object", "null"],
+      "description": "Config opcional de notificacoes. Ver docs/specs/notifications.md",
+      "properties": {
+        "enabled": { "type": "boolean", "default": false },
+        "channels": { "type": "array" }
+      }
     },
     "termination": {
       "type": "object",

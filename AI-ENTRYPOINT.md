@@ -9,6 +9,20 @@
 
 ## Algoritmo de execução (siga em ordem)
 
+### Passo 0 — Identifique o MODO de execução (v0.6.0+)
+
+Leia `.blindar/config.yml` se existir. Detecte:
+
+| Flag | Modo | Comportamento |
+|---|---|---|
+| `dry_run: true` | **DRY-RUN** | Simula. Cria branches mas NÃO mergeia. Reporta o que faria. |
+| `minimal_mode: true` | **MINIMAL** | Projeto pequeno. Pula discovery extensiva, usa template ATKs por stack. |
+| `maintenance_mode: true` | **MAINTENANCE** | Pipeline reduzido: Fase 0 → 7 → 8. Sem rounds extensivos. |
+| (nenhuma) | **FULL** | Pipeline completo Fases 0-6. |
+
+Em MULTI-target (`target_framework: [iso27001, soc2]`), gera coverage
+report pra cada um na Fase 6.
+
 ### Passo 1 — Identifique seu modo de operação
 
 ```

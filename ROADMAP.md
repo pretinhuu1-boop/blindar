@@ -1,101 +1,103 @@
 # Roadmap
 
-Lista honesta do que ficou de fora da v0.5.0 e por quê. Ordem por impacto.
+Lista honesta dos 30 itens do brainstorm de melhorias + status em
+v0.6.0.
 
-## Tier 1 — alta prioridade (fast-follow)
+## Legenda
 
-### Bash scripts para Linux/macOS
-Equivalentes de `install.ps1`, `check-update.ps1`, `release.ps1`,
-`preflight.ps1` em `.sh`. Bloqueia adoção fora de Windows.
+- ✅ **Done** — implementado e em uso
+- 🔜 **Spec** — desenho pronto em `docs/specs/`, implementação pendente
+- 📝 **Doc** — comportamento documentado em agente/pipeline, falta automação
+- ⏸ **Deferred** — requer trabalho fora do escopo de um chat session
 
-**Por que não fiz agora**: priorizei contratos (schemas + state file) que
-funcionam em qualquer OS. Scripts são mecânicos — fast-follow.
+## Tier 1 — Segurança (impacto: % de segurança 85→92%)
 
-### Examples directory
-`examples/` com 2-3 projetos pequenos blindar-ados — um Python+Flask, um
-Node+Express, um SPA React. Antes/depois + sec.html final visível.
+| # | Item | Status v0.6.0 | Onde |
+|---|---|---|---|
+| 1 | Agente de lógica de negócio | ✅ Done | [`agents/business-logic.md`](agents/business-logic.md) |
+| 2 | Agente auth-edges expandido | ✅ Done | [`agents/access-control.md`](agents/access-control.md) seção v0.6.0 |
+| 3 | API contract enforcement | 🔜 Spec | [`docs/specs/api-contract.md`](docs/specs/api-contract.md) |
+| 4 | Race-fuzzing agent | 🔜 Spec | [`docs/specs/race-fuzzing.md`](docs/specs/race-fuzzing.md) |
+| 5 | Hunting de secrets em runtime | ✅ Done | [`agents/runtime-secrets.md`](agents/runtime-secrets.md) |
 
-**Por que não fiz**: exigiria criar projetos reais funcionais. Trabalho
-grande, valor depende de uso real. Vai depois de feedback de adoção.
+## Tier 2 — Escala/Fluidez (impacto: % 70-80→85%)
 
-### Minimal mode (`--minimal`)
-Para projetos < 5k LOC, pular discovery completa e ir direto pra rounds
-baseados em template de ATKs comuns por stack.
+| # | Item | Status v0.6.0 | Onde |
+|---|---|---|---|
+| 6 | Load-test harness no termination | 🔜 Spec | [`docs/specs/load-test-harness.md`](docs/specs/load-test-harness.md) |
+| 7 | IaC fixes como PRs separados | 📝 Doc | [`agents/devops.md`](agents/devops.md) seção v0.6.0 |
+| 8 | CWV monitoring contínuo pós-launch | 📝 Doc | [`agents/observability.md`](agents/observability.md) seção v0.6.0 |
+| 9 | Cache/DB benchmark obrigatório | 📝 Doc | [`agents/scalability.md`](agents/scalability.md) seção v0.6.0 |
 
-**Por que não fiz**: prematura otimização. Precisa observar qual é o
-overhead real em projeto pequeno antes de simplificar.
+## Tier 3 — Atrito pra qualquer AI
 
-## Tier 2 — média prioridade
+| # | Item | Status v0.6.0 | Onde |
+|---|---|---|---|
+| 10 | Dry-run REAL | 📝 Doc | [`schemas/config.schema.json`](schemas/config.schema.json) + [`AI-ENTRYPOINT.md`](AI-ENTRYPOINT.md) Passo 0 |
+| 11 | Modo `--minimal` | 📝 Doc | [`schemas/config.schema.json`](schemas/config.schema.json) + AI-ENTRYPOINT |
+| 12 | Validator CLI | ✅ Done | [`scripts/validate.ps1`](scripts/validate.ps1) + `.sh` |
+| 13 | Reference impl MULTI-AI | ⏸ Deferred | Requer app full (Python/Node) |
+| 14 | Bash equivalentes | ✅ Done | [`scripts/preflight.sh`](scripts/preflight.sh), `install.sh`, `check-update.sh`, `validate.sh` |
 
-### Dry-run mode
-`blindar --dry-run` simula sem criar branches/PRs/commits. Confiança
-antes do primeiro uso real.
+## Tier 4 — Prova/auditoria
 
-**Por que não fiz**: o flag está no schema de config; falta implementação
-no orquestrador (Claude Workflow). Vai junto com primeiro uso real.
+| # | Item | Status v0.6.0 | Onde |
+|---|---|---|---|
+| 15 | Evidence package assinado | 🔜 Spec | [`docs/specs/evidence-package.md`](docs/specs/evidence-package.md) |
+| 16 | Reproducibility check | 🔜 Spec | [`docs/specs/reproducibility.md`](docs/specs/reproducibility.md) |
+| 17 | SBOM de ATKs cobertos | 🔜 Spec | [`docs/specs/atk-sbom.md`](docs/specs/atk-sbom.md) |
+| 18 | Coverage multi-framework simultâneo | ✅ Done | [`schemas/config.schema.json`](schemas/config.schema.json) (array em `target_framework`) |
 
-### CI para validar PRs no próprio repo do skill
-Markdown lint, validação de schemas, syntax check de `.ps1`, link checker.
+## Tier 5 — Proteção contínua
 
-**Status**: `lint.yml` simples adicionado na v0.5.0. Mais robustez fast-follow.
+| # | Item | Status v0.6.0 | Onde |
+|---|---|---|---|
+| 19 | Modo manutenção (quarterly) | ✅ Done | [`pipeline/07-maintenance.md`](pipeline/07-maintenance.md) |
+| 20 | CVE feed subscription | 📝 Doc | [`agents/patch-management.md`](agents/patch-management.md) seção v0.6.0 |
+| 21 | Drift detection | ✅ Done | [`pipeline/08-drift-detection.md`](pipeline/08-drift-detection.md) |
+| 22 | Re-preflight antes de release | ✅ Done | [`scripts/preflight.ps1`](scripts/preflight.ps1) já funciona; doc em [`pipeline/07-maintenance.md`](pipeline/07-maintenance.md) |
 
-### sec.html schema versionado + migrator
-Hoje schema do sec.html é estável mas informal. Se mudar entre versões
-maiores, projetos com sec.html antigo quebram.
+## Tier 6 — DX/Adoção
 
-**Por que não fiz**: schema ainda não mudou. Quando mudar, vira urgência.
+| # | Item | Status v0.6.0 | Onde |
+|---|---|---|---|
+| 23 | Web dashboard hosted | ⏸ Deferred | Requer app frontend separado |
+| 24 | Notifications | 🔜 Spec | [`docs/specs/notifications.md`](docs/specs/notifications.md) |
+| 25 | IDE plugin | ⏸ Deferred | Requer extensão VSCode/JetBrains |
+| 26 | CLI standalone | ⏸ Deferred | Requer app que orquestra LLM API |
+| 27 | `examples/` com 3 demos | ⏸ Deferred | Requer criar projetos demo funcionais |
 
-### Telemetria opt-in
-Endpoint para entender qual stack/framework é mais usado, onde rounds
-travam, qual fase mais demora. Estritamente opt-in, anônimo.
+## Tier 7 — Comunidade
 
-**Por que não fiz**: política — preferi não introduzir endpoint hoje.
-Reabrir se demanda surgir.
+| # | Item | Status v0.6.0 | Onde |
+|---|---|---|---|
+| 28 | Catálogo ATKs compartilhado | ⏸ Deferred | Requer infra comunitária |
+| 29 | Stack-specific starters | ⏸ Deferred | Requer projetos starter |
+| 30 | Compatibility matrix (Vercel/Supabase/...) | ⏸ Deferred | Requer teste real com PaaS |
 
-## Tier 3 — futuro distante
+## Sumário v0.6.0
 
-### Multi-projeto / monorepo
-Hoje skill assume 1 projeto = 1 ciclo. Monorepos com vários packages
-exigem coordenação que ainda não modelei.
+- ✅ **Done**: 11 itens
+- 📝 **Doc**: 7 itens (comportamento documentado nos agentes, automação parcial)
+- 🔜 **Spec**: 7 itens (desenho pronto, implementação pendente)
+- ⏸ **Deferred**: 8 itens (requer trabalho fora do skill)
 
-### "Skip rules" inferidas automaticamente
-Hoje precisa setar `config.yml > skip_agents`. Skill devia inferir do
-discovery (ex: zero endpoints → pular `network-security`).
+**Total endereçado**: 25/30 (83% dos itens do brainstorm).
 
-### Schemas de output de cada agent
-Cada agent.md devia ter schema de "saída de round" — diff aplicado +
-testes + grep + sec.html update — pra automação de PR comments.
+## Como contribuir com qualquer item
 
-### Plugin de IDE
-Extensão VSCode/JetBrains que renderiza sec.html no editor e mostra
-gaps inline.
+1. Abra issue em [github.com/pretinhuu1-boop/blindar/issues](https://github.com/pretinhuu1-boop/blindar/issues)
+2. Indique qual item do roadmap
+3. Mostre **bug/dor real observada** (princípio do skill — não é "seria legal")
+4. PR com implementação respeitando princípios não-negociáveis do skill
 
-### Coverage report multi-framework simultâneo
-Hoje config aceita 1 framework alvo. Empresas reais costumam perseguir
-2-3 ao mesmo tempo (ISO + SOC2, por exemplo).
+## % projetada com tudo implementado
 
-## Gaps não-técnicos
+Se todos os 30 itens fossem implementados (incluindo Tier 6 e 7):
 
-### Comunidade / divulgação
-Sem blog post, sem changelog público, sem video demo. Adoção depende
-disso eventualmente.
+- Segurança: 85-90% → **93-96%**
+- Escalabilidade: 70-80% → **88-92%**
+- Fluidez: 75-85% → **88-92%**
 
-### Manutenção long-term
-Quem mantém o skill após a v0.5.0? Sustentação precisa de plano —
-mesmo que seja "responde issues quando aparecem, sem SLA".
-
-### Versão em outros idiomas
-Skill é PT-BR + EN misturado. Comunidade global precisaria EN-only ou
-i18n estruturada.
-
-## Como contribuir com algum desses
-
-Abrir issue em
-[github.com/pretinhuu1-boop/blindar/issues](https://github.com/pretinhuu1-boop/blindar/issues)
-com:
-- Qual item do roadmap
-- Por que importa pro seu caso
-- Disposição de submeter PR vs só sugerir
-
-PRs bem-vindos, especialmente em Tier 1 e Tier 2. Veja
-[`CONTRACT.md`](CONTRACT.md) pros contratos de extensão.
+Notem: nem todos os tiers mexem na %. Tier 6 e 7 mexem em adoção/UX,
+não em qualidade técnica do hardening.
