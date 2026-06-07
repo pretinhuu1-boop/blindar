@@ -1,0 +1,111 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/pretinhuu1-boop/blindar/blob/main/schemas/plan.schema.json",
+  "title": "blindar execution plan",
+  "description": "Plano de execucao gerado pela Fase 0 (Strategic Scan). Vive em .blindar/plan.json no projeto-alvo.",
+  "type": "object",
+  "required": ["blindar_version", "generated_at", "selected_findings", "hardware", "execution"],
+  "properties": {
+    "blindar_version": { "type": "string" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "scan_report_path": {
+      "type": "string",
+      "default": ".blindar/scan-report.md"
+    },
+    "selected_findings": {
+      "type": "array",
+      "description": "Numeros dos findings que operador aprovou pra aplicar.",
+      "items": { "type": "integer", "minimum": 1 }
+    },
+    "skipped_findings": {
+      "type": "array",
+      "description": "Numeros dos findings que operador rejeitou.",
+      "items": { "type": "integer", "minimum": 1 }
+    },
+    "all_findings": {
+      "type": "array",
+      "description": "Catalogo completo dos findings detectados pelo scan.",
+      "items": {
+        "type": "object",
+        "required": ["number", "category", "severity", "found", "suggested", "agent", "effort"],
+        "properties": {
+          "number": { "type": "integer" },
+          "category": { "type": "integer", "minimum": 1, "maximum": 14 },
+          "category_name": { "type": "string" },
+          "severity": { "enum": ["crit", "high", "med", "info"] },
+          "found": { "type": "string", "description": "O que foi detectado" },
+          "suggested": { "type": "string", "description": "O que blindar faria" },
+          "agent": {
+            "type": "string",
+            "description": "Qual agent.md atacaria isso"
+          },
+          "effort": {
+            "enum": ["Sm", "Md", "Lg", "XL"],
+            "description": "Estimativa de esforco (rounds + LOC)"
+          },
+          "estimated_rounds": { "type": "integer", "minimum": 0 },
+          "frameworks": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "files_affected": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    },
+    "hardware": {
+      "type": "object",
+      "required": ["cpu_cores"],
+      "properties": {
+        "os": { "enum": ["windows", "linux", "macos", "unknown"] },
+        "cpu_cores": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Numero de cores logicos detectados"
+        },
+        "ram_gb": { "type": "number" },
+        "storage_gb_free": { "type": "number" }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "required": ["max_parallel_agents", "estimated_rounds", "estimated_time_min"],
+      "properties": {
+        "max_parallel_agents": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16,
+          "description": "min(16, cpu_cores - 2)"
+        },
+        "estimated_rounds": { "type": "integer", "minimum": 0 },
+        "estimated_time_min": { "type": "integer", "minimum": 0 },
+        "parallel_groups": {
+          "type": "array",
+          "description": "Grupos de agentes que podem rodar paralelos sem conflito",
+          "items": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "sequential_dependencies": {
+          "type": "array",
+          "description": "Agentes que precisam rodar em ordem (A depende de B)",
+          "items": {
+            "type": "object",
+            "properties": {
+              "agent": { "type": "string" },
+              "depends_on": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "interactive_mode": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se false, assume crit+high automaticamente sem perguntar"
+    }
+  }
+}

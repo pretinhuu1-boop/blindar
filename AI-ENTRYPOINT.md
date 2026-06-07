@@ -59,19 +59,20 @@ contra os princípios do skill.
           3. Comece pelo Passo 4 (Fase 0 — Baseline)
 ```
 
-### Passo 4 — Pipeline (Fases 0 → 6)
+### Passo 4 — Pipeline (Fases 0 → 7)
 
 Cada fase tem arquivo em `pipeline/`. Execute em ordem:
 
 | Fase | Arquivo | Sua tarefa |
 |---|---|---|
-| 0 | `pipeline/00-baseline.md` | Validar projeto. **Para** se suite vermelha. |
-| 1 | `pipeline/01-discovery.md` | 3 agents paralelos. **Use schemas/** pra validar saída. |
-| 2 | `pipeline/02-bootstrap-sec-html.md` | Criar `sec.html` na raiz do projeto-alvo, PR único. |
-| 3 | `pipeline/03-rounds-loop.md` | Loop principal. Cada round = 1 PR mergeado. |
-| 4 | `pipeline/04-adversarial-review.md` | A cada 10 rounds, 4 lentes + verify. |
-| 5 | `pipeline/05-production-checklist.md` | Após adversarial limpa, gates finais. |
-| 6 | `pipeline/06-final-report.md` | PR final com sumário. |
+| 0 ⭐ | `pipeline/00-strategic-scan.md` | **Varre projeto, lista oportunidades numeradas, pergunta operador, planeja paralelismo.** Não modifica nada. |
+| 1 | `pipeline/01-baseline.md` | Validar projeto. **Para** se suite vermelha. |
+| 2 | `pipeline/02-discovery.md` | 3 agents paralelos. **Use schemas/** pra validar saída. |
+| 3 | `pipeline/03-bootstrap-sec-html.md` | Criar `sec.html` na raiz do projeto-alvo, PR único. |
+| 4 | `pipeline/04-rounds-loop.md` | Loop principal. Cada round = 1 PR mergeado. **Só rounds selecionados no plan.json.** |
+| 5 | `pipeline/05-adversarial-review.md` | A cada 10 rounds, 4 lentes + verify. |
+| 6 | `pipeline/06-production-checklist.md` | Após adversarial limpa, gates finais. |
+| 7 | `pipeline/07-final-report.md` | PR final com sumário. |
 
 ### Passo 5 — Após CADA round (Fase 3)
 
@@ -101,7 +102,7 @@ TODAS verdadeiras?
   - ci_green_streak: >= 3
   - production_checklist_passed: true (Fase 5)
 
-  SIM → vá pra Fase 6 (relatório final) → done
+  SIM → vá pra Fase 7 (relatório final) → done
   NÃO → continue rounds
 ```
 

@@ -83,15 +83,16 @@ Operador acompanha em tempo real abrindo `sec.html` no browser.
 
 | Fase | Arquivo | Duração |
 |---|---|---|
-| 0 — Baseline | [`pipeline/00-baseline.md`](pipeline/00-baseline.md) | ~2 min |
-| 1 — Discovery | [`pipeline/01-discovery.md`](pipeline/01-discovery.md) | ~3 min |
-| 2 — Bootstrap sec.html | [`pipeline/02-bootstrap-sec-html.md`](pipeline/02-bootstrap-sec-html.md) | ~1 min |
-| 3 — Loop de rounds | [`pipeline/03-rounds-loop.md`](pipeline/03-rounds-loop.md) | até termination |
-| 4 — Adversarial review | [`pipeline/04-adversarial-review.md`](pipeline/04-adversarial-review.md) | ~10 min (a cada 10 rounds) |
-| 5 — Production checklist | [`pipeline/05-production-checklist.md`](pipeline/05-production-checklist.md) | ~3 min |
-| 6 — Relatório final | [`pipeline/06-final-report.md`](pipeline/06-final-report.md) | ~2 min |
-| 7 — **Maintenance** (opt-in, trimestral) | [`pipeline/07-maintenance.md`](pipeline/07-maintenance.md) | ~5 min |
-| 8 — **Drift detection** (subfase de 7) | [`pipeline/08-drift-detection.md`](pipeline/08-drift-detection.md) | ~3 min |
+| 0 — **Strategic Scan & Planning** ⭐ v0.7.0 | [`pipeline/00-strategic-scan.md`](pipeline/00-strategic-scan.md) | ~3 min |
+| 1 — Baseline | [`pipeline/01-baseline.md`](pipeline/01-baseline.md) | ~2 min |
+| 2 — Discovery | [`pipeline/02-discovery.md`](pipeline/02-discovery.md) | ~3 min |
+| 3 — Bootstrap sec.html | [`pipeline/03-bootstrap-sec-html.md`](pipeline/03-bootstrap-sec-html.md) | ~1 min |
+| 4 — Loop de rounds | [`pipeline/04-rounds-loop.md`](pipeline/04-rounds-loop.md) | até termination |
+| 5 — Adversarial review | [`pipeline/05-adversarial-review.md`](pipeline/05-adversarial-review.md) | ~10 min (a cada 10 rounds) |
+| 6 — Production checklist | [`pipeline/06-production-checklist.md`](pipeline/06-production-checklist.md) | ~3 min |
+| 7 — Relatório final | [`pipeline/07-final-report.md`](pipeline/07-final-report.md) | ~2 min |
+| 8 — **Maintenance** (opt-in, trimestral) | [`pipeline/08-maintenance.md`](pipeline/08-maintenance.md) | ~5 min |
+| 9 — **Drift detection** (subfase de 8) | [`pipeline/09-drift-detection.md`](pipeline/09-drift-detection.md) | ~3 min |
 
 ## Roster de agentes
 
@@ -102,6 +103,7 @@ Agentes de **segurança** (sempre carregados primeiro):
 | Controle de acesso (auth/MFA/RBAC) | [`agents/access-control.md`](agents/access-control.md) |
 | Criptografia (TLS / at-rest / secrets) | [`agents/cryptography.md`](agents/cryptography.md) |
 | Segurança aplicacional geral | [`agents/security.md`](agents/security.md) |
+| **Strategic Scanner** (Fase 0) | [`agents/strategic-scanner.md`](agents/strategic-scanner.md) |
 | Lógica de negócio (ASVS V11) | [`agents/business-logic.md`](agents/business-logic.md) |
 | Secrets em runtime (memória/env/log) | [`agents/runtime-secrets.md`](agents/runtime-secrets.md) |
 | Frontend / CSP / XSS | [`agents/frontend.md`](agents/frontend.md) |

@@ -3,6 +3,86 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.7.0] — 2026-06-07
+
+### BREAKING — renumeração de fases
+
+Adicionada **Fase 0: Strategic Scan & Planning** antes do Baseline.
+Todas as fases existentes foram **renumeradas +1**:
+
+| Antes (v0.6.x) | Agora (v0.7.0) |
+|---|---|
+| 00-baseline.md | 01-baseline.md |
+| 01-discovery.md | 02-discovery.md |
+| 02-bootstrap-sec-html.md | 03-bootstrap-sec-html.md |
+| 03-rounds-loop.md | 04-rounds-loop.md |
+| 04-adversarial-review.md | 05-adversarial-review.md |
+| 05-production-checklist.md | 06-production-checklist.md |
+| 06-final-report.md | 07-final-report.md |
+| 07-maintenance.md | 08-maintenance.md |
+| 08-drift-detection.md | 09-drift-detection.md |
+| (nova) | **00-strategic-scan.md** |
+
+**Migração**: nada a fazer no projeto-alvo. `.blindar/state.json`
+mantém compatibilidade (`phase` field aceita os nomes textuais).
+
+### Adicionou — Fase 0 Strategic Scan & Planning
+
+- `pipeline/00-strategic-scan.md` — nova fase pré-baseline:
+  - **Varredura arquitetural** (read-only) em 14 categorias:
+    auth, autz, storage, secrets, frontend, API, testes, CI/CD,
+    logging, deps, arquitetura, perf, resiliência, observability
+  - **Findings numerados** por severidade (crit / high / med / info)
+  - **Pergunta interativa** ao operador: "quais aplicar? [1-5, 10, 16-18]"
+  - **Detecção de hardware** (cores, RAM)
+  - **Plano de paralelismo** otimizado pra máquina atual
+  - **Save** `.blindar/plan.json` + `.blindar/scan-report.md`
+
+- `agents/strategic-scanner.md` — agente novo, **read-only**:
+  - Não implementa nada, só observa e propõe
+  - Detecta anti-patterns: senhas plaintext, .env commitado,
+    JSON-as-DB, sem MFA, CORS *, innerHTML inseguro, etc.
+  - Classifica esforço (Sm/Md/Lg/XL) e aponta agente que atacaria
+
+- `templates/scan-report.md` — formato do relatório legível por
+  humano. Findings agrupadas por severidade, com encontrado/sugerido/
+  agente/esforço por finding.
+
+- `schemas/plan.schema.json` — schema do `.blindar/plan.json` com
+  hardware, findings selecionados, grupos paralelos, dependências.
+
+### Adicionou — paralelismo inteligente
+
+Cálculo automático na Fase 0:
+- `max_parallel_agents = min(16, cpu_cores - 2)` — bate com cap da
+  Workflow API
+- **Grupos independentes** identificados:
+  - Grupo A: access-control + crypto + observability (alta vazão)
+  - Grupo B: frontend + network-security + supply-chain
+  - Grupo C: resilience + business-logic (sequencial, dependências)
+
+### Mudou — SKILL.md + AI-ENTRYPOINT.md
+
+- Pipeline table reflete renumeração
+- AI-ENTRYPOINT Passo 4: agora 8 fases (0-7) + 2 opcionais (8-9)
+- Strategic Scanner adicionado ao roster de agentes
+
+### Não mudou
+
+- Conteúdo das fases existentes (só renomeação)
+- Agentes existentes
+- Schemas existentes (apenas adicionou `plan.schema.json`)
+- Defaults do skill
+
+### Filosofia
+
+"Antes de blindar, **olhar**. Antes de olhar, **planejar**."
+
+Sem Fase 0, blindar gastava rounds em coisas que o operador nem queria
+fixar. Agora a Fase 0 produz contrato explícito sobre o que vai/não vai
+ser atacado, com tempo estimado realista e plano de paralelismo
+ajustado à máquina.
+
 ## [0.6.0] — 2026-06-07
 
 Endereça 25/30 itens do brainstorm de melhorias (ver

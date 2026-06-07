@@ -62,7 +62,8 @@ blindar/
 ├── CHECKLIST.md          ← validação pós-download
 ├── README.md             ← este arquivo
 │
-├── pipeline/             ← as 6 fases (00 a 06)
+├── pipeline/             ← as 8 fases (00 a 07) + 2 opcionais (08-09)
+│   └── 00-strategic-scan.md  ⭐ NOVA em v0.7.0 — pre-blindar scan + plano
 │
 ├── agents/               ← especialistas (segurança primeiro, sempre)
 │   │ ──── SEGURANÇA (10 técnicas clássicas de TI) ────
