@@ -3,6 +3,27 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.4.2] — 2026-06-07
+
+### Adicionou
+- `USAGE.md` — guia completo passo-a-passo de uso:
+  - Instalação por OS
+  - Pré-requisitos no projeto-alvo
+  - Primeiro uso (passo a passo)
+  - O que esperar durante execução + cronograma típico
+  - Como acompanhar via `sec.html`
+  - Parar / pausar / retomar
+  - Critério de termination
+  - Casos especiais (LGPD, PCI, framework alvo, stack obscura, pentest)
+  - Modo multi-AI (referência ao MULTI-AI.md)
+  - Atualização do skill
+  - Troubleshooting (8 cenários comuns)
+  - Comandos úteis
+  - Resumo de 1 página
+
+### Mudou
+- `README.md` — adicionado link destacado para `USAGE.md` na seção de uso.
+
 ## [0.4.1] — 2026-06-07
 
 ### Adicionou

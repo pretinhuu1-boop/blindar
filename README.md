@@ -47,6 +47,10 @@ ou um dos triggers: `blinda este projeto`, `deixa pronto pra produção`,
 
 O skill abre `sec.html` na raiz — abra no browser pra acompanhar em tempo real.
 
+**Guia completo passo-a-passo: [`USAGE.md`](USAGE.md)** — inclui pré-requisitos,
+o que esperar durante a execução, casos especiais (LGPD/PCI), como parar e
+retomar, troubleshooting, e como rodar em outras AIs.
+
 ## Estrutura do repositório
 
 ```
