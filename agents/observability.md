@@ -1,4 +1,13 @@
-# agent: observability
+---
+name: observability
+category: ops
+module: 6
+priority: P0
+description: |
+  Logs estruturados (JSON), métricas (Prometheus/OpenTelemetry), tracing distribuído (W3C), audit trail imutável com hash chain. Cobre técnica #7. SLI/SLO definidos.
+---
+
+# Agent: observability
 
 Logs, métricas, traces, audit trail. Cobre técnica #7 do baseline
 (monitoramento e auditoria).

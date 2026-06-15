@@ -1,4 +1,13 @@
-# agent: frontend
+---
+name: frontend
+category: security
+module: 3
+priority: P0
+description: |
+  Hardening de SPA/SSR: CSP estrita, XSS protection, Trusted Types, SRI em scripts externos, cookies HttpOnly+Secure+SameSite=Strict, Referrer-Policy.
+---
+
+# Agent: frontend
 
 Hardening de SPA/SSR.
 

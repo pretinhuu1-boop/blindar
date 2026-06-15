@@ -1,4 +1,13 @@
-# agent: business-logic
+---
+name: business-logic
+category: security
+module: 2
+priority: P0
+description: |
+  OWASP ASVS V11 (Business Logic). Validation de regras (preço, desconto, comissão, estoque) — ninguém burla pelo navegador, replays, race conditions em operações financeiras.
+---
+
+# Agent: business-logic
 
 Lógica de negócio — fraude no fluxo, race em saldo, abuso de processo,
 IDOR previsível. Cobre OWASP **ASVS V11** (Business Logic).

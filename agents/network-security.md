@@ -1,4 +1,13 @@
-# agent: network-security
+---
+name: network-security
+category: security
+module: 4
+priority: P0
+description: |
+  WAF (Cloudflare/Vercel/AWS WAF), rate limit por IP+user, headers HTTP de segurança (HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy), IaC Security Groups. Cobre técnicas #3 e #8.
+---
+
+# Agent: network-security
 
 Defesas de rede aplicáveis em **código e IaC**. Cobre parte das técnicas
 #3 (firewall) e #8 (segurança de rede) do baseline — só a parte que cabe

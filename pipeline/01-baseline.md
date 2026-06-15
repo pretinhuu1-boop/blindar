@@ -1,4 +1,4 @@
-# Fase 0 — Baseline
+# Fase 1 — Baseline
 
 **Duração**: ~2 min (paralelo)
 

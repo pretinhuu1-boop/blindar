@@ -58,13 +58,22 @@ Antes de invocar `blindar` num projeto que importa:
 
 ## 7. Riscos aceitos
 
-- [ ] Você entendeu que o skill **não pede confirmação** — roda do começo ao
-      fim sozinho
+- [ ] Você entendeu o **launcher** (4 perguntas + menu de 15 módulos, ≤30s)
+      na primeira execução em projeto novo (v0.8+)
+- [ ] Você escolheu o **modo** de execução: **AUTO** (vai até o fim sem
+      pausar), **SUPERVISIONADO** (pausa entre rounds), **ESCOLHIDOS**
+      (roda só módulos selecionados)
+- [ ] Em modo AUTO, ele **não pede mais confirmação** depois do launcher
+      — roda até termination sozinho
 - [ ] Você entendeu que ele **faz commits e abre PRs reais** no projeto
 - [ ] Você entendeu que ele **espera CI verde** antes de mergear (não bypassa
       com `--no-verify`)
 - [ ] Você sabe que pode interromper com `Ctrl+C` a qualquer momento — o
       último commit fica intacto
+- [ ] Você sabe que `blindar --reset` apaga `.blindar/` e roda launcher de novo
+- [ ] Se você escolheu `rigor = COMPLIANCE`, escolheu também um `target_framework`
+      válido (`iso27001` / `nist-csf` / `cis` / `asvs-l1` / `asvs-l2` / `asvs-l3` /
+      `pci-dss` / `soc2` / `lgpd`)
 
 ---
 

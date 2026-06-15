@@ -1,7 +1,16 @@
-# agent: adversarial-reviewer
+---
+name: adversarial-reviewer
+category: security
+module: 15
+priority: P0
+description: |
+  Workflow de revisão adversarial executado na Fase 5: 4 lentes paralelas (security, races, failmodes, regression) + verify por finding (default refute). Confirma apenas findings reais antes de virar rounds.
+---
+
+# Agent: adversarial-reviewer
 
 Não é um agente único — é o **workflow** descrito em
-[`pipeline/04-adversarial-review.md`](../pipeline/04-adversarial-review.md).
+[`pipeline/05-adversarial-review.md`](../pipeline/05-adversarial-review.md).
 
 ## Estrutura
 

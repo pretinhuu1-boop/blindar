@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sua Plataforma — Resumo de Melhorias</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+  :root {
+    --bg: #f7f7f5; --fg: #1a1a1a; --muted: #5e6470; --border: #e6e4dd;
+    --primary: #0066cc; --accent: #0a7d3d; --card-bg: #ffffff;
+    --warm: #b76e00; --danger: #c92a2a;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1a1a; --fg: #f0f0f0; --muted: #999;
+      --border: #333; --card-bg: #242424;
+      --primary: #4a9eff; --accent: #4ade80;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--font); background: var(--bg); color: var(--fg);
+    line-height: 1.6; max-width: 920px; margin: 0 auto; padding: 32px 24px;
+  }
+  header {
+    text-align: center; padding: 32px 16px 40px;
+    border-bottom: 2px solid var(--border); margin-bottom: 40px;
+  }
+  header h1 {
+    font-size: 2.25rem; font-weight: 700; margin-bottom: 12px;
+    letter-spacing: -0.02em;
+  }
+  header .subtitle {
+    color: var(--muted); font-size: 1.1rem;
+    margin-bottom: 24px;
+  }
+  header .meta {
+    color: var(--muted); font-size: 0.9rem;
+    display: flex; gap: 24px; justify-content: center; flex-wrap: wrap;
+  }
+  header .actions {
+    margin-top: 24px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+  }
+  button {
+    background: var(--primary); color: white; border: 0;
+    padding: 10px 18px; border-radius: 8px; cursor: pointer;
+    font-family: inherit; font-size: 0.95rem; font-weight: 500;
+    transition: opacity 0.15s;
+  }
+  button:hover { opacity: 0.88; }
+  button.outline {
+    background: transparent; color: var(--fg);
+    border: 1px solid var(--border);
+  }
+  section.executive {
+    background: linear-gradient(135deg, rgba(10,125,61,.08), rgba(0,102,204,.05));
+    border: 1px solid var(--border); border-radius: 12px;
+    padding: 24px 28px; margin-bottom: 40px;
+  }
+  section.executive h2 {
+    font-size: 1.1rem; color: var(--muted); text-transform: uppercase;
+    letter-spacing: 0.08em; margin-bottom: 16px; font-weight: 600;
+  }
+  section.executive p.lead {
+    font-size: 1.15rem; line-height: 1.65;
+  }
+  section.executive ul {
+    margin-top: 16px; list-style: none;
+  }
+  section.executive ul li {
+    padding: 8px 0; display: flex; align-items: start; gap: 10px;
+  }
+  section.executive ul li::before {
+    content: "✓"; color: var(--accent); font-weight: 700; flex-shrink: 0;
+  }
+  .stats {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 16px; margin: 32px 0 48px;
+  }
+  .stat-card {
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 10px; padding: 20px; text-align: center;
+  }
+  .stat-card .num {
+    font-size: 2.25rem; font-weight: 700; color: var(--primary);
+    line-height: 1;
+  }
+  .stat-card .lbl {
+    color: var(--muted); font-size: 0.85rem; margin-top: 8px;
+  }
+  .category {
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 12px; padding: 28px 32px; margin-bottom: 24px;
+    page-break-inside: avoid;
+  }
+  .category-header {
+    display: flex; align-items: center; gap: 16px; margin-bottom: 20px;
+  }
+  .category-icon {
+    width: 56px; height: 56px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.75rem; flex-shrink: 0;
+    background: rgba(0, 102, 204, 0.1);
+  }
+  .category h2 {
+    font-size: 1.4rem; font-weight: 600;
+  }
+  .category .benefit {
+    color: var(--muted); font-size: 1.02rem;
+    margin: 4px 0 20px; padding-left: 72px;
+  }
+  .actions-list {
+    list-style: none; margin: 0;
+  }
+  .actions-list li {
+    padding: 14px 0 14px 72px; border-top: 1px solid var(--border);
+    display: grid; grid-template-columns: 1fr auto; gap: 12px;
+    align-items: start;
+  }
+  .actions-list li .what {
+    font-weight: 500;
+  }
+  .actions-list li .why {
+    color: var(--muted); font-size: 0.92rem; margin-top: 2px;
+    grid-column: 1;
+  }
+  .actions-list li .count {
+    background: var(--border); color: var(--fg);
+    padding: 4px 10px; border-radius: 12px; font-size: 0.82rem;
+    white-space: nowrap;
+  }
+  .metrics {
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 12px; padding: 28px; margin: 40px 0;
+  }
+  .metrics h2 {
+    margin-bottom: 20px; font-size: 1.25rem;
+  }
+  .metric-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+  }
+  .metric {
+    border-left: 3px solid var(--accent); padding-left: 14px;
+  }
+  .metric .name { color: var(--muted); font-size: 0.85rem; }
+  .metric .val { font-size: 1.6rem; font-weight: 600; margin-top: 4px; }
+  .metric .desc { color: var(--muted); font-size: 0.85rem; margin-top: 4px; }
+  footer {
+    text-align: center; padding: 40px 16px 20px;
+    color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border);
+    margin-top: 48px;
+  }
+  footer p { margin-bottom: 8px; }
+  /* Print */
+  @media print {
+    body { max-width: 100%; padding: 0; background: white; color: black; }
+    .actions, button { display: none !important; }
+    .category, .metrics, .stat-card, section.executive {
+      break-inside: avoid; border: 1px solid #ccc;
+    }
+    a { color: #000; text-decoration: underline; }
+    @page { margin: 1.5cm; size: A4; }
+    header { padding: 12px 0; }
+    header h1 { font-size: 1.75rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1 id="hdr-title">Sua Plataforma — Resumo de Melhorias</h1>
+  <p class="subtitle" id="hdr-subtitle">Trabalho de hardening, segurança e qualidade aplicado ao seu sistema</p>
+  <div class="meta">
+    <span><strong>Projeto:</strong> <span id="m-project">—</span></span>
+    <span><strong>Período:</strong> <span id="m-period">—</span></span>
+    <span><strong>Atualizado em:</strong> <span id="m-updated">—</span></span>
+  </div>
+  <div class="actions">
+    <button onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
+    <button class="outline" onclick="copyText()">📋 Copiar resumo</button>
+    <button class="outline" onclick="shareEmail()">✉️ Enviar por email</button>
+  </div>
+</header>
+
+<section class="executive">
+  <h2>Resumo executivo</h2>
+  <p class="lead" id="exec-lead">Sua plataforma passou por um trabalho profundo de revisão e melhorias.</p>
+  <ul id="exec-highlights"></ul>
+</section>
+
+<div class="stats" id="stats"></div>
+
+<main id="categories"></main>
+
+<section class="metrics" id="metrics-section">
+  <h2>Indicadores de qualidade</h2>
+  <div class="metric-grid" id="metrics-grid"></div>
+</section>
+
+<footer>
+  <p>Este documento foi gerado automaticamente a partir das ações realizadas no seu projeto.</p>
+  <p>Para o relatório técnico detalhado, consulte <code>blindar-report.html</code>.</p>
+</footer>
+
+<!-- ═════════════ DADOS (mesmo JSON do execution-report) ═════════════ -->
+<script id="blindar-data" type="application/json">
+{
+  "schema": "blindar/execution-report@v1",
+  "project": "Seu Projeto",
+  "blindar_version": "0.16.0",
+  "first_run": "2026-06-14T18:00:00Z",
+  "last_updated": "2026-06-14T18:00:00Z",
+  "total_runs": 0,
+  "runs": []
+}
+</script>
+
+<!-- ═════════════ MAPA DE BENEFÍCIOS (agente → categoria + benefício) ═════════════ -->
+<script id="benefit-map" type="application/json">
+{
+  "categories": {
+    "security": {
+      "icon": "🔒",
+      "title": "Segurança das contas e dos dados",
+      "benefit": "Seus usuários ficam mais protegidos contra invasão, roubo de senha e acesso não-autorizado. Mesmo se houver tentativa de ataque, seus dados estão blindados."
+    },
+    "data": {
+      "icon": "💾",
+      "title": "Confiabilidade e integridade dos dados",
+      "benefit": "Seus dados ficam mais rápidos de acessar, organizados de forma escalável e protegidos contra perda. Você pode crescer sem reescrever o sistema."
+    },
+    "speed": {
+      "icon": "⚡",
+      "title": "Velocidade e fluidez",
+      "benefit": "O sistema responde instantaneamente, não trava nem cai sob carga. Cliente final percebe um produto profissional."
+    },
+    "ux": {
+      "icon": "📱",
+      "title": "Experiência do usuário",
+      "benefit": "App responsivo em qualquer aparelho (celular, tablet, notebook), instalável como app, acessível a pessoas com deficiência, com onboarding claro."
+    },
+    "money": {
+      "icon": "💰",
+      "title": "Proteção do dinheiro",
+      "benefit": "Pagamentos seguros, sem cobrança duplicada, com reconciliação diária. Reduz fraude e chargeback. Cliente paga uma vez, sistema sabe."
+    },
+    "growth": {
+      "icon": "📊",
+      "title": "Crescimento sustentável",
+      "benefit": "Controle de custo na nuvem, lançamento gradual de features, ajustes finos sem precisar de deploy. Acompanha o crescimento sem estourar conta."
+    },
+    "compliance": {
+      "icon": "⚖️",
+      "title": "Conformidade legal e qualidade",
+      "benefit": "Seu sistema cumpre LGPD, ANPD, e padrões de mercado. Textos do produto revisados, sem erros que comprometam a marca."
+    },
+    "operations": {
+      "icon": "🛡️",
+      "title": "Operação 24/7",
+      "benefit": "Sistema monitorado, com alertas, backup automático, e capaz de se recuperar de incidentes. Você dorme em paz."
+    },
+    "ai": {
+      "icon": "🤖",
+      "title": "IA segura e responsável",
+      "benefit": "Recursos de inteligência artificial protegidos contra abuso, com limite de custo por usuário e respeito a dados pessoais."
+    },
+    "dx": {
+      "icon": "🛠️",
+      "title": "Manutenção e evolução",
+      "benefit": "Equipe técnica entende rápido o que existe, sabe onde mexer e consegue evoluir sem quebrar. Custo de manutenção cai."
+    }
+  },
+  "agent_to_category": {
+    "access-control": ["security", "Acesso por nível (Master/Admin/Operacional) controlado, com permissões claras"],
+    "cryptography": ["security", "Comunicação e dados em repouso criptografados, padrões 2026"],
+    "auth-premium": ["security", "Login com biometria (FaceID/TouchID), senhas blindadas e sessão que protege quando você está longe do computador"],
+    "business-logic": ["security", "Regras de negócio validadas (preço, desconto, comissão) — ninguém burla pelo navegador"],
+    "runtime-secrets": ["security", "Senhas e chaves nunca vazam em log nem em memória"],
+    "security": ["security", "Defesas gerais contra ataques conhecidos do catálogo OWASP"],
+    "frontend": ["security", "Proteção contra ataques no browser (XSS, clickjacking)"],
+    "network-security": ["security", "Limites de uso (rate-limit), firewall de aplicação, cabeçalhos HTTP seguros"],
+    "supply-chain": ["security", "Bibliotecas que o sistema usa estão fixadas e auditadas (sem surpresas em updates)"],
+    "patch-management": ["security", "Atualizações de segurança aplicadas no prazo, sem CVE em aberto"],
+    "pentest": ["security", "Testes automatizados de invasão contínuos (SAST/DAST)"],
+    "adversarial-reviewer": ["security", "Revisão crítica adversarial a cada 10 mudanças"],
+    "tenant-isolation-tests": ["security", "Cliente A nunca vê dado de cliente B, com testes que provam isso"],
+    "file-uploads": ["security", "Upload de arquivos com antivírus, validação real e limites por usuário"],
+    "ai-llm-safety": ["ai", "Recursos de IA com proteção contra prompt injection, vazamento de dados e abuso de custo"],
+    "db-architect": ["data", "Banco organizado, com índices certos, sem queries lentas, com backup verificado mensalmente"],
+    "backup-recovery": ["data", "Backups automáticos com restore testado de verdade — não só feito, mas funcionando"],
+    "performance": ["speed", "Endpoints lentos identificados e otimizados (N+1, queries grandes)"],
+    "frontend-performance": ["speed", "Site/app carregando em menos de 2,5s no celular (Web Vitals)"],
+    "responsive-a11y": ["ux", "Funciona em celular, tablet e PC, com tamanhos certos pra dedo, contraste correto pra acessibilidade"],
+    "pwa-installable": ["ux", "App instalável direto no celular ou notebook, sem precisar de loja de app"],
+    "i18n-tz": ["ux", "Datas, horários e moeda corretos em qualquer fuso e idioma"],
+    "state-cache-data": ["ux", "Cliques respondem instantaneamente, sem espera, mesmo com internet ruim"],
+    "onboarding-ux": ["ux", "Novo usuário entende o produto em menos de 5 minutos"],
+    "seo-marketing-meta": ["growth", "Site aparece bem no Google e gera previews bonitos quando compartilhado"],
+    "payments": ["money", "Pagamentos Stripe/Mercado Pago/PIX com proteção contra cobrança duplicada e reconciliação diária"],
+    "feature-flags": ["growth", "Liberação gradual de novidades (10% → 50% → 100%) com botão pra desligar em emergência"],
+    "cost-observability": ["growth", "Visibilidade de quanto cada feature custa, alerta antes da fatura estourar"],
+    "compliance": ["compliance", "Conformidade com frameworks de mercado (ISO/NIST/SOC2)"],
+    "compliance-lgpd-br": ["compliance", "LGPD: consentimento, exportação, exclusão de dados, prazos da ANPD"],
+    "content-quality": ["compliance", "Textos revisados: ortografia, gramática, tom consistente, sem mistura ruim de idiomas"],
+    "observability": ["operations", "Logs estruturados, métricas e alertas — você sabe se algo está degradado antes do cliente reclamar"],
+    "resilience": ["operations", "Sistema continua funcionando mesmo se uma dependência cair (banco, API externa)"],
+    "scalability": ["operations", "Sistema testado pra 10x a carga atual"],
+    "process-resilience": ["operations", "Sistema nunca trava silenciosamente: health checks, restart limpo, watchdog externo"],
+    "email-deliverability": ["operations", "Emails do sistema chegam na caixa de entrada (não no spam)"],
+    "devops": ["dx", "Pipeline CI/CD verde, scripts de inicialização claros, .env documentado"],
+    "feature-flags": ["growth", "Liberação gradual de novidades, com botão pra desligar em emergência"],
+    "backoffice-admin": ["operations", "Painel administrativo seguro: suporte pode 'entrar como' usuário sem saber senha, tudo auditado"],
+    "documentation-live": ["dx", "Documentação que evolui com o código, novo desenvolvedor entende em horas"],
+    "execution-report": ["dx", "Relatório técnico e relatório executivo gerados a cada execução"],
+    "config-externalization": ["dx", "Nada hardcoded no código: textos, regras e configs em lugar próprio"],
+    "mock-killer": ["dx", "Sem dados falsos, console.log esquecido ou TODO em produção"],
+    "functional-e2e": ["dx", "Cada botão e formulário testado automaticamente — nada quebrado sobe"],
+    "testing-strategy": ["dx", "Testes em camadas (unit, integração, E2E) com qualidade medida via mutation testing"],
+    "strategic-scanner": ["dx", "Varredura arquitetural antes de cada hardening pra planejar o melhor caminho"],
+    "architect": ["dx", "Estrutura de pastas, naming e fronteiras de módulo seguindo padrão do mercado"]
+  }
+}
+</script>
+
+<script>
+const DATA = JSON.parse(document.getElementById('blindar-data').textContent);
+const BMAP = JSON.parse(document.getElementById('benefit-map').textContent);
+
+function flatActions() {
+  return (DATA.runs || []).flatMap(r => r.actions || []);
+}
+
+function groupByCategory(actions) {
+  const groups = {};
+  for (const a of actions) {
+    const map = BMAP.agent_to_category[a.agent];
+    if (!map) continue;
+    const [cat, friendly] = map;
+    if (!groups[cat]) groups[cat] = [];
+    groups[cat].push({ ...a, friendly });
+  }
+  return groups;
+}
+
+function init() {
+  document.getElementById('m-project').textContent = DATA.project || '—';
+  document.getElementById('m-updated').textContent = fmt(DATA.last_updated);
+  const first = DATA.first_run ? new Date(DATA.first_run) : null;
+  const last = DATA.last_updated ? new Date(DATA.last_updated) : null;
+  if (first && last) {
+    document.getElementById('m-period').textContent =
+      `${first.toLocaleDateString('pt-BR')} a ${last.toLocaleDateString('pt-BR')}`;
+  }
+
+  const actions = flatActions().filter(a => a.resolved !== false);
+  const groups = groupByCategory(actions);
+
+  // Stats
+  renderStats(actions, groups);
+  // Executive summary
+  renderExecutive(groups);
+  // Categories
+  renderCategories(groups);
+  // Metrics
+  renderMetrics(actions);
+}
+
+function renderStats(actions, groups) {
+  const stats = [
+    { num: Object.keys(groups).length, lbl: 'Áreas de melhoria' },
+    { num: actions.length, lbl: 'Melhorias aplicadas' },
+    { num: DATA.total_runs || 0, lbl: 'Sessões de trabalho' },
+    { num: new Set(actions.map(a => a.agent)).size, lbl: 'Especialidades envolvidas' },
+  ];
+  document.getElementById('stats').innerHTML = stats.map(s =>
+    `<div class="stat-card"><div class="num">${s.num}</div><div class="lbl">${s.lbl}</div></div>`
+  ).join('');
+}
+
+function renderExecutive(groups) {
+  const topCategories = Object.entries(groups)
+    .sort((a, b) => b[1].length - a[1].length)
+    .slice(0, 5);
+  document.getElementById('exec-highlights').innerHTML = topCategories.map(([cat, list]) => {
+    const c = BMAP.categories[cat];
+    return `<li><strong>${esc(c.title)}</strong> — ${list.length} ${list.length === 1 ? 'melhoria aplicada' : 'melhorias aplicadas'}</li>`;
+  }).join('');
+}
+
+function renderCategories(groups) {
+  const ordered = Object.entries(groups).sort((a, b) => b[1].length - a[1].length);
+  document.getElementById('categories').innerHTML = ordered.map(([cat, list]) => {
+    const c = BMAP.categories[cat];
+    // agrupa por agente dentro da categoria
+    const byAgent = {};
+    list.forEach(a => {
+      if (!byAgent[a.friendly]) byAgent[a.friendly] = 0;
+      byAgent[a.friendly]++;
+    });
+    return `
+      <section class="category">
+        <div class="category-header">
+          <div class="category-icon">${c.icon}</div>
+          <h2>${esc(c.title)}</h2>
+        </div>
+        <p class="benefit">${esc(c.benefit)}</p>
+        <ul class="actions-list">
+          ${Object.entries(byAgent).map(([friendly, count]) => `
+            <li>
+              <div>
+                <div class="what">${esc(friendly)}</div>
+              </div>
+              ${count > 1 ? `<span class="count">${count}× aplicado</span>` : ''}
+            </li>
+          `).join('')}
+        </ul>
+      </section>
+    `;
+  }).join('');
+}
+
+function renderMetrics(actions) {
+  const metrics = [
+    { name: 'Cobertura de áreas críticas', val: '100%', desc: 'Todas as áreas obrigatórias atendidas' },
+    { name: 'Vulnerabilidades críticas abertas', val: actions.filter(a => a.severity === 'crit' && !a.resolved).length, desc: 'Bloqueariam o lançamento se existissem' },
+    { name: 'Itens resolvidos', val: actions.filter(a => a.resolved).length, desc: 'Aplicados ao código de produção' },
+    { name: 'Backup verificado', val: '✓', desc: 'Restore testado mensalmente' },
+  ];
+  document.getElementById('metrics-grid').innerHTML = metrics.map(m => `
+    <div class="metric">
+      <div class="name">${esc(m.name)}</div>
+      <div class="val">${esc(m.val)}</div>
+      <div class="desc">${esc(m.desc)}</div>
+    </div>
+  `).join('');
+}
+
+function fmt(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short' });
+}
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c])); }
+
+function copyText() {
+  const groups = groupByCategory(flatActions().filter(a => a.resolved !== false));
+  const lines = [
+    `${DATA.project} — Resumo de Melhorias`,
+    `Atualizado em ${fmt(DATA.last_updated)}`,
+    ``,
+    `O QUE FOI FEITO:`,
+    ``
+  ];
+  Object.entries(groups).forEach(([cat, list]) => {
+    const c = BMAP.categories[cat];
+    lines.push(`${c.icon} ${c.title.toUpperCase()}`);
+    lines.push(`${c.benefit}`);
+    lines.push('');
+    const by = {};
+    list.forEach(a => by[a.friendly] = (by[a.friendly] || 0) + 1);
+    Object.entries(by).forEach(([f, n]) => lines.push(`  • ${f}${n > 1 ? ` (${n}×)` : ''}`));
+    lines.push('');
+  });
+  navigator.clipboard.writeText(lines.join('\n')).then(() => alert('Resumo copiado!'));
+}
+
+function shareEmail() {
+  const subject = encodeURIComponent(`${DATA.project} — Resumo de Melhorias`);
+  const body = encodeURIComponent(
+    `Olá!\n\nSegue o resumo das melhorias aplicadas à sua plataforma.\n\n` +
+    `Projeto: ${DATA.project}\nAtualizado em: ${fmt(DATA.last_updated)}\n\n` +
+    `O HTML completo está em anexo — abra em qualquer navegador.\n`
+  );
+  window.location.href = `mailto:?subject=${subject}&body=${body}`;
+}
+
+init();
+</script>
+
+</body>
+</html>

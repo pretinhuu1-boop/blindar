@@ -1,0 +1,144 @@
+{
+  "$schema": "https://github.com/pretinhuu1-boop/blindar/blob/main/schemas/module-map.schema.json",
+  "version": "0.21.0",
+  "description": "Mapa estruturado dos 15 módulos do launcher → agentes ativados → fases onde rodam. Consumido pelas Fases 02 (discovery), 04 (rounds-loop) e 06 (production-checklist) pra filtrar agentes pelo array config.selected_modules.",
+  "modules": {
+    "1": {
+      "name": "Baseline & Discovery",
+      "mandatory": true,
+      "skip_token": "always-on",
+      "agents": ["strategic-scanner"],
+      "phases": ["00-strategic-scan", "01-baseline", "02-discovery"]
+    },
+    "2": {
+      "name": "Segurança aplicacional core + AI/LLM + Tenant isolation + File uploads + MLOps",
+      "mandatory": true,
+      "skip_token": "core-security",
+      "agents": [
+        "access-control",
+        "cryptography",
+        "business-logic",
+        "runtime-secrets",
+        "security",
+        "auth-premium",
+        "ai-llm-safety",
+        "tenant-isolation-tests",
+        "file-uploads",
+        "mlops"
+      ],
+      "phases": ["04-rounds-loop", "05-adversarial-review"]
+    },
+    "3": {
+      "name": "Frontend hardening (CSP/XSS/SRI/Trusted Types)",
+      "mandatory": false,
+      "default_on_when": ["ui_detected"],
+      "agents": ["frontend"],
+      "phases": ["04-rounds-loop"]
+    },
+    "4": {
+      "name": "Rede & API + Payments + Realtime + API Gateway + GraphQL + gRPC",
+      "mandatory": false,
+      "default_on_when": ["project_type:saas", "project_type:ecom", "project_type:api"],
+      "agents": ["network-security", "api-design", "payments", "realtime", "api-gateway", "graphql", "grpc-internal"],
+      "phases": ["04-rounds-loop"]
+    },
+    "5": {
+      "name": "Supply chain & patch + SBOM/SLSA (compliance 2026)",
+      "mandatory": false,
+      "default_on_when": ["always"],
+      "agents": ["supply-chain", "patch-management", "sbom-slsa"],
+      "phases": ["04-rounds-loop"]
+    },
+    "6": {
+      "name": "Observabilidade & audit + Cost monitoring",
+      "mandatory": false,
+      "default_on_when": ["project_type:saas", "project_type:ecom", "project_type:api"],
+      "agents": ["observability", "cost-observability"],
+      "phases": ["04-rounds-loop"]
+    },
+    "7": {
+      "name": "Banco de dados + Backup & DR + Multi-region + Data Warehouse/ETL",
+      "mandatory": false,
+      "default_on_when": ["db_detected"],
+      "agents": ["backup-recovery", "db-architect", "multi-region", "data-warehouse-etl"],
+      "phases": ["04-rounds-loop", "06-production-checklist"]
+    },
+    "8": {
+      "name": "Compliance: LGPD + GDPR + HIPAA + PCI-DSS + frameworks",
+      "mandatory": false,
+      "default_on_when": ["data_sensitivity:high", "data_sensitivity:medium", "rigor:compliance"],
+      "agents": ["compliance-lgpd-br", "compliance", "compliance-gdpr", "compliance-hipaa", "compliance-pci-deep"],
+      "phases": ["04-rounds-loop", "06-production-checklist"]
+    },
+    "9": {
+      "name": "Performance backend + Query + CDN strategy",
+      "mandatory": false,
+      "default_on_when": ["project_type:saas", "project_type:ecom", "project_type:api"],
+      "agents": ["performance", "db-architect", "cdn-strategy"],
+      "phases": ["04-rounds-loop"]
+    },
+    "10": {
+      "name": "Fluidez completa + SEO + Frontend gen + Search + Push + Mobile native + Analytics + Audio + Video",
+      "mandatory": false,
+      "default_on_when": ["ui_detected"],
+      "agents": ["frontend-performance", "responsive-a11y", "pwa-installable", "i18n-tz", "state-cache-data", "onboarding-ux", "seo-marketing-meta", "frontend-generator", "search-quality", "push-notifications", "mobile-native", "embedded-analytics", "audio-voice", "video-streaming"],
+      "phases": ["04-rounds-loop", "06-production-checklist"]
+    },
+    "11": {
+      "name": "Funcional E2E + Testing strategy + Visual regression",
+      "mandatory": true,
+      "skip_token": "no-mock-no-broken",
+      "agents": ["functional-e2e", "testing-strategy", "visual-regression"],
+      "phases": ["04-rounds-loop", "06-production-checklist"]
+    },
+    "12": {
+      "name": "Anti-mock + Externalização + Content quality (gramática/tom/glossário)",
+      "mandatory": true,
+      "skip_token": "no-mock-no-broken",
+      "agents": ["mock-killer", "config-externalization", "content-quality"],
+      "phases": ["04-rounds-loop", "06-production-checklist"]
+    },
+    "13": {
+      "name": "Resiliência + escalabilidade + Process + Scheduled jobs + Chaos + Event-driven",
+      "mandatory": false,
+      "default_on_when": ["rigor:production", "rigor:compliance"],
+      "default_off_when": ["rigor:mvp"],
+      "agents": ["resilience", "scalability", "process-resilience", "scheduled-jobs", "chaos-engineering", "event-driven"],
+      "phases": ["04-rounds-loop"]
+    },
+    "14": {
+      "name": "DX + Flags + Backoffice + Email + Docs + Reports + Architect + Delivery + Project bootstrap (scaffold do zero)",
+      "mandatory": false,
+      "default_on_when": ["always"],
+      "agents": ["devops", "feature-flags", "backoffice-admin", "email-deliverability", "documentation-live", "execution-report", "architect", "delivery-bundle", "project-bootstrap"],
+      "phases": ["03-bootstrap-sec-html", "04-rounds-loop", "06-production-checklist", "07-final-report"]
+    },
+    "15": {
+      "name": "Pentest + adversarial review",
+      "mandatory": true,
+      "skip_token": "always-on",
+      "agents": ["pentest", "adversarial-reviewer"],
+      "phases": ["05-adversarial-review", "06-production-checklist"]
+    }
+  },
+  "resolution_rules": {
+    "description": "Como resolver defaults quando user escolhe 'defaults' no menu. Aplicar em ordem.",
+    "rules": [
+      "Módulos com mandatory:true sempre entram, independente de tudo",
+      "Default ON se default_on_when contém 'always'",
+      "Default ON se default_on_when contém condição que bate (ui_detected, db_detected, project_type:X, data_sensitivity:Y, rigor:Z)",
+      "Default OFF se default_off_when contém condição que bate (sobrescreve ON)",
+      "Resto fica OFF até user incluir manualmente"
+    ]
+  },
+  "consumer_contract": {
+    "description": "Como pipeline consome este arquivo. Ler ANTES de spawnar agentes em qualquer fase.",
+    "steps": [
+      "Ler .blindar/config.yml do projeto-alvo",
+      "Para cada agente que a fase atual quer rodar, verificar: módulo do agente está em config.selected_modules?",
+      "Se SIM: spawn agente normalmente",
+      "Se NÃO: pular (log: 'agent X skipped: module Y not in selected_modules')",
+      "Se selected_modules estiver vazio/missing: rodar todos (compat com v0.7 e abaixo)"
+    ]
+  }
+}

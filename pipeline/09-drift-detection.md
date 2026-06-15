@@ -1,9 +1,9 @@
-# Fase 8 — Drift detection (subfase de maintenance)
+# Fase 9 — Drift detection (subfase de maintenance)
 
 Detecta se defesas implementadas em ciclos anteriores foram **removidas**
 ou **enfraquecidas** em PRs subsequentes (não-blindar).
 
-⚠ **Status v0.6.0**: subfase opcional de [`07-maintenance.md`](07-maintenance.md).
+⚠ **Status v0.6.0+**: subfase opcional de [`08-maintenance.md`](08-maintenance.md).
 
 ## Sinais de drift
 
@@ -114,7 +114,7 @@ Restoring with optional refactor if original defense outdated.
 
 ## Ver também
 
-- [`pipeline/07-maintenance.md`](07-maintenance.md) — orquestrador
+- [`pipeline/08-maintenance.md`](08-maintenance.md) — orquestrador
 - [`docs/specs/reproducibility.md`](../docs/specs/reproducibility.md) —
   por que checkpoints servem como ground truth
 

@@ -5,6 +5,47 @@
   "description": "Overrides de defaults do skill, por projeto. Vive em .blindar/config.yml ou .blindar/config.json. Tudo opcional — defaults do SKILL.md valem se omitido.",
   "type": "object",
   "properties": {
+    "mode": {
+      "type": "string",
+      "enum": ["auto", "supervised", "chosen"],
+      "default": "auto",
+      "description": "Modo de execução escolhido no launcher (Fase 00). v0.8.0+."
+    },
+    "selected_modules": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 15
+      },
+      "uniqueItems": true,
+      "description": "Módulos numerados do menu (1..15) a executar. Ver SKILL.md > Menu de módulos. v0.8.0+. Sem default no schema — quando vazio/missing, pipeline trata como 'rodar todos' (compat retroativa com v0.7). Launcher (Fase 00) preenche este array conforme escolha do operador."
+    },
+    "project_type": {
+      "type": "string",
+      "enum": ["saas", "mvp", "landing", "ecom", "api", "mobile", "cli", "other"],
+      "description": "Tipo de projeto (pergunta 1 do launcher). v0.8.0+."
+    },
+    "data_sensitivity": {
+      "type": "string",
+      "enum": ["high", "medium", "low"],
+      "default": "medium",
+      "description": "Sensibilidade dos dados (pergunta 2 do launcher). 'high' força módulo 8 LGPD. v0.8.0+."
+    },
+    "rigor": {
+      "type": "string",
+      "enum": ["production", "compliance", "mvp"],
+      "default": "production",
+      "description": "Nível de rigor (pergunta 4 do launcher). 'mvp' desliga módulo 13 por default. v0.8.0+."
+    },
+    "ui_detected": {
+      "type": "boolean",
+      "description": "Detectado em Fase 1. Liga módulos 3 e 10 por default. v0.8.0+."
+    },
+    "db_detected": {
+      "type": "boolean",
+      "description": "Detectado em Fase 1. Liga módulo 7 por default. v0.8.0+."
+    },
     "round_size_loc": {
       "type": "number",
       "minimum": 1,
@@ -19,15 +60,15 @@
       "description": "A cada quantos rounds rodar adversarial review."
     },
     "target_framework": {
-      "description": "Framework(s) alvo. Pode ser string única (legacy) ou array (multi-target, v0.6.0+).",
+      "description": "Framework(s) alvo. Pode ser string única (legacy) ou array (multi-target, v0.6.0+). 'lgpd' adicionado em v0.8 — framework regulatório brasileiro reconhecido.",
       "oneOf": [
         {
-          "enum": ["iso27001", "nist-csf", "cis", "asvs-l1", "asvs-l2", "asvs-l3", "pci-dss", "soc2", null]
+          "enum": ["iso27001", "nist-csf", "cis", "asvs-l1", "asvs-l2", "asvs-l3", "pci-dss", "soc2", "lgpd", null]
         },
         {
           "type": "array",
           "items": {
-            "enum": ["iso27001", "nist-csf", "cis", "asvs-l1", "asvs-l2", "asvs-l3", "pci-dss", "soc2"]
+            "enum": ["iso27001", "nist-csf", "cis", "asvs-l1", "asvs-l2", "asvs-l3", "pci-dss", "soc2", "lgpd"]
           },
           "uniqueItems": true
         }
@@ -42,11 +83,30 @@
           "network-security", "observability", "backup-recovery",
           "patch-management", "supply-chain", "pentest", "performance",
           "frontend-performance", "resilience", "scalability",
-          "compliance", "compliance-lgpd-br", "devops"
+          "compliance", "compliance-lgpd-br", "devops",
+          "business-logic", "runtime-secrets", "strategic-scanner",
+          "adversarial-reviewer",
+          "mock-killer", "functional-e2e", "responsive-a11y",
+          "auth-premium", "pwa-installable",
+          "db-architect", "config-externalization", "api-design", "i18n-tz",
+          "state-cache-data", "onboarding-ux", "feature-flags",
+          "cost-observability", "ai-llm-safety", "backoffice-admin",
+          "process-resilience",
+          "payments", "file-uploads", "tenant-isolation-tests",
+          "email-deliverability", "seo-marketing-meta", "testing-strategy",
+          "documentation-live", "content-quality", "execution-report",
+          "architect", "delivery-bundle",
+          "project-bootstrap", "frontend-generator",
+          "realtime", "search-quality", "push-notifications", "scheduled-jobs",
+          "cdn-strategy", "chaos-engineering", "sbom-slsa",
+          "mobile-native", "compliance-gdpr", "event-driven", "multi-region",
+          "api-gateway", "embedded-analytics", "visual-regression",
+          "mlops", "graphql", "grpc-internal", "audio-voice", "video-streaming",
+          "data-warehouse-etl", "compliance-hipaa", "compliance-pci-deep"
         ]
       },
       "default": [],
-      "description": "Agents que NÃO devem ser ativados (ex: projeto CLI-only pula 'frontend')."
+      "description": "Agents que NÃO devem ser ativados (ex: projeto CLI-only pula 'frontend'). Lista alinhada com pipeline/MODULE-MAP.json (72 agentes em v0.21)."
     },
     "branch": {
       "type": "string",

@@ -1,4 +1,13 @@
-# agent: compliance
+---
+name: compliance
+category: compliance
+module: 8
+priority: P1
+description: |
+  Compliance genérico — audit chain Merkle, retention policies, redaction PII em logs. Base pra frameworks (ISO27001/NIST/SOC2/CIS) sem ser Brasil/EU específico.
+---
+
+# Agent: compliance
 
 Genérico — audit chain, retention, redaction. Funciona pra GDPR/CCPA/SOC2/etc.
 

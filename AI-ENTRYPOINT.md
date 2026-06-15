@@ -17,8 +17,8 @@ Leia `.blindar/config.yml` se existir. Detecte:
 |---|---|---|
 | `dry_run: true` | **DRY-RUN** | Simula. Cria branches mas NÃO mergeia. Reporta o que faria. |
 | `minimal_mode: true` | **MINIMAL** | Projeto pequeno. Pula discovery extensiva, usa template ATKs por stack. |
-| `maintenance_mode: true` | **MAINTENANCE** | Pipeline reduzido: Fase 0 → 7 → 8. Sem rounds extensivos. |
-| (nenhuma) | **FULL** | Pipeline completo Fases 0-6. |
+| `maintenance_mode: true` | **MAINTENANCE** | Pipeline reduzido: Fase 1 → 8 → 9 (baseline + maintenance + drift). Sem rounds extensivos. |
+| (nenhuma) | **FULL** | Pipeline completo Fases 00 + 0-7. |
 
 Em MULTI-target (`target_framework: [iso27001, soc2]`), gera coverage
 report pra cada um na Fase 6.
@@ -55,23 +55,51 @@ contra os princípios do skill.
   │
   └─ NÃO → modo FRESH START.
           1. Crie .blindar/ no projeto-alvo
-          2. Se .blindar/config.yml existir, leia overrides
-          3. Comece pelo Passo 4 (Fase 0 — Baseline)
+          2. Comece pelo Passo 3.5 (Fase 00 — Launcher)
 ```
 
-### Passo 4 — Pipeline (Fases 0 → 7)
+### Passo 3.5 — Launcher (Fase 00, v0.8+)
 
-Cada fase tem arquivo em `pipeline/`. Execute em ordem:
+```
+.blindar/config.yml existe E tem mode + selected_modules?
+  ├─ SIM → pule launcher, vá pro Passo 4 (Fase 0 strategic-scan)
+  │
+  └─ NÃO → rode pipeline/00-launcher.md:
+          1. 4 perguntas objetivas ao operador (≤30s):
+             - tipo de projeto, sensibilidade, modo, rigor
+          2. Mostra menu de 15 módulos com defaults inteligentes
+          3. Aceita "tudo" / "defaults" / "1,3,5,7,10" / "1-8" / "tudo menos 13,14"
+          4. Confirmação final (default-yes em modo AUTO, timeout 10s)
+          5. Grava .blindar/config.yml com:
+             - mode (auto|supervised|chosen)
+             - selected_modules [1..15]
+             - project_type, data_sensitivity, rigor
+             - ui_detected, db_detected (preenche em Fase 02)
+          6. Atualiza .blindar/state.json: phase="00-launcher-done"
+```
+
+Modos especiais:
+- `--resume` → pula launcher se config.yml existir
+- `--headless` → pula launcher, usa defaults (modo auto, rigor produção)
+- `--reset` → apaga .blindar/ e roda launcher do zero
+- `--dry-run` → roda launcher mas grava dry_run:true
+
+### Passo 4 — Pipeline (Fases 00 → 7)
+
+Cada fase tem arquivo em `pipeline/`. Execute em ordem. **Antes de spawnar
+qualquer agente em Fases 04 e 06, consulte `pipeline/MODULE-MAP.json` e
+filtre por `.blindar/config.yml > selected_modules`.**
 
 | Fase | Arquivo | Sua tarefa |
 |---|---|---|
-| 0 ⭐ | `pipeline/00-strategic-scan.md` | **Varre projeto, lista oportunidades numeradas, pergunta operador, planeja paralelismo.** Não modifica nada. |
+| 00 ⭐ v0.8 | `pipeline/00-launcher.md` | 4 perguntas + menu, grava config |
+| 0 ⭐ | `pipeline/00-strategic-scan.md` | Varre projeto, lista oportunidades, planeja paralelismo. Read-only. |
 | 1 | `pipeline/01-baseline.md` | Validar projeto. **Para** se suite vermelha. |
-| 2 | `pipeline/02-discovery.md` | 3 agents paralelos. **Use schemas/** pra validar saída. |
+| 2 | `pipeline/02-discovery.md` | 3 agents paralelos. Detecta `ui_detected`, `db_detected`. Atualiza config.yml. |
 | 3 | `pipeline/03-bootstrap-sec-html.md` | Criar `sec.html` na raiz do projeto-alvo, PR único. |
-| 4 | `pipeline/04-rounds-loop.md` | Loop principal. Cada round = 1 PR mergeado. **Só rounds selecionados no plan.json.** |
+| 4 | `pipeline/04-rounds-loop.md` | Loop principal. Filtra agentes por MODULE-MAP ∩ selected_modules. |
 | 5 | `pipeline/05-adversarial-review.md` | A cada 10 rounds, 4 lentes + verify. |
-| 6 | `pipeline/06-production-checklist.md` | Após adversarial limpa, gates finais. |
+| 6 | `pipeline/06-production-checklist.md` | Após adversarial limpa, gates finais (filtrados por módulo). |
 | 7 | `pipeline/07-final-report.md` | PR final com sumário. |
 
 ### Passo 5 — Após CADA round (Fase 3)
@@ -100,9 +128,9 @@ TODAS verdadeiras?
   - critical_categories_coverage_pct: >= 80
   - runbooks_generated: contém incident-response.md, key-rotation.md, supply-chain.md
   - ci_green_streak: >= 3
-  - production_checklist_passed: true (Fase 5)
+  - production_checklist_passed: true (Fase 6)
 
-  SIM → vá pra Fase 7 (relatório final) → done
+  SIM → vá pra Fase 6 (production checklist) → Fase 7 (relatório final) → done
   NÃO → continue rounds
 ```
 
@@ -136,7 +164,9 @@ TODAS verdadeiras?
 | `agents/<categoria>.md` | Quando spawn agent dessa categoria |
 | `schemas/*.json` | Antes de qualquer output JSON |
 | `frameworks/<alvo>.md` | Se config.target_framework definido |
-| `templates/sec.html` | Bootstrap (Fase 2) |
+| `pipeline/MODULE-MAP.json` | Antes de spawnar agentes (filtragem por selected_modules) |
+| `docs/trends-2026.md` | Curadoria semestral — consultar em agentes relevantes |
+| `templates/sec.html` | Bootstrap (Fase 3) |
 | `templates/pr-message.md` | Cada PR de round |
 | `stacks.md` | Categorias extras conforme stack detectada |
 | `CONTRACT.md` | Estrutura completa de `.blindar/` no projeto-alvo |

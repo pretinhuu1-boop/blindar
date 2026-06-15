@@ -1,4 +1,4 @@
-# Fase 3 — Loop de rounds
+# Fase 4 — Loop de rounds
 
 **Duração**: até termination (ver `SKILL.md`)
 
@@ -6,10 +6,36 @@
 
 Fechar gaps da matrix, um por vez, cada um virando um PR mergeado.
 
+## Filtragem por módulo selecionado (v0.8+)
+
+**ANTES de pickar um gap**, consultar `pipeline/MODULE-MAP.json`:
+
+```
+const map = readJSON("pipeline/MODULE-MAP.json")
+const config = readYAML(".blindar/config.yml")
+const selected = config.selected_modules || [1..15]  // fallback: tudo
+
+const allowedAgents = Object.entries(map.modules)
+  .filter(([id]) => selected.includes(Number(id)))
+  .flatMap(([, m]) => m.agents)
+```
+
+Cada round só roda se o agente que cobriria o gap está em `allowedAgents`.
+Gap fora de módulo selecionado fica **pulado com log** (não é finding, não
+quebra termination):
+
+```
+[round 23] skipped gap "XSS-DOM-injection" — agent 'frontend' not in
+  selected_modules (module 3 OFF)
+```
+
+Se TODOS os módulos cobrindo um gap estiverem OFF, marcar gap como `n/a`
+no `sec.html` com tag `skipped-by-user-selection`.
+
 ## Para cada round
 
-1. **Pick** — highest-severity gap do matrix
-2. **Spawn** — agente especialista da categoria (ver [`agents/`](../agents/))
+1. **Pick** — highest-severity gap do matrix **cujo agente está em allowedAgents**
+2. **Spawn** — agente especialista (resolvido via MODULE-MAP.json)
 3. **Implement** — ≤ 80 LOC + teste real (≥ 3 asserts) + grep estático
 4. **Update** — `sec.html`: ATK gap→covered, matrix recalc, version++
 5. **Local check** — suite verde + type-check verde
@@ -20,19 +46,25 @@ Fechar gaps da matrix, um por vez, cada um virando um PR mergeado.
 
 A cada 10 rounds completos: **Fase 4** (adversarial review) automaticamente.
 
-## Roster de agentes
+## Modo de execução (v0.8+)
 
-| Categoria | Agente |
+Comportamento depende de `config.mode`:
+
+| Mode | Comportamento |
 |---|---|
-| Segurança aplicacional | [`agents/security.md`](../agents/security.md) |
-| Performance | [`agents/performance.md`](../agents/performance.md) |
-| Threads / locks / breakers | [`agents/resilience.md`](../agents/resilience.md) |
-| Escalabilidade (stub) | [`agents/scalability.md`](../agents/scalability.md) |
-| Compliance genérico | [`agents/compliance.md`](../agents/compliance.md) |
-| LGPD / ANPD (BR) | [`agents/compliance-lgpd-br.md`](../agents/compliance-lgpd-br.md) |
-| Supply chain / CI | [`agents/supply-chain.md`](../agents/supply-chain.md) |
-| Frontend / CSP | [`agents/frontend.md`](../agents/frontend.md) |
-| DevOps / deploy | [`agents/devops.md`](../agents/devops.md) |
+| `auto` | Loop contínuo sem pausa. Roda até termination. |
+| `supervised` | Após cada ROUND, pausa: "round X concluído. Próximo? (s/n)". Em `n` salva estado e para. |
+| `chosen` | Roda só módulos em selected_modules. NÃO entra em loop infinito — termina quando todos os módulos selecionados estão `covered` ou `n/a`. |
+
+## Roster completo de agentes
+
+**Fonte da verdade**: [`pipeline/MODULE-MAP.json`](MODULE-MAP.json). Pipeline lê esse JSON
+em tempo de execução pra resolver agentes por módulo selecionado.
+
+Versão atual: **72 agentes em v0.21** distribuídos em 15 módulos numerados.
+Para a tabela visual completa, ver [`SKILL.md`](../SKILL.md) seção "Menu de
+módulos numerados". A filtragem real respeita `config.selected_modules` ∩
+`MODULE-MAP[id].agents`.
 
 ## Quality gates por round
 

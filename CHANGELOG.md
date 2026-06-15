@@ -3,6 +3,1121 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.21.0] — 2026-06-14
+
+### Adicionou — Intelligence em mais 5 agentes
+
+Completa a passada de "agentes inteligentes" iniciada em v0.20.
+Agora **10 agentes consultam `.blindar/intelligence.yml`** + `content-quality`
+consulta `.blindar/copy-style.yml` (link cruzado em
+`schemas/intelligence.schema.json`):
+
+#### `responsive-a11y`
+- Respeita `aria-hidden="true"`, `role="presentation"`, `data-blindar-skip`
+- `desktop_only_routes` / `mobile_only_routes` — não acusa scroll horizontal em rota intencionalmente desktop-only (admin, BI)
+- `touch_target_exempt_selectors` — elementos legítimos < 44×44px
+- `lighthouse_thresholds_per_route` — admin pode ter threshold relaxado, checkout mais rigoroso
+- `ignore_violations` com `reason` + `adr` obrigatórios
+- `strict_in_production_only` vs `always_strict`
+- Auto-detecta Storybook stories (não acusa — é showcase)
+
+#### `api-design`
+- `idempotent_by_design` — login/refresh/logout/health não exigem header `Idempotency-Key`
+- `cursor_pagination_exempt` — admin precisa "página 47"
+- `versioning_exempt` — `/health/live`, `/.well-known/*` são estáveis
+- `rfc7807_exempt` — webhooks de gateway externo seguem contrato deles
+- `rate_limit_exempt` — `/health/*` não pode ser limitado
+- `webhook_profiles` — Stripe ≠ MP ≠ PagSeguro
+- Marker JSDoc `@no-idempotency-needed`, `@stable-endpoint`, `@custom-error-format`
+
+#### `email-deliverability`
+- **Env-aware** — DMARC `p=reject` exigido SÓ em produção, dev/staging relaxed
+- Auto-detecta provider `mailpit`/`mailtrap` → modo dev
+- Auto-detecta subdomínio `staging-*` → modo staging com thresholds relaxados
+- `ip_warmup_grace_period_days: 30` — não acusa volume baixo em IP novo
+- `template_safe_list` — transacionais (welcome/reset/receipt/confirmation) isentos de unsubscribe
+- `transactional_exempt_from` lista
+- Marker HTML `<!-- @blindar:transactional -->`
+- Var ambiente `BLINDAR_ENV=development|staging|production`
+
+#### `seo-marketing-meta`
+- `noindex_routes` — `/admin/*`, `/app/*`, `/dashboard/*` não devem aparecer no sitemap nem ter canonical exigida
+- `public_routes` — onde TODO SEO check é obrigatório
+- `json_ld_by_route_type` — `/blog/*` → Article, `/products/*` → Product, etc auto-aplicado
+- `hreflang_required` — só em rotas multi-idioma de marketing
+- `llm_crawlers.allow/deny` — política explícita (GPTBot, ClaudeBot, PerplexityBot, CCBot)
+- `site_type` (saas/ecommerce/content/landing) — adapta defaults
+- Auto-detecta `metadata.robots = 'noindex'` em Next.js → skip checks
+- Auto-detecta route groups privados (`(app)`, `(dashboard)`, `(admin)`)
+- Marker `@blindar:noindex`
+
+#### `payments`
+- `active_gateways` — auto-detecta de imports/env (stripe, mercadopago, pagseguro, pix_direct)
+- `gateway_profiles` — header de signature, lib, success status, retry policy diferentes por gateway:
+  - **Stripe**: `stripe-signature`, `constructEvent`, retry em 5xx, supports 3DS
+  - **Mercado Pago**: `x-signature`, accepts 200 + 422, PIX nativo
+  - **PagSeguro**: `x-pagseguro-signature`, legacy SOAP em alguns endpoints
+  - **PIX direto**: PSP-aware (Itaú/Bradesco/Sicredi), DICT lookup, QR code 15min
+- `required_pii_redaction` — CPF/CNPJ/phone/address sempre redactados
+- `exempt_from_idempotency` — GET-shaped POSTs (listar refunds, calcular fees)
+- Auto-detecta modo test (`sk_test_*` no Stripe) → relaxa reconciliação
+- Markers JSDoc `@blindar:gateway-stripe`, `@blindar:legacy-soap-endpoint`, etc
+
+### Mudou — `schemas/intelligence.schema.json`
+
+Adicionadas as 5 seções novas. Schema agora documenta 11 dos 12 agentes
+com intelligence (content-quality continua linkando ao próprio agent file).
+
+### Total de agentes
+
+**72** (mesmo de v0.20 — refinamento, sem novos agentes).
+
+### Migração v0.20.0 → v0.21.0
+
+Nada a fazer. Agentes detectam contexto automaticamente. Se quiser
+customizar exceções, criar `.blindar/intelligence.yml` no projeto com a
+seção do agente desejado.
+
+---
+
+## [0.20.0] — 2026-06-14
+
+### Adicionou — Preview + Aprovação no frontend-generator (Seção P)
+
+**Pedido explícito do operador**: nenhuma reescrita de frontend sem
+consulta prévia. Agora o agente passa por **3 portões** antes de tocar
+em qualquer arquivo:
+
+1. **Portão 1** — Pergunta inicial (4 opções):
+   - Gerar do zero
+   - Refazer (releitura) com aprovação por rota
+   - Atualizar só faltantes
+   - Cancelar
+
+2. **Portão 2** — Geração de `frontend-preview.html` na raiz do projeto:
+   - Lista TODAS as rotas que SERIAM criadas, com checkbox `apply/keep/skip`
+   - Mockup dos dashboards por role (MASTER/ADMIN/GERENCIAL/OPERACIONAL)
+   - Lista de forms gerados de Zod schemas
+   - Componentes UI utilizados
+   - Stack que será adicionada (incluindo deps novas)
+   - Estimativa de LOC e arquivos a criar
+   - Filtros por método, decisão, busca livre
+   - Botões: "Aprovar TUDO", "Baixar minhas decisões", "Cancelar"
+   - Operador baixa JSON, salva em `.blindar/frontend-decisions.json`
+
+3. **Portão 3** — Confirmação final no terminal:
+   - Mostra resumo com `(s/N)` default N
+   - Operador precisa digitar `s` explícito
+   - Estado registrado em `.blindar/frontend-state.json` (auditoria)
+
+**Nenhum arquivo do projeto é tocado nos portões 1 e 2.** `Ctrl+C` em
+qualquer ponto = nada perde. Re-execução com `--reset` recomeça do zero.
+
+### Adicionou — Sistema de Intelligence compartilhada
+
+Registry `.blindar/intelligence.yml` com schema em
+`schemas/intelligence.schema.json`. Todos os agentes consultam pra
+evitar falso positivo.
+
+Cinco agentes ganharam **seção "Intelligence"** documentando suas
+exceções legítimas:
+
+#### `mock-killer`
+- `ignore_paths`: glob de paths ignorados (node_modules, vendor, *.gen.ts, __mocks__, test, stories, .dev.ts, scripts)
+- `keep_console_in`: arquivos onde console.* é OK (logger.ts, dev/)
+- `intentional_todo_pattern`: regex de TODOs com issue link aceitos
+- `inline_override_marker`: `// @blindar:keep`
+- Auto-detecta `// eslint-disable-next-line no-console` (decisão consciente)
+
+#### `config-externalization`
+- `whitelist_constants`: HTTP codes, byte sizes, tempos universais, math constants
+- `whitelist_url_patterns`: localhost, *.local, *.test, example.com
+- `whitelist_strings_short`: "ok", "id", "GB", "%" etc
+- `inline_override_marker`: `// @blindar:hardcode-ok`
+
+#### `db-architect`
+- `global_tables`: tabelas legitimamente SEM tenant_id (feature_flags, system_logs, migrations, exchange_rates, countries)
+- `no_rls_required_tables`: onde RLS é overkill
+- SQL comment marker: `-- @blindar:global` ou `/// @blindar:global` (Prisma)
+- Detecção: tabela sem FK vinda de tabela tenant-scoped = provavelmente global
+
+#### `tenant-isolation-tests`
+- `inherit_from: db-architect` (respeita global_tables do db-architect)
+- `skip_endpoints`: /admin/tenants, /health/*, /api/public/*, /api/webhooks/*
+- `cross_tenant_intentional`: casos onde MASTER deve ver cross-tenant (com audit)
+- Auto-skip: endpoint com `@Roles('MASTER')` exclusivo
+
+#### `architect`
+- `router_mode`: auto-detect App Router vs Pages Router (não força conversão)
+- `structure_style`: auto-detect feature/layer/hybrid
+- `blueprint_overrides`: aliases custom do projeto
+- `allowed_top_level_dirs`: infra/, k8s/, docs/, scripts/ não são "erradas"
+- `ignore_size_limit_in`: *.gen.ts, schema.prisma, locales/ podem ser grandes
+- Marker: `// @blindar:keep-structure`
+- Auto-detecta Vue/Svelte/Astro e muda blueprint
+
+### Adicionou — `templates/frontend-preview.html`
+
+HTML single-file ~25 KB, self-contained, modo escuro automático,
+print-friendly. Visualiza decisões interativamente, gera JSON pra blindar
+aplicar depois.
+
+### Mudou — SKILL.md
+
+Nova seção "Intelligence System" com exemplos e learning mode.
+Templates expandidos (frontend-preview agora listado).
+
+### Total de agentes
+
+**72** (mesmo de v0.19.0 — não criou agente novo, melhorou os existentes).
+
+### Migração v0.19.0 → v0.20.0
+
+- `intelligence.yml` não existir = comportamento atual preservado (defaults sensatos).
+- Primeira execução de mock-killer/config-ext/db-architect/etc gera template
+  comentado em `.blindar/intelligence.yml` pra operador customizar.
+- Frontend-generator em modo refazer agora SEMPRE pede aprovação (default N).
+  Não há `--yes` flag — confirmação explícita é regra.
+
+---
+
+## [0.19.0] — 2026-06-14
+
+### Adicionou — 22 agentes (Tier 1 + 2 + 3 da listagem prévia)
+
+**Tier 1 (universais)** — módulos 4, 5, 9, 10, 13:
+- `realtime` (m4) — WebSocket/SSE/CRDT com auth handshake, rooms multi-tenant, heartbeat, Redis adapter, presença
+- `search-quality` (m10) — Meilisearch/Algolia/pg_trgm com pesos, debounce, sinônimos, empty state, multi-tenant
+- `push-notifications` (m10) — VAPID+FCM+APNs, consent gradual, quiet hours, fallback chain
+- `scheduled-jobs` (m13) — Redlock exactly-once, idempotência, watchdog, retry+DLQ, checkpoint
+- `cdn-strategy` (m9) — cache em camadas, tags, immutable, image opt, signed URLs, anti-hotlink
+- `chaos-engineering` (m13) — Chaos Mesh, GameDays, hipóteses, auto-rollback, RPO/RTO
+- `sbom-slsa` (m5) — CycloneDX/SPDX, SLSA L3, Cosign+Rekor, admission policy
+
+**Tier 2 (mercados específicos)** — módulos 4, 7, 8, 10, 11:
+- `mobile-native` (m10) — Expo SDK 52, deep links, EAS Build/Update, biometria, SecureStore
+- `compliance-gdpr` (m8) — ROPA, DPIA, DPA, TIA, ePrivacy cookies, 8 direitos
+- `event-driven` (m13) — Kafka outbox, CQRS, Event Sourcing, saga
+- `multi-region` (m7) — active-passive, DNS failover, RPO/RTO formais, drills
+- `api-gateway` (m4) — Kong/Tyk, API keys, quotas, plans, dev portal
+- `embedded-analytics` (m10) — Metabase/Cube embed, RLS, cache, white-label
+- `visual-regression` (m11) — Chromatic/Percy, snapshot stable, cross-browser/viewport
+
+**Tier 3 (niche, sob demanda)** — módulos 2, 4, 7, 8, 10:
+- `mlops` (m2) — MLflow registry, DVC, drift detection, feature store, OWASP ML
+- `graphql` (m4) — persisted queries, depth/complexity limit, DataLoader, federation
+- `grpc-internal` (m4) — Protobuf versionado, mTLS, retry policy, codegen CI
+- `audio-voice` (m10) — Opus, MediaRecorder, PTT, STT (Deepgram), TTS (ElevenLabs)
+- `video-streaming` (m10) — HLS adaptive, transcoding (Mux), Picture-in-Picture, WebRTC
+- `data-warehouse-etl` (m7) — Snowflake+dbt+Dagster, incremental, lineage, cost
+- `compliance-hipaa` (m8) — 18 PHI identifiers, BAA, encryption, audit 6 anos
+- `compliance-pci-deep` (m8) — SAQ types, 12 reqs, network segmentation, KMS
+
+### Mudou — MODULE-MAP módulos 2, 4, 5, 7, 8, 9, 10, 11, 13
+
+Renomes refletindo novos agentes por módulo. Todos os 22 agentes amarrados.
+
+### Total de agentes
+
+**72** (era 50 em v0.18.0). +44% em 1 release. Cobre praticamente todas as
+verticais comuns + 8 niches.
+
+### Migração v0.18.0 → v0.19.0
+
+Nada a fazer. Novos agentes só ativam quando módulo correspondente
+selecionado E projeto bate pré-requisitos (ex: `mlops` só se detectar
+training scripts). Ninguém roda sem motivo.
+
+---
+
+## [0.18.0] — 2026-06-14
+
+### Adicionou — `project-bootstrap` (módulo 14)
+
+Cria projeto novo do **ZERO**. Faz 6 perguntas (nome, tipo, stack, multi-
+tenant, sensibilidade dados, idiomas) e em ≤5min entrega:
+
+- Estrutura monorepo (Turborepo + pnpm workspaces) com `apps/web` + `apps/api`
+  + `packages/{shared,ui,config}`
+- `package.json` com scripts, engines pinados, pnpm
+- TypeScript **strict** desde o dia 1 (`noUncheckedIndexedAccess: true`)
+- ESLint + Prettier + import sorting + Tailwind class sorting
+- Husky pre-commit (lint-staged) + commitlint (conventional commits)
+- GitHub Actions: CI (lint+test+build+blindar dry-run) + deploy-staging + deploy-prod
+- Docker compose com Postgres+Redis local + healthchecks
+- Scripts `iniciar.bat` (Windows) e `iniciar.sh` (Linux/macOS)
+- Prisma schema com `tenant_id` + audit columns + RLS pré-configurado
+- Seed: 1 tenant demo + 4 users (MASTER/ADMIN/GERENCIAL/OPERACIONAL)
+- `.env.example` documentando TODAS variáveis necessárias (agrupado por
+  serviço, com instrução de como obter)
+- `.gitignore` completo (Node, env, .blindar local, uploads)
+- README com quickstart < 5min **testado**
+- `.nvmrc`, `.editorconfig`, `.vscode/{extensions,settings}.json`
+- `.blindar/config.yml` já preenchido conforme respostas
+- Licença MIT default (com pergunta)
+- Commit zero: "chore: initial scaffold via blindar project-bootstrap"
+
+**Stacks default por tipo:**
+- SaaS: Next.js 15 (App Router + RSC) + NestJS + Postgres + Prisma + Vercel + Supabase
+- MVP: Next.js 15 + Server Actions + Postgres + Vercel (mono-app)
+- E-com: Next.js 15 + Stripe + Postgres + Algolia/Meilisearch
+- API pura: NestJS + Postgres + Swagger + Docker + Railway
+- Landing: Astro + Tailwind + Cloudflare Pages (estático)
+- Mobile: Expo SDK 52 + EAS Build + Supabase + NestJS
+- CLI/Lib: TypeScript + tsup + Changesets
+
+**NÃO faz**: feature de negócio, sobrescrever projeto existente, comprar
+domínio, decidir branding. Pergunta dupla antes de scaffold em pasta
+não-vazia.
+
+### Adicionou — `frontend-generator` (módulo 10)
+
+**Lê o backend → gera frontend coerente** em horas, não sprints.
+
+**Inputs lidos** (não pergunta o que dá pra detectar):
+- `openapi.yaml` (do `api-design`) → endpoints, métodos, schemas
+- `prisma/schema.prisma` (do `db-architect`) → entidades, relações
+- `templates/role-hierarchy.md` ou `users.role` enum → roles + permissões
+- `packages/shared/schemas/` (Zod) → reuso de validação FE+BE
+- Design tokens / Tailwind config → cores, fontes, spacing
+
+**Gera estrutura completa Next.js 15:**
+- 1 página por rota REST (lista, detail, new, edit) com loading skeleton,
+  empty state rico (ícone+texto+CTA), error boundary amigável
+- Forms gerados de Zod schemas (DatePicker pra `datetime`, Select pra
+  `enum`, máscara CPF pra regex BR, etc.)
+- Dashboards **por role** (MASTER/ADMIN/GERENCIAL/OPERACIONAL) com
+  widgets pensados pra cada audience
+- SDK API client gerado via Orval (React Query + cache + retry)
+- Permission matrix derivada do `@Roles()` do backend
+  (`<Can do="appointment.delete">`)
+- i18n keys auto-extraídas pra `locales/pt-BR/<feature>.json` (en-US
+  com placeholder `__TRANSLATE__`)
+- PWA manifest + service worker (delegando ao `pwa-installable`)
+- SEO metadata em cada page.tsx (via `seo-marketing-meta`)
+- Playwright spec auto-gerado pra cada rota nova (via `functional-e2e`)
+
+**Modo refazer (strangler fig)**:
+- Detecta frontend existente
+- Gera ao lado em `frontend.next/` (NUNCA toca no antigo)
+- Cria `docs/REFACTOR-FRONTEND.md` com mapping de rotas + roteiro de
+  migração feature por feature
+- Sugere proxy com feature-flag pra rota X ir pro novo, resto pro antigo
+- Quando 100% migrado: deleta antigo em PR separado
+
+**NÃO faz**: inventa feature/regra que backend não tem, sobrescreve
+arquivo com marca `<!-- USER-EDITED -->`, decide cores próprias
+(lê design tokens), apaga frontend antigo no primeiro PR.
+
+### Mudou — MODULE-MAP módulos 10 e 14
+
+- **Módulo 10** ganhou `frontend-generator` (gera/refaz frontend lendo backend)
+- **Módulo 14** ganhou `project-bootstrap` (scaffold do zero)
+
+### Total de agentes
+
+**50** (era 48 em v0.17.0).
+
+### Migração v0.17.0 → v0.18.0
+
+Nada a fazer. Novos agentes só ativam quando operador chamar
+explicitamente (`blindar bootstrap` ou `blindar generate frontend`) ou
+quando módulo correspondente estiver selecionado e projeto bater
+pré-requisitos.
+
+---
+
+## [0.17.0] — 2026-06-14
+
+### Adicionou — `delivery-bundle` (módulo 14)
+
+Agente que ao **final da execução** (Fase 07) monta a pasta `release/`
+no projeto-alvo com **TUDO** que precisa pra entregar o sistema:
+
+#### Estrutura gerada
+
+```
+release/
+├── README.md                          ← índice + como usar
+├── DEPLOY.md                          ← guia de implantação completo
+├── MANUAL.md                          ← manual por role (MASTER/ADMIN/...)
+├── API.md                             ← referência humana da API
+├── openapi.yaml                       ← spec OpenAPI 3.1 completa
+├── postman/
+│   ├── collection.json                ← collection production-ready
+│   ├── env-local.json
+│   ├── env-dev.json
+│   ├── env-staging.json
+│   └── env-prod.json                  ← placeholders (sem secrets reais)
+├── diagrams/
+│   ├── architecture.mermaid
+│   ├── er-database.mermaid
+│   ├── auth-flow.mermaid
+│   └── payment-flow.mermaid
+├── CHECKLIST-GO-LIVE.md               ← 28 itens pré-launch
+├── SLA-TEMPLATE.md
+├── DEMO-SCRIPT.md                     ← 5/15/30 min
+├── CHANGELOG-PUBLIC.md                ← versão amigável
+└── legal/
+    ├── terms-of-service.template.md
+    ├── privacy-policy.template.md
+    ├── cookie-policy.template.md
+    └── data-processing-agreement.template.md
+```
+
+#### Highlights do Postman collection
+
+Não é só "import OpenAPI" — collection production-ready:
+- **Folders por feature** com cenários nomeados (Happy path, Conflito, Cancelar)
+- **Pre-request scripts**: refresh automático de token se expirado,
+  `Idempotency-Key` auto-gerado em POST
+- **Post-response tests**: status 2xx, response time < 500ms, schema
+  validation contra OpenAPI, save IDs no env pra próximo request
+- **4 environments separados** (local/dev/staging/prod). Env-prod só
+  com placeholders — **nunca commitar secret real**.
+- **Newman-ready**: `newman run collection.json -e env-local.json`
+  roda em CI e gera HTML report.
+
+#### Outros artefatos
+
+- **DEPLOY.md** auto-extrai env vars de `.env.example` em tabela
+  documentada (nome, tipo, obrigatório, descrição, como obter)
+- **MANUAL.md** gera seção por role detectado no `role-hierarchy`,
+  com placeholders pra screenshots
+- **Diagramas Mermaid** versionáveis (não PNG): arquitetura geral, ER
+  do banco, fluxos sequenciais de auth e payment
+- **CHECKLIST-GO-LIVE.md** com 6 grupos (Infra, Segurança, Banco,
+  Funcional, Legal, Operacional) totalizando 28 itens
+- **CHANGELOG-PUBLIC.md** versão amigável (sem refs a issues, sem nomes
+  de devs, sem stack trace)
+- **Templates legais** com marca `[REVISAR JURÍDICO]` em cláusulas
+  sensíveis — sempre passar por advogado antes de publicar
+
+#### Preservação de edits manuais
+
+Operador edita `MANUAL.md` ou `SLA-TEMPLATE.md` → adiciona marca
+`<!-- USER-EDITED -->` no topo. Próxima execução do delivery-bundle:
+- NÃO sobrescreve
+- Gera versão nova em `<file>.next.md` pro operador comparar
+- Avisa no sec.html
+
+#### Config opcional (`.blindar/config.yml`)
+
+```yaml
+delivery:
+  enabled: true
+  zip: true                         # gerar release-vX.Y.zip
+  postman:
+    environments: [local, dev, staging, prod]
+    include_scenarios: true
+  diagrams:
+    architecture: true
+    er_database: true
+    auth_flow: true
+    payment_flow: true
+  manual:
+    roles: auto                     # ou lista explícita
+  custom_sections:
+    - file: MIGRATION-FROM-V1.md
+    - file: PARTNER-API.md
+```
+
+### Consome saída de outros agentes (zero duplicação)
+
+- `api-design` → openapi.yaml + Postman base
+- `db-architect` → ER diagram
+- `role-hierarchy` → estrutura do MANUAL
+- `devops` → conteúdo do DEPLOY
+- `auth-premium` → auth flow diagram
+- `payments` → payment flow diagram
+- `execution-report` → CHANGELOG público
+- `documentation-live` → coexiste (interna evoluindo vs snapshot estável)
+
+### Total de agentes
+
+**48** (era 47 em v0.16.0).
+
+### Migração v0.16.0 → v0.17.0
+
+Em projetos já existentes: primeira execução em v0.17.0 cria pasta
+`release/` do zero. Subsequentes regeneram preservando edits manuais
+(marca `<!-- USER-EDITED -->`).
+
+---
+
+## [0.16.0] — 2026-06-14
+
+### Adicionou — `client-report.html` (relatório executivo)
+
+Novo arquivo gerado na raiz do projeto-alvo, **em paralelo** ao
+`blindar-report.html` técnico. Lê o **mesmo `report-data.json`** mas
+renderiza visão amigável ao cliente final / decisor:
+
+- **10 categorias de benefício** (não módulos técnicos): Segurança das
+  contas, Confiabilidade dos dados, Velocidade, Experiência do usuário,
+  Proteção do dinheiro, Crescimento sustentável, Conformidade legal,
+  Operação 24/7, IA segura, Manutenção e evolução. Cada uma com ícone,
+  título, frase de benefício pro negócio.
+- **Resumo executivo** com 5 destaques principais.
+- **4 cards de estatística** focados em valor (não em quantidade técnica):
+  áreas de melhoria, melhorias aplicadas, sessões de trabalho,
+  especialidades envolvidas.
+- **Mapa `agent_to_category`** embutido (46 agentes mapeados → categoria
+  + descrição em linguagem de negócio). Operador pode editar pra
+  ajustar o tom do produto dele.
+- **Visual mais clean**: tipografia maior, gradiente sutil no header,
+  ícones grandes por categoria.
+- **3 ações de export**: imprimir (CSS @media print otimizado A4),
+  copiar resumo em texto puro (não markdown — pronto pra colar em
+  WhatsApp/email), abrir email com subject/body pré-preenchidos.
+
+### Atualizou — `execution-report.md`
+
+- Documenta agora a **dupla saída**: técnico (`blindar-report.html`) +
+  cliente (`client-report.html`).
+- Função de update agora re-grava bloco JSON em **ambos** os HTMLs.
+- Esclarece que `client-report.html` tem um **segundo bloco**
+  `<script id="benefit-map">` que NÃO é atualizado pelo blindar — é a
+  tabela de tradução técnica→cliente que o operador customiza.
+
+### Adicionou — `agents/architect.md` (módulo 14)
+
+Agente arquiteto cobrindo organização do código:
+
+- **Detecção de stack** + escolha de blueprint do mercado (Next.js 15,
+  NestJS DDD-light, Monorepo Turborepo/Nx, React SPA Vite, FastAPI).
+  Cada blueprint com estrutura recomendada + regras de fronteira.
+- **Naming conventions** não-negociáveis (kebab pra arquivos, PascalCase
+  pra componentes, useCamelCase pra hooks, UPPER_SNAKE pra constants).
+- **Boundaries via `dependency-cruiser`** ou `eslint-plugin-boundaries`:
+  - `features/A` não importa de `features/B`
+  - `components/` não importa de `app/`
+  - `lib/` não importa de `components/`
+  - Domain não importa de infrastructure (DDD)
+  - Zero ciclos
+- **File size limits**: componente ≤300 LOC, hook ≤100, util ≤200,
+  service ≤400, page ≤200. `utils.ts`/`helpers.ts`/`common.ts`
+  **proibidos** (sempre nomear por domínio: `date-utils.ts`,
+  `currency-utils.ts`).
+- **Feature-based vs layer-based**: orientação de quando usar cada um,
+  **híbrido recomendado** (`/components/ui` + `/lib` + `/hooks` +
+  `/features/<nome>`).
+- **DDD**: aplicar só quando complexidade justifica (5+ devs, ubiquitous
+  language). Estrutura DDD-light: domain / application / infrastructure /
+  presentation.
+- **Dead code**: `knip` + `ts-prune` + `vulture` (Python) como gate.
+- **Circular deps**: `madge --circular` ou `depcruise` em CI.
+- **Strangler fig**: refactor gradual nunca big-bang. Métricas pra
+  acompanhar migração de % de imports.
+- **15 anti-padrões CRIT**: `utils.ts` genérico, importação cross-feature,
+  componente RSC com `'use client'` sem motivo, path `../../../../`,
+  index.ts barril > 50 linhas, mistura de naming, arquivo > 600 LOC, etc.
+
+### Mudou — MODULE-MAP módulo 14
+
+Renomeado: "DX + Flags + Backoffice + Email + Docs + Execution report" →
+"DX + Flags + Backoffice + Email + Docs + **Reports (técnico+cliente)** +
+**Architect**". Agentes: +`architect`.
+
+### Total de agentes
+
+**47** (era 46 em v0.15.0).
+
+### Migração v0.15.0 → v0.16.0
+
+Em projetos já com `blindar-report.html`: primeira execução em v0.16.0
+copia `client-report.html` em paralelo (não toca no técnico) e popula
+com os mesmos dados. A partir daí ambos atualizam juntos.
+
+---
+
+## [0.15.0] — 2026-06-14
+
+### Adicionou — Execution report HTML cumulativo (módulo 14)
+
+Novo arquivo gerado na raiz do projeto-alvo: `blindar-report.html`.
+
+- **Self-contained**: HTML + CSS + JS embutidos em um único arquivo
+  (~25 KB). Funciona offline, abre em qualquer browser, pode anexar em
+  email.
+- **Cumulativo**: cada execução do blindar **apenda** ao histórico
+  (nunca substitui). Operador vê toda a evolução do hardening ao longo
+  do tempo.
+- **Fonte da verdade**: `.blindar/report-data.json` (versionado). HTML
+  re-renderiza o bloco `<script id="blindar-data">` a partir do JSON.
+  Layout do HTML pode ser customizado sem perder dados.
+- **3 visualizações**: Timeline (mais recente primeiro), Por módulo,
+  Por agente.
+- **6 stats no topo**: módulos executados, agentes ativos, rounds
+  completados, findings resolvidos, crits abertos, highs em
+  accept-risk.
+- **5 filtros client-side**: busca livre, módulo (1-15), agente,
+  severidade (CRIT/HIGH/MED/LOW/Resolvidos), período (24h/7d/30d/tudo).
+- **4 ações de exportação**:
+  - 🖨️ Imprimir / PDF (CSS @media print esconde controles, expande
+    detalhes, otimiza pra A4)
+  - 📋 Copiar resumo (gera Markdown estruturado, cola em email/Slack)
+  - 💾 Baixar dados (JSON cru pra backup ou análise externa)
+  - ✉️ Compartilhar (`mailto:` com subject/body pré-preenchidos)
+- **Modo escuro automático** via `prefers-color-scheme`.
+- **a11y**: contraste WCAG AA, tags semânticas (`<details>`,
+  `<summary>`, `<header>`, `<footer>`), escape de XSS via `esc()`.
+
+### Adicionou — `agents/execution-report.md`
+
+Agente passivo (não roda lógica própria) — outros agentes apendam
+ações ao final de cada round. Documenta:
+- Schema do JSON cumulativo (com 11 campos por action)
+- Workflow de criação (Fase 03), append (Fase 04), fechamento (Fase 07)
+- Regex de update do bloco JSON no HTML
+- Cleanup periódico (> 1000 entries → archive, > 5MB → particiona)
+- Greps de validação (HTML ↔ JSON em disco coerentes)
+- 9 anti-padrões (não substituir JSON inteiro, não permitir XSS via
+  description, não servir HTML em rota pública do app, etc.)
+
+### Adicionou — `templates/execution-report.html`
+
+Template completo do HTML. Copiado pra raiz do projeto na Fase 03 e
+atualizado nas fases 04/05/06/07.
+
+### Mudou — MODULE-MAP módulo 14
+
+- Adicionado `execution-report` aos agentes
+- Adicionadas fases `03-bootstrap-sec-html` e `07-final-report` à
+  lista `phases` (além das 04 e 06 já presentes)
+- Renome: "DX + Feature flags + Backoffice/Admin + Email + Docs" →
+  "DX + Flags + Backoffice + Email + Docs + **Execution report**"
+
+### Total de agentes
+
+**46** (era 45 em v0.14.1).
+
+### Migração v0.14.1 → v0.15.0
+
+Em projetos com blindar v0.14.1 já rodado: a primeira execução em
+v0.15.0 cria `blindar-report.html` e `.blindar/report-data.json` do
+zero. Histórico anterior não está retroativamente disponível (não há
+como reconstruir actions sem dados gravados). A partir daí é cumulativo.
+
+---
+
+## [0.14.1] — 2026-06-14
+
+### Fixou — content-quality agora é inteligente com nomes próprios e code-switching
+
+Adicionou 4 listas de proteção em `.blindar/copy-style.yml` que evitam
+falsos positivos comuns:
+
+- **`protected_terms`**: marcas (Stripe, WhatsApp, Vercel), nomes de
+  produto (Salon Pro), tenants (Beleza Real), pessoas (Maykonbts), roles
+  (MASTER/ADMIN). Auto-populado de `package.json`, `README.md` H1, `.env`
+  vars (`BRAND_NAME`/`APP_NAME`/`SERVICE_NAME`), constants files
+  (`src/lib/brand.ts`), arquivos de roles. Operador edita depois.
+
+- **`technical_terms`**: termos consagrados aceitos em qualquer locale
+  (API, webhook, deploy, dashboard, KPI, ROI, MVP, SaaS, MRR, churn, lead,
+  scroll, swipe). Não viram "erro de estrangeirismo" em pt-BR.
+
+- **`proper_nouns_detection`**: regras de auto-detecção (CamelCase ≥ 2
+  capitalizadas, UPPERCASE ≥ 2 chars, precedido de "do/da/de"). Novo
+  termo detectado vira candidato a `protected_terms` (low-severity pra
+  revisão humana, não bloqueia).
+
+- **`allowed_code_switching`**: padrões aceitos de mistura pt+en
+  ("Configurar webhook", "Conectar Stripe"). Lista de
+  `forbidden_translations` (manter "deploy"/"webhook"/"dashboard"
+  originais, não forçar tradução).
+
+### Adicionou — engine de decisão documentada
+
+Pipeline em 6 passos antes de flagar qualquer token: protected_terms →
+technical_terms → proper_nouns_detection → context_rules.ignore →
+context_rules.revisar_apenas → revisão real. Documentado em
+`A.1. Engine de decisão` com 10 exemplos práticos resolvidos.
+
+### Adicionou — `context_rules`
+
+Distingue **código de UI**. Ignora: variáveis, constantes UPPER_SNAKE,
+schemas Zod, comentários, JSDoc, URLs, regex, *.test.*, *.config.*,
+.env*, logs estruturados. Revisa apenas: JSX text nodes, atributos
+visíveis (alt/title/aria-label/placeholder), props textuais, i18n files,
+templates de email, markdown público.
+
+### Migração v0.14.0 → v0.14.1
+
+Em projetos com `.blindar/copy-style.yml` v0.14.0 já criado: agente
+detecta versão antiga e **adiciona as 4 seções novas com auto-população**
+preservando configs existentes do operador. Backup automático em
+`copy-style.yml.backup-v0.14.0`.
+
+---
+
+## [0.14.0] — 2026-06-14
+
+### Adicionou — content-quality (módulo 12)
+
+Agente revisor de copy/gramática/tom que respeita config do projeto:
+
+- **Config de tom** em `.blindar/copy-style.yml`: idioma primário,
+  formalidade (casual/neutral/formal), pronoun (você/tu), warmth, glossário
+  com termos preferidos + variações proibidas, lista de `forbidden_words`,
+  `preferred_phrasing` (consistência de microcopy), regras de
+  inclusividade (gênero neutro, anti-capacitismo).
+- **5 camadas de validação**: (1) LanguageTool ortografia+gramática pt-BR/
+  en-US/es-ES, (2) Vale prose lint com regras Microsoft + Blindar custom,
+  (3) glossário (detecta termos errados), (4) alex.js (inclusividade),
+  (5) LLM opcional pra score de tom (cache por hash).
+- **Tipos de copy revisados**: botões primários (consistência),
+  mensagens de erro (amigáveis, não culpando user), empty states
+  (CTA claro), confirmações destrutivas (texto explícito, não "OK"),
+  emails transacionais, política/TOS, tooltips, push notifications
+  (< 50 chars título), placeholders (não substituem label).
+- **Greps**: erro técnico vazando pra UI (`undefined`, `TypeError`),
+  "Tem certeza?" vago, "OK/Cancelar" em destrutivo, plurais por
+  concatenação, traduções faltando entre locales.
+- **Bloqueia merge se**: ortografia em produção, glossário misturado
+  (`agendamento` + `reserva` no mesmo produto), confirmação destrutiva
+  genérica, termo proibido detectado, pronoun inconsistente.
+
+### Mudou — módulo 12
+
+Renomeado de "Anti-mock & cleanup + Externalização" para
+"Anti-mock + Externalização + Content quality (gramática/tom/glossário)".
+
+### Total de agentes
+
+**45** (era 44 em v0.13).
+
+### Migração v0.13 → v0.14
+
+Nada a fazer. Em projetos sem `.blindar/copy-style.yml`, o agente cria
+template na primeira execução com defaults sensatos pro idioma detectado.
+
+---
+
+## [0.13.0] — 2026-06-14
+
+### Adicionou — 7 agentes (verticais de produção elevados de playbook a enforcement)
+
+- `agents/payments.md` — **módulo 4**. Idempotency obrigatória, webhook
+  HMAC + dedup + async, status machine 12 estados, refund auditado com
+  motivo, reconciliação diária cron, fraud detection básico (velocity/
+  geo/amount), PCI-DSS awareness (SAQ A — nunca toca PAN), SCA/3DS,
+  PIX (Brasil). Valor sempre BIGINT cents.
+
+- `agents/file-uploads.md` — **módulo 2**. Presigned URL (backend não
+  proxia bytes), MIME validation por magic bytes (não extensão),
+  antivírus (ClamAV/VirusTotal), strip EXIF + re-encode (image-rewrite),
+  SVG sanitize (DOMPurify, mata XSS), signed URL leitura 15min,
+  lifecycle policies (temp/24h, archive/30d), quota por user/tenant,
+  audit log.
+
+- `agents/tenant-isolation-tests.md` — **módulo 2**. Gera ~47 testes
+  automatizados que PROVAM isolamento: READ/WRITE/DELETE cross-tenant
+  retorna 404 (não 403!), filtros e contagens não vazam, role scope
+  (OPERACIONAL ≠ outro OP), token reuse, storage path injection, cache
+  key collision, RLS habilitado em todas tabelas, WebSocket broadcast,
+  job/queue context, audit log filter, fuzz UUID enumeration.
+
+- `agents/email-deliverability.md` — **módulo 14**. SPF (`-all`), DKIM,
+  DMARC (`p=reject` gradual), BIMI opcional, bounce/complaint handler
+  com tabela de supressão (check antes de cada envio), warm-up
+  cronograma de IP novo, IPs separados (transacional vs marketing),
+  one-click unsubscribe RFC 8058 (Gmail/Yahoo exigem), footer compliant
+  LGPD/CAN-SPAM, plain text obrigatório, Postmaster Tools, métricas
+  (delivery > 98%, bounce < 2%, complaint < 0.1%), fallback provider.
+
+- `agents/seo-marketing-meta.md` — **módulo 10**. Title/description único
+  por página, canonical obrigatória, OG (1200×630 dinâmica) + Twitter
+  Card, structured data JSON-LD por tipo (SoftwareApplication, Article,
+  Product, FAQ, Breadcrumb, Organization), sitemap.xml gerado, robots.txt
+  com decisão LLM crawlers (GPTBot/ClaudeBot/PerplexityBot), hreflang
+  pra i18n, IndexNow ping, Lighthouse SEO ≥ 90 como gate, slugs legíveis.
+
+- `agents/testing-strategy.md` — **módulo 11**. Pirâmide saudável
+  (60/30/10 unit/integration/E2E), integration com DB real
+  (testcontainers, NÃO SQLite/mock), contract tests Pact entre FE↔BE,
+  mutation testing Stryker (mede QUALIDADE dos testes, score > 80%),
+  property-based fast-check pra invariantes, snapshot inline + Chromatic
+  visual regression, performance test k6 como gate (p95 < 500ms),
+  coverage gates (stmt 80%/branch 75%), flake detection.
+
+- `agents/documentation-live.md` — **módulo 14**. README com quickstart
+  testado < 5min, API docs interativa Scalar/Redoc gerada do OpenAPI,
+  Storybook com 5+ stories por componente (a11y addon + Chromatic),
+  ADRs versionados em `docs/adr/` (decisão importante = ADR, não Slack),
+  CHANGELOG semver via changesets, diagramas Mermaid em markdown
+  (versionáveis), code comments só "porquê" não-óbvio, JSDoc/TSDoc em
+  API pública, onboarding doc de dev novo.
+
+### Mudou — MODULE-MAP renomeou 5 módulos
+
+| # | Antes | Agora |
+|---|---|---|
+| 2 | Segurança core + AI/LLM | + **Tenant isolation + File uploads** |
+| 4 | Rede & API | + **Payments** (Stripe/MP/PIX) |
+| 10 | Fluidez completa | + **SEO/marketing meta** |
+| 11 | Funcional E2E | + **Testing strategy completa** |
+| 14 | DX + Feature flags + Backoffice | + **Email deliverability + Documentation** |
+
+### Total de agentes
+
+**44** (era 37 em v0.12).
+
+### Migração v0.12 → v0.13
+
+Nada a fazer.
+
+---
+
+## [0.12.0] — 2026-06-14
+
+### Adicionou — process-resilience (módulo 13)
+
+Cobre 7 vetores de "processo trava silencioso" que `resilience.md` (focado
+em breakers/pools externos) não cobria:
+
+1. **Health checks em 3 níveis** — `/health/live` (rápido, sem deps),
+   `/health/ready` (checa DB/cache/storage), `/health/deep` (métricas
+   ricas, protegido por auth). K8s usa live+ready, watchdog usa deep.
+2. **Graceful shutdown** — handler SIGTERM/SIGINT que para de aceitar
+   conexões, espera in-flight terminar (timeout 30s), drena pools,
+   `process.exit(0)`. K8s `terminationGracePeriodSeconds: 30`.
+3. **Backpressure** — middleware HTTP 503 + `Retry-After` quando
+   `inflight >= MAX`, monitor de event loop lag (perf_hooks
+   `monitorEventLoopDelay`), queue com `concurrency` + DLQ.
+4. **ulimits / OOM** — container memory limit obrigatório,
+   `--max-old-space-size` explícito, LRU cache (não `new Map()`
+   unbounded), detect heap > threshold antes do OOMKill.
+5. **Watchdog externo** — heartbeat ativo (app push pra serviço externo
+   a cada 30s) ou Better Uptime / Healthchecks.io / Cronitor passivo.
+   Cobre caso "k8s acha vivo mas event loop travado".
+6. **Long-running transaction killer** — Postgres
+   `idle_in_transaction_session_timeout = 60s` + cron mata tx > 5min,
+   wrapper app-level com `Promise.race` timeout 5s default.
+7. **Deadlock retry automático** — wrapper `withDeadlockRetry` trata
+   códigos `40001` (serialization_failure) e `40P01` (deadlock_detected)
+   do Postgres com backoff exponencial + jitter (3 tentativas).
+
+### Total de agentes
+
+**37** (era 36 em v0.11).
+
+### Migração v0.11 → v0.12
+
+Nada a fazer.
+
+---
+
+## [0.11.0] — 2026-06-14
+
+### Adicionou — 6 agentes finais (cobertura total UX + AI + Ops)
+
+- `agents/state-cache-data.md` — **módulo 10**. TanStack Query v5 default,
+  optimistic UI com rollback, cache invalidation hierárquica (item/lista/
+  agregado), stale-while-revalidate, offline-first com persistência
+  IndexedDB + retry queue, conflict resolution via optimistic locking
+  (version column → 409 + modal), Suspense + streaming, prefetch on hover.
+
+- `agents/onboarding-ux.md` — **módulo 10**. Signup ≤ 3 campos, magic
+  link/passkey opcional, empty states ricos (ícone+texto+CTA+demo),
+  tour guiado contextual (3-5 passos, não modal de 12 slides), demo data
+  opcional com limpar 1-clique, activation funnel mensurável (aha_moment
+  evento), onboarding checklist persistente no dashboard, welcome email
+  personal.
+
+- `agents/feature-flags.md` — **módulo 14**. Tabela `feature_flags` (ou
+  serviço LaunchDarkly/GrowthBook), 4 tipos (release/ops/experiment/
+  permission), rollout gradual com hash determinístico (murmurhash), kill
+  switch < 30s de latência, A/B testing com variation tracking, cleanup
+  obrigatório após 30d com flag estável (issue automática), audit log de
+  mudanças. Evaluation NO BACKEND, nunca no client.
+
+- `agents/cost-observability.md` — **módulo 6**. Budget alerts cloud
+  (50/80/100/120%), anomaly detection (AWS Cost Anomaly), LLM cost
+  tracking per user/feature (tabela `llm_usage`), rate limit por plano
+  (free/pro/enterprise), DB slow query alerts (>1s), storage lifecycle
+  policies obrigatórias, CDN cache hit rate > 80%, métrica chave $/usuário
+  ativo, per-tenant budget com hard limit opcional.
+
+- `agents/ai-llm-safety.md` — **módulo 2**. Cobertura OWASP LLM Top 10 2025:
+  prompt injection (separação estrutural user/system, system prompt
+  blindado), indirect injection (sandbox `<<<DATA>>>` em tool results),
+  PII redaction antes/depois, max_tokens cap obrigatório, rate limit por
+  user (1/min e diário), tools com schema Zod + auth + confirmação em
+  ações destrutivas, output validation (não eval/innerHTML cru), UI deixa
+  claro "é IA" (anti-overreliance), audit log de cada call.
+
+- `agents/backoffice-admin.md` — **módulo 14**. Impersonation auditada
+  (motivo obrigatório, banner persistente, token 30min, ações destrutivas
+  bloqueadas), audit log particionado mensal, support workflows (refund/
+  bloqueio/LGPD export+delete via UI, não SQL direto), 6 dashboards
+  operacionais, MFA obrigatório pra ADMIN/MASTER (WebAuthn), IP allowlist
+  opcional, read-only DB query auditada.
+
+### Mudou — MODULE-MAP renomeou 4 módulos
+
+| # | Antes | Agora |
+|---|---|---|
+| 2 | Segurança aplicacional core | **Segurança aplicacional core + AI/LLM** |
+| 6 | Observabilidade & audit | **Observabilidade & audit + Cost monitoring** |
+| 10 | Fluidez + a11y + responsivo + PWA + i18n/timezone | **Fluidez completa** (+ state/cache + onboarding) |
+| 14 | DX & onboarding | **DX + Feature flags + Backoffice/Admin** |
+
+### Total de agentes
+
+**36** (era 30 em v0.10):
+- 7 segurança (access-control, cryptography, business-logic, runtime-secrets, security, auth-premium, **ai-llm-safety**)
+- 1 API design (api-design)
+- 1 frontend hardening (frontend)
+- 1 rede (network-security)
+- 2 supply chain (supply-chain, patch-management)
+- 2 observability (observability, **cost-observability**)
+- 2 DR/DB (backup-recovery, db-architect)
+- 2 compliance (compliance, compliance-lgpd-br)
+- 1 performance backend (performance)
+- 6 fluidez/UX (frontend-performance, responsive-a11y, pwa-installable, i18n-tz, **state-cache-data**, **onboarding-ux**)
+- 1 funcional E2E (functional-e2e)
+- 2 cleanup (mock-killer, config-externalization)
+- 2 resilience/scale (resilience, scalability)
+- 3 devops/ops (devops, **feature-flags**, **backoffice-admin**)
+- 2 pentest (pentest, adversarial-reviewer)
+- 1 strategic-scanner
+
+Bold = novos em v0.11.
+
+### Migração v0.10 → v0.11
+
+Nada a fazer. Configs antigos rodam normalmente.
+
+---
+
+## [0.10.0] — 2026-06-14
+
+### Adicionou — 4 agentes (cobertura "stack moderna 2026")
+
+- `agents/db-architect.md` — **módulos 7 + 9**. Schema obrigatório
+  (UUID v7 + audit columns + soft delete + version pra optimistic locking),
+  índices multi-tenant (tenant_id 1º), migrations zero-downtime (3-deploy
+  pattern), Row-Level Security, N+1 detection com DataLoader + count em
+  testes, EXPLAIN em CI bloqueando Seq Scan em tabela > 10k, connection
+  pool sizing por workload (incl. serverless/PgBouncer), statement_timeout
+  obrigatório, audit log table, anonimização LGPD Art. 18 VI, PITR backup
+  com drill mensal.
+
+- `agents/config-externalization.md` — **módulo 12**. Aplica regra "nada
+  no código": 10 categorias de greps (textos, URLs, magic numbers, regras
+  de negócio `if tenant`, cores/spacing, regex duplicado, templates de
+  email, endpoints frontend, feature flags inline). Cada finding mapeia
+  pra destino: env / settings table / feature_flags table / i18n /
+  design tokens / schema central. Schemas SQL sugeridos pras tabelas de
+  config. Complementa mock-killer no mesmo módulo (mock-killer remove,
+  este externaliza).
+
+- `agents/api-design.md` — **módulo 4**. OpenAPI como fonte de verdade
+  (gera SDK + mock + validation + lint via Spectral em CI), versionamento
+  por path com `Sunset` header, idempotency keys obrigatórias em POST
+  críticos com tabela `idempotency_keys`, paginação cursor (não offset em
+  endpoint público), filtragem RSQL/FIQL, errors no formato RFC 7807
+  Problem Details, ETags + If-Match (avoid lost update), webhooks com
+  HMAC signature + replay protection + retry exponencial + DLQ (padrão
+  Svix), rate limit headers IETF, contract testing com Pact, GraphQL com
+  persisted queries + depth/complexity limits.
+
+- `agents/i18n-tz.md` — **módulo 10**. Regra absoluta: tudo em UTC no DB
+  (TIMESTAMPTZ obrigatório), currency em cents BIGINT (não DECIMAL/FLOAT),
+  timezone IANA por usuário (não offset), Temporal API ou Intl nativo
+  pra render, ICU MessageFormat pra plurais (zero concatenação), fallback
+  chain de locales, RTL via CSS logical properties (não margin-left),
+  telefone E.164 + libphonenumber-js, endereço com formato variável por
+  país (não fixo VARCHAR(8) pra CEP), detecção por profile→cookie→header
+  (não IP).
+
+### Mudou — MODULE-MAP renomeou 5 módulos
+
+| # | Antes | Agora |
+|---|---|---|
+| 4 | Rede & proxy (WAF/rate-limit/headers) | **Rede & API** (WAF/rate-limit/headers/OpenAPI/idempotency) |
+| 7 | Backup & DR | **Banco de dados + Backup & DR** |
+| 9 | Performance backend | **Performance backend + Query optimization** |
+| 10 | Fluidez + a11y + responsivo + PWA instalável | **Fluidez + a11y + responsivo + PWA + i18n/timezone** |
+| 12 | Anti-mock & cleanup | **Anti-mock + Externalização** (nada no código) |
+
+### Mudou — `db-architect` referenciado em 2 módulos
+
+Único agente que aparece em **dois módulos** do MODULE-MAP (7 e 9) — porque
+DB cobre tanto durabilidade (módulo 7) quanto performance (módulo 9).
+Pipeline trata como mesma instância (não spawna 2x se ambos módulos ativos).
+
+### Migração v0.9 → v0.10
+
+Nada a fazer. Configs antigos rodam normalmente. Agentes novos só ativam
+em projetos onde os módulos correspondentes estão selecionados.
+
+### Total de agentes
+
+**30** (era 26 em v0.9):
+- 6 segurança aplicacional (access-control, cryptography, business-logic, runtime-secrets, security, **auth-premium**)
+- 1 API design (**api-design**)
+- 1 frontend hardening (frontend)
+- 1 rede (network-security)
+- 2 supply chain (supply-chain, patch-management)
+- 1 observability
+- 2 DR/DB (backup-recovery, **db-architect**)
+- 2 compliance (compliance, compliance-lgpd-br)
+- 1 performance backend (performance)
+- 4 fluidez/UX (frontend-performance, responsive-a11y, **pwa-installable**, **i18n-tz**)
+- 1 funcional E2E (functional-e2e)
+- 2 cleanup (mock-killer, **config-externalization**)
+- 2 resilience/scale (resilience, scalability)
+- 1 devops
+- 2 pentest (pentest, adversarial-reviewer)
+- 1 strategic-scanner
+
+Bold = novos em v0.8+.
+
+---
+
+## [0.9.0] — 2026-06-14
+
+### Adicionou — 2 agentes premium
+
+- `agents/auth-premium.md` — **módulo 2**. Stack completa: WebAuthn/Passkeys
+  (FaceID/TouchID/Windows Hello), Argon2id, JWT RS256 com refresh rotation +
+  reuse detection (logout total ao detectar token roubado), idle timeout
+  15min com PIN de retomada que **preserva estado da página** (form drafts,
+  scroll, modais), Pwned password check (HIBP k-anonymity), rate limit em
+  /auth/*, headers de segurança (8), CORS allowlist explícita.
+
+- `agents/pwa-installable.md` — **módulo 10**. Torna qualquer projeto com UI
+  instalável como app nativo no celular (iOS 16.4+ / Android) e desktop
+  (Windows/macOS/Linux). Manifest validado, Service Worker (Workbox/Vite
+  PWA), ícones maskable, install prompt customizado, offline page,
+  Lighthouse PWA ≥ 90.
+
+### Adicionou — Template de hierarquia
+
+- `templates/role-hierarchy.md` — padrão de 4 níveis extraído do projeto
+  Salon Pro 3.0: **MASTER** (multi-tenant global) → **ADMIN** (por tenant)
+  → **GERENCIAL** (operacional) → **OPERACIONAL** (próprios dados).
+  Inclui: schema Prisma, NestJS Roles decorator + Guard com hierarquia,
+  filtragem por escopo no service layer, hooks de role no frontend,
+  audit log obrigatório, mapeamentos por domínio (beleza/e-com/saúde/
+  educação). Testes de isolamento entre roles especificados.
+
+### Mudou — MODULE-MAP.json
+
+- Módulo 2 ganha `auth-premium`.
+- Módulo 10 renomeado para "Fluidez + a11y + responsivo + PWA instalável"
+  e ganha `pwa-installable`.
+- Total: **26 agentes** (era 24 em v0.8).
+
+### Migração v0.8 → v0.9
+
+Nada a fazer. Configs antigos rodam normalmente. Agentes novos só ativam
+em projetos onde os módulos 2 e 10 estão selecionados (mandatory ou por
+escolha do operador).
+
+---
+
+## [0.8.0] — 2026-06-14
+
+### Adicionou — Launcher interativo (Fase 00)
+
+- `pipeline/00-launcher.md` — **ponto de entrada** novo, antes da Fase 0
+  Strategic Scan. Faz 4 perguntas objetivas (≤30s):
+  1. Tipo de projeto (SaaS / MVP / LP / E-com / API / Mobile / CLI)
+  2. Sensibilidade de dados (Alta / Média / Baixa)
+  3. Modo (Auto / Supervisionado / Escolhidos)
+  4. Rigor (Produção / Compliance / MVP)
+- Exibe **menu numerado de 15 módulos** com defaults inteligentes baseados
+  nas respostas.
+- Aceita: `"tudo"`, `"defaults"`, `"1,3,5,7,10"`, `"1-8"`, `"tudo menos 13,14"`.
+- Confirmação única no fim, default-yes em modo AUTO (timeout 10s).
+- Grava `.blindar/config.yml` com `mode`, `selected_modules`, `project_type`,
+  `data_sensitivity`, `rigor`, `ui_detected`, `db_detected`.
+
+### Adicionou — 3 novos agentes (núcleo não-negociável)
+
+- `agents/mock-killer.md` — **módulo 12**. Caça e elimina dados mocados,
+  `console.log`, TODOs, mocks fora de teste, placeholders Lorem, senhas
+  hardcoded, URLs `localhost` em produção, botões com handler vazio
+  (`onClick={()=>{}}`), `.env.example` desincronizado. Bloqueia merge se
+  qualquer botão visível tiver handler vazio.
+- `agents/functional-e2e.md` — **módulo 11**. Gera Playwright auto-descoberto
+  pra cada rota: clica em CADA botão visível em 3 viewports (mobile/tablet/
+  desktop) e exige resposta real (request, navegação, toast ou modal). Testa
+  endpoints API com payload válido + inválido. Bloqueia merge se rota
+  retornar 5xx ou ID começar com `mock|test|fake|dummy`.
+- `agents/responsive-a11y.md` — **módulo 10**. Lighthouse ≥ 90 em 4 pilares
+  (Perf/A11y/BP/SEO), axe-core WCAG AA, 5 viewports (320/375/768/1440/1920),
+  touch targets ≥ 44px no mobile, LCP < 2.5s, CLS < 0.1, INP < 200ms,
+  `prefers-reduced-motion` respeitado, dark mode com tokens semânticos.
+
+### Adicionou — MODULE-MAP estruturado
+
+- `pipeline/MODULE-MAP.json` — mapa **consumível por AI**: módulo numerado →
+  agentes ativados → fases onde rodam. Define `mandatory`, `default_on_when`,
+  `default_off_when` (regras de resolução de defaults). Pipeline consulta
+  ANTES de spawnar qualquer agente — gap fora de módulo selecionado fica
+  pulado com log, não vira finding.
+
+### Adicionou — 3 modos de execução
+
+- **AUTO**: roda do início ao fim sem pausar (default).
+- **SUPERVISIONADO**: pausa após cada round, pede confirmação.
+- **ESCOLHIDOS**: roda só `selected_modules`, em ordem numérica, termina
+  quando todos `covered` ou `n/a` (NÃO entra em loop infinito).
+
+### Adicionou — Curadoria semestral de tendências
+
+- `docs/trends-2026.md` — referência consultada por agentes relevantes.
+  Cobertura inicial: React Compiler v1, RSC default Next.js 15+, Edge
+  runtime, performance budget ≤ 400KB JS gzipped, headers HTTP de segurança
+  obrigatórios, supply chain SHA-pin em CI, ANPD 2026 (prioridade em dados
+  de crianças/IA/scraping), SCC internacional obrigatória, breach
+  notification 3 dias úteis, hooks > instruções pra regras críticas.
+
+### Mudou — Comportamento `--headless` e `--resume`
+
+- `--resume` pula o launcher se `.blindar/config.yml` existir e tem
+  `mode` + `selected_modules`. Retoma de `state.json`.
+- `--headless` (CI/cron) pula launcher e usa defaults: todos os módulos
+  detectados como ON, modo `auto`, rigor `production`.
+- `--reset` apaga `.blindar/` e roda launcher do zero.
+- `--dry-run` roda launcher mas grava `dry_run: true`. Simula módulos
+  sem commits/PRs.
+
+### Mudou — Schema de config
+
+- `schemas/config.schema.json` ganhou campos: `mode`, `selected_modules`,
+  `project_type`, `data_sensitivity`, `rigor`, `ui_detected`, `db_detected`.
+- Compat retroativa: configs v0.7 (sem esses campos) rodam como `mode: auto`
+  + `selected_modules: [1..15]` (todos).
+
+### Mudou — Pipeline Fase 02 (discovery) e Fase 04 (rounds-loop)
+
+- Discovery (Fase 02) agora detecta `ui_detected` e `db_detected` e
+  atualiza `config.yml`.
+- Rounds-loop (Fase 04) filtra agentes por `selected_modules` ∩
+  `MODULE-MAP[module].agents`. Gap sem agente ativo vira `n/a` com tag
+  `skipped-by-user-selection`.
+
+### Migração v0.7 → v0.8
+
+Nada a fazer. Configs antigos rodam em modo "rodar tudo" automaticamente
+(comportamento v0.7 preservado). Novo launcher só aparece em primeira
+execução em projeto sem `.blindar/config.yml`.
+
+### Total de fases em v0.8
+
+**11 fases**: 1 launcher (00) + 8 principais (00 strategic-scan + 01..07) +
+2 opcionais (08 maintenance, 09 drift-detection). Antes (v0.7): 10 fases.
+Todos os headers internos dos arquivos `pipeline/*.md` foram alinhados com
+o número do prefixo.
+
+---
+
 ## [0.7.0] — 2026-06-07
 
 ### BREAKING — renumeração de fases
@@ -100,11 +1215,13 @@ Endereça 25/30 itens do brainstorm de melhorias (ver
 
 ### Adicionou — 2 fases de pipeline (Tier 5 continuidade)
 
-- `pipeline/07-maintenance.md` (#19) — opt-in trimestral. Pipeline
+- `pipeline/08-maintenance.md` (#19) — opt-in trimestral. Pipeline
   reduzido: drift + CVE + stale check. Sem rounds extensivos.
-- `pipeline/08-drift-detection.md` (#21) — detecta defesas
+  (Era `07-maintenance.md` na v0.6; renumerado em v0.7.)
+- `pipeline/09-drift-detection.md` (#21) — detecta defesas
   removidas em PRs posteriores (grep guard sumido, teste
   deletado, header dropped, audit chain quebrada).
+  (Era `08-drift-detection.md` na v0.6; renumerado em v0.7.)
 
 ### Adicionou — 7 specs em `docs/specs/`
 

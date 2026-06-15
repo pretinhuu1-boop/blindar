@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Frontend Generator — Preview e Aprovação</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+  :root {
+    --bg: #f7f7f5; --fg: #1a1a1a; --muted: #5e6470; --border: #e6e4dd;
+    --primary: #0066cc; --accent: #0a7d3d; --card-bg: #ffffff;
+    --warm: #b76e00; --danger: #c92a2a;
+    --code-bg: #f0f0ed;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1a1a; --fg: #f0f0f0; --muted: #999; --border: #333;
+      --card-bg: #242424; --code-bg: #2a2a2a;
+      --primary: #4a9eff; --accent: #4ade80;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--fg); line-height: 1.5;
+    max-width: 1180px; margin: 0 auto; padding: 24px;
+  }
+  header {
+    border-bottom: 2px solid var(--border); padding-bottom: 16px;
+    margin-bottom: 24px;
+  }
+  h1 { font-size: 1.85rem; margin-bottom: 8px; }
+  h2 { font-size: 1.4rem; margin: 28px 0 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 1.05rem; margin: 14px 0 8px; }
+  .lead { color: var(--muted); font-size: 1.05rem; margin-bottom: 12px; }
+  .meta {
+    display: flex; gap: 20px; flex-wrap: wrap;
+    color: var(--muted); font-size: 0.9rem; padding: 12px 0;
+  }
+  .meta b { color: var(--fg); }
+  .summary {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px; margin-bottom: 20px;
+  }
+  .stat {
+    background: var(--card-bg); padding: 14px 18px; border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  .stat .value { font-size: 1.65rem; font-weight: 700; color: var(--primary); }
+  .stat.warn .value { color: var(--warm); }
+  .stat.success .value { color: var(--accent); }
+  .stat .label { font-size: 0.78rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+  .toolbar {
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 14px; margin-bottom: 18px;
+    display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+  }
+  .toolbar input[type="search"] {
+    flex: 1; min-width: 200px;
+    background: var(--bg); color: var(--fg); border: 1px solid var(--border);
+    padding: 8px 12px; border-radius: 6px; font-family: inherit; font-size: 0.9rem;
+  }
+  button {
+    background: var(--primary); color: white; border: 0;
+    padding: 8px 16px; border-radius: 6px; cursor: pointer;
+    font-family: inherit; font-size: 0.9rem; font-weight: 500;
+    transition: opacity 0.15s;
+  }
+  button:hover { opacity: 0.88; }
+  button.outline {
+    background: transparent; color: var(--fg);
+    border: 1px solid var(--border);
+  }
+  button.accent { background: var(--accent); }
+  button.warn { background: var(--warm); }
+  button.danger { background: var(--danger); }
+  .route {
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 8px; margin-bottom: 10px;
+    display: grid; grid-template-columns: auto 1fr auto auto; gap: 14px;
+    align-items: center; padding: 12px 16px;
+  }
+  .route-method {
+    font-family: ui-monospace, monospace; font-size: 0.78rem;
+    padding: 3px 8px; border-radius: 4px; font-weight: 600;
+    background: var(--code-bg); color: var(--muted);
+  }
+  .route-path {
+    font-family: ui-monospace, monospace; font-size: 0.95rem;
+  }
+  .route-desc { color: var(--muted); font-size: 0.85rem; margin-top: 2px; }
+  .route-meta {
+    font-size: 0.78rem; color: var(--muted);
+    display: flex; gap: 10px; flex-wrap: wrap;
+  }
+  .route-meta span { background: var(--code-bg); padding: 2px 7px; border-radius: 10px; }
+  select.decision {
+    background: var(--bg); color: var(--fg); border: 1px solid var(--border);
+    padding: 5px 8px; border-radius: 4px; font-family: inherit; font-size: 0.85rem;
+  }
+  select.decision[data-value="apply"] { border-color: var(--accent); }
+  select.decision[data-value="keep"] { border-color: var(--warm); }
+  select.decision[data-value="skip"] { border-color: var(--danger); }
+  .mockup {
+    background: var(--code-bg); border-radius: 6px; padding: 12px;
+    font-family: ui-monospace, monospace; font-size: 0.82rem;
+    color: var(--muted); margin-top: 8px;
+  }
+  .dashboards-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 14px;
+  }
+  .dashboard-card {
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 16px;
+  }
+  .role-badge {
+    display: inline-block; font-size: 0.7rem; padding: 2px 8px;
+    border-radius: 10px; background: var(--primary); color: white;
+    font-weight: 600; letter-spacing: 0.5px;
+  }
+  .actions-bar {
+    position: sticky; bottom: 16px;
+    background: var(--card-bg); border: 2px solid var(--primary);
+    border-radius: 10px; padding: 18px 22px; margin-top: 32px;
+    display: grid; grid-template-columns: 1fr auto; gap: 16px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+  }
+  .actions-bar .info { color: var(--muted); font-size: 0.92rem; }
+  .actions-bar .info strong { color: var(--fg); }
+  .actions-bar .buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+  details {
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 8px; margin-bottom: 8px;
+  }
+  summary { padding: 10px 14px; cursor: pointer; font-weight: 500; }
+  details > div { padding: 0 14px 14px; border-top: 1px solid var(--border); padding-top: 10px; }
+  code {
+    font-family: ui-monospace, monospace; font-size: 0.85em;
+    background: var(--code-bg); padding: 1px 5px; border-radius: 3px;
+  }
+  pre {
+    background: var(--code-bg); padding: 10px 14px; border-radius: 6px;
+    overflow-x: auto; font-size: 0.82rem; line-height: 1.5;
+  }
+  .warning {
+    background: rgba(183, 110, 0, 0.08); border-left: 4px solid var(--warm);
+    padding: 12px 16px; border-radius: 4px; margin: 16px 0;
+    color: var(--fg);
+  }
+  /* Print */
+  @media print {
+    body { max-width: 100%; padding: 0; background: white; color: black; }
+    .toolbar, button, .actions-bar { display: none !important; }
+    .route { break-inside: avoid; border: 1px solid #ccc; }
+    @page { margin: 1.5cm; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🎨 Frontend Generator — Preview e Aprovação</h1>
+  <p class="lead">Revise CADA rota antes que algo seja escrito no projeto. Nada vai pra disco sem sua aprovação explícita.</p>
+  <div class="meta">
+    <span><b>Projeto:</b> <span id="m-project">—</span></span>
+    <span><b>Backend:</b> <span id="m-backend">—</span></span>
+    <span><b>Gerado em:</b> <span id="m-generated">—</span></span>
+    <span><b>Modo:</b> <span id="m-mode">Refazer (releitura)</span></span>
+  </div>
+</header>
+
+<div class="warning">
+  <strong>⚠ Estado atual:</strong> Nenhum arquivo do seu projeto foi tocado ainda.
+  Este HTML é só uma <strong>simulação</strong>. Para aplicar, baixe o JSON de
+  decisões no final e rode <code>blindar generate frontend --apply-decisions</code>.
+</div>
+
+<section class="summary" id="summary"></section>
+
+<div class="toolbar">
+  <input type="search" id="filter" placeholder="Filtrar rota (ex: appointment, login, admin…)" oninput="render()">
+  <select id="filter-method" onchange="render()">
+    <option value="">Todos métodos</option>
+    <option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option><option>DELETE</option>
+  </select>
+  <select id="filter-decision" onchange="render()">
+    <option value="">Todas decisões</option>
+    <option value="apply">Apenas Aprovar</option>
+    <option value="keep">Apenas Manter</option>
+    <option value="skip">Apenas Pular</option>
+  </select>
+  <button class="outline" onclick="bulkSet('apply')">Aprovar visíveis</button>
+  <button class="outline" onclick="bulkSet('skip')">Pular visíveis</button>
+</div>
+
+<h2>Rotas a gerar (<span id="route-count">0</span>)</h2>
+<div id="routes"></div>
+
+<h2>Dashboards por Role</h2>
+<p class="lead">Cada role vê só o que pode. Pré-visualização do que será gerado.</p>
+<div class="dashboards-grid" id="dashboards"></div>
+
+<h2>Forms gerados (a partir de Zod)</h2>
+<div id="forms"></div>
+
+<h2>Componentes UI utilizados</h2>
+<div id="components"></div>
+
+<h2>Stack que será adicionada</h2>
+<div id="stack"></div>
+
+<div class="actions-bar">
+  <div class="info">
+    Decisões: <strong id="count-apply">0</strong> aprovar ·
+    <strong id="count-keep">0</strong> manter ·
+    <strong id="count-skip">0</strong> pular
+    <br>
+    <small id="loc-estimate">Estimativa: — LOC novas, — arquivos a criar</small>
+  </div>
+  <div class="buttons">
+    <button class="outline" onclick="window.print()">🖨️ Imprimir</button>
+    <button class="accent" onclick="downloadDecisions(true)">✅ Aprovar TUDO</button>
+    <button onclick="downloadDecisions(false)">🎯 Baixar minhas decisões</button>
+    <button class="danger" onclick="cancel()">❌ Cancelar</button>
+  </div>
+</div>
+
+<details style="margin-top: 24px;">
+  <summary>Como aplicar as decisões</summary>
+  <div>
+    <ol>
+      <li>Clique em "Baixar minhas decisões" acima</li>
+      <li>Salve o arquivo como <code>.blindar/frontend-decisions.json</code> na raiz do projeto</li>
+      <li>Rode no terminal:
+        <pre>blindar generate frontend --apply-decisions</pre>
+      </li>
+      <li>O blindar vai mostrar um RESUMO FINAL e pedir confirmação <code>(s/N)</code> antes de escrever qualquer arquivo</li>
+      <li>Estado final é registrado em <code>.blindar/frontend-state.json</code> para auditoria</li>
+    </ol>
+    <p><strong>Cancelar:</strong> simplesmente não execute o comando final. Nada perde, nada se gera.</p>
+  </div>
+</details>
+
+<!-- ═════════════ DADOS DO PREVIEW ═════════════ -->
+<script id="preview-data" type="application/json">
+{
+  "schema": "blindar/frontend-preview@v1",
+  "project": "Seu Projeto",
+  "backend": "OpenAPI 47 endpoints + Prisma 12 entidades",
+  "blindar_version": "0.20.0",
+  "generated_at": "2026-06-14T20:00:00Z",
+  "mode": "refactor",
+  "stack": {
+    "framework": "Next.js 15 (App Router + RSC)",
+    "ui": "shadcn/ui + Tailwind CSS",
+    "state": "TanStack Query v5",
+    "forms": "React Hook Form + Zod",
+    "i18n": "next-intl",
+    "deps_to_add": ["next-intl", "@tanstack/react-query", "react-hook-form", "@hookform/resolvers", "zod"]
+  },
+  "routes": [
+    {
+      "method": "GET",  "path": "/dashboard",       "page": "app/(app)/dashboard/page.tsx", "loc": 80,  "source": "openapi /api/v2/me", "description": "Dashboard inicial — varia por role"},
+    {"method": "GET",  "path": "/appointments",   "page": "app/(app)/appointments/page.tsx", "loc": 95,  "source": "openapi GET /appointments", "description": "Lista com cursor pagination + filtros"},
+    {"method": "POST", "path": "/appointments/new", "page": "app/(app)/appointments/new/page.tsx", "loc": 70,  "source": "Zod schema CreateAppointmentSchema", "description": "Form de criação"},
+    {"method": "GET",  "path": "/appointments/[id]", "page": "app/(app)/appointments/[id]/page.tsx", "loc": 110, "source": "openapi GET/PATCH/DELETE /appointments/:id", "description": "Detalhe + edit + delete"},
+    {"method": "GET",  "path": "/clients",         "page": "app/(app)/clients/page.tsx", "loc": 85,  "source": "openapi GET /clients", "description": "Lista de clientes"},
+    {"method": "GET",  "path": "/services",        "page": "app/(app)/services/page.tsx", "loc": 75,  "source": "openapi GET /services", "description": "Catálogo de serviços"},
+    {"method": "GET",  "path": "/admin/users",     "page": "app/(admin-only)/users/page.tsx", "loc": 90,  "source": "openapi GET /admin/users", "description": "Gestão de usuários (ADMIN+)"},
+    {"method": "GET",  "path": "/admin/tenants",   "page": "app/(master-only)/tenants/page.tsx", "loc": 80,  "source": "openapi GET /admin/tenants", "description": "Multi-tenant (MASTER)"},
+    {"method": "GET",  "path": "/login",           "page": "app/(auth)/login/page.tsx", "loc": 60,  "source": "openapi POST /auth/login", "description": "Login + WebAuthn"},
+    {"method": "GET",  "path": "/signup",          "page": "app/(auth)/signup/page.tsx", "loc": 55,  "source": "Zod SignupSchema", "description": "Cadastro"},
+    {"method": "GET",  "path": "/settings",        "page": "app/(app)/settings/page.tsx", "loc": 130, "source": "openapi GET/PATCH /settings", "description": "Configurações"},
+    {"method": "GET",  "path": "/reports",         "page": "app/(app)/reports/page.tsx", "loc": 95,  "source": "openapi /reports/*", "description": "Relatórios"}
+  ],
+  "dashboards": [
+    {"role": "MASTER",      "widgets": ["Total tenants", "MRR", "Churn rate", "Alertas globais"], "loc": 200},
+    {"role": "ADMIN",       "widgets": ["Faturamento mês", "Top profissionais", "Novos clientes", "Alertas"], "loc": 180},
+    {"role": "GERENCIAL",   "widgets": ["Agenda do dia", "Próximos atendimentos", "Pendências", "Clientes recentes"], "loc": 160},
+    {"role": "OPERACIONAL", "widgets": ["Minha agenda", "Minhas comissões", "Próximos clientes"], "loc": 120}
+  ],
+  "forms": [
+    {"name": "CreateAppointmentForm",  "fields": 6, "source": "Zod"},
+    {"name": "EditClientForm",         "fields": 11, "source": "Zod"},
+    {"name": "ServicePricingForm",     "fields": 8, "source": "Zod"},
+    {"name": "UserInviteForm",         "fields": 4, "source": "Zod"}
+  ],
+  "components": [
+    "Button", "Input", "Select", "Dialog", "Sheet", "DataTable", "Form", "Card", "EmptyState",
+    "Skeleton", "Toast", "Avatar", "Badge", "DatePicker", "Calendar", "Tabs"
+  ]
+}
+</script>
+
+<script>
+const DATA = JSON.parse(document.getElementById('preview-data').textContent);
+const decisions = {};   // { 'GET /dashboard': 'apply'|'keep'|'skip' }
+
+function init() {
+  document.getElementById('m-project').textContent = DATA.project;
+  document.getElementById('m-backend').textContent = DATA.backend;
+  document.getElementById('m-generated').textContent = new Date(DATA.generated_at).toLocaleString('pt-BR');
+  document.getElementById('m-mode').textContent = DATA.mode === 'refactor' ? 'Refazer (releitura)' : 'Criar do zero';
+
+  // Default: tudo "apply"
+  DATA.routes.forEach(r => { decisions[`${r.method} ${r.path}`] = 'apply'; });
+
+  renderSummary();
+  renderDashboards();
+  renderForms();
+  renderComponents();
+  renderStack();
+  render();
+}
+
+function renderSummary() {
+  document.getElementById('summary').innerHTML = `
+    <div class="stat"><div class="value">${DATA.routes.length}</div><div class="label">Rotas propostas</div></div>
+    <div class="stat success"><div class="value">${DATA.dashboards.length}</div><div class="label">Dashboards por role</div></div>
+    <div class="stat"><div class="value">${DATA.forms.length}</div><div class="label">Forms (de Zod)</div></div>
+    <div class="stat"><div class="value">${DATA.components.length}</div><div class="label">Componentes UI</div></div>
+    <div class="stat warn"><div class="value">${DATA.stack.deps_to_add.length}</div><div class="label">Deps a adicionar</div></div>
+  `;
+}
+
+function renderDashboards() {
+  document.getElementById('dashboards').innerHTML = DATA.dashboards.map(d => `
+    <div class="dashboard-card">
+      <span class="role-badge">${d.role}</span>
+      <h3 style="margin: 8px 0;">Dashboard</h3>
+      <ul style="list-style: none; padding: 0;">
+        ${d.widgets.map(w => `<li style="padding: 4px 0; color: var(--muted); font-size: 0.9rem;">▸ ${w}</li>`).join('')}
+      </ul>
+      <p style="font-size: 0.78rem; color: var(--muted); margin-top: 8px;">~${d.loc} LOC</p>
+    </div>
+  `).join('');
+}
+
+function renderForms() {
+  document.getElementById('forms').innerHTML = DATA.forms.map(f => `
+    <details>
+      <summary>📝 ${f.name} — ${f.fields} campos (${f.source})</summary>
+      <div>
+        <p>Gerado a partir do schema Zod compartilhado. Campos derivados automaticamente:</p>
+        <ul style="margin-left: 20px;">
+          <li><code>z.string().datetime()</code> → DatePicker com fuso do user</li>
+          <li><code>z.string().email()</code> → input email com validação live</li>
+          <li><code>z.enum([...])</code> → Select</li>
+          <li><code>z.number().int().positive()</code> → input number com máscara</li>
+          <li><code>z.string().regex(/^\\d{11}$/)</code> → CPF com máscara</li>
+        </ul>
+      </div>
+    </details>
+  `).join('');
+}
+
+function renderComponents() {
+  document.getElementById('components').innerHTML = `
+    <p class="lead">A partir do shadcn/ui (cópia local, sem dependência hosted):</p>
+    <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+      ${DATA.components.map(c => `<code>${c}</code>`).join('')}
+    </div>
+  `;
+}
+
+function renderStack() {
+  document.getElementById('stack').innerHTML = `
+    <table style="width: 100%; border-collapse: collapse;">
+      <tr><td style="padding: 6px; font-weight: 600;">Framework</td><td style="padding: 6px;">${DATA.stack.framework}</td></tr>
+      <tr><td style="padding: 6px; font-weight: 600;">UI</td><td style="padding: 6px;">${DATA.stack.ui}</td></tr>
+      <tr><td style="padding: 6px; font-weight: 600;">State / fetching</td><td style="padding: 6px;">${DATA.stack.state}</td></tr>
+      <tr><td style="padding: 6px; font-weight: 600;">Forms</td><td style="padding: 6px;">${DATA.stack.forms}</td></tr>
+      <tr><td style="padding: 6px; font-weight: 600;">i18n</td><td style="padding: 6px;">${DATA.stack.i18n}</td></tr>
+      <tr><td style="padding: 6px; font-weight: 600;">Dependências novas</td><td style="padding: 6px;">${DATA.stack.deps_to_add.map(d => `<code>${d}</code>`).join(' ')}</td></tr>
+    </table>
+  `;
+}
+
+function render() {
+  const q = document.getElementById('filter').value.toLowerCase();
+  const method = document.getElementById('filter-method').value;
+  const dec = document.getElementById('filter-decision').value;
+
+  const filtered = DATA.routes.filter(r => {
+    if (q && !`${r.method} ${r.path} ${r.description}`.toLowerCase().includes(q)) return false;
+    if (method && r.method !== method) return false;
+    if (dec && decisions[`${r.method} ${r.path}`] !== dec) return false;
+    return true;
+  });
+
+  document.getElementById('route-count').textContent = filtered.length;
+  document.getElementById('routes').innerHTML = filtered.map(r => {
+    const key = `${r.method} ${r.path}`;
+    const current = decisions[key];
+    return `
+      <div class="route" data-key="${escapeAttr(key)}">
+        <span class="route-method">${r.method}</span>
+        <div>
+          <div class="route-path">${escapeHtml(r.path)}</div>
+          <div class="route-desc">${escapeHtml(r.description)}</div>
+          <div class="route-meta">
+            <span>📄 ${escapeHtml(r.page)}</span>
+            <span>~${r.loc} LOC</span>
+            <span>🔗 ${escapeHtml(r.source)}</span>
+          </div>
+        </div>
+        <select class="decision" data-value="${current}" onchange="setDecision('${escapeAttr(key)}', this.value)">
+          <option value="apply" ${current === 'apply' ? 'selected' : ''}>✅ Aprovar</option>
+          <option value="keep" ${current === 'keep' ? 'selected' : ''}>📌 Manter atual</option>
+          <option value="skip" ${current === 'skip' ? 'selected' : ''}>⏭️ Pular</option>
+        </select>
+      </div>
+    `;
+  }).join('') || '<p class="lead">Nenhuma rota corresponde aos filtros.</p>';
+
+  updateActionsBar();
+}
+
+function setDecision(key, value) {
+  decisions[key] = value;
+  render();
+}
+
+function bulkSet(value) {
+  const visible = document.querySelectorAll('.route');
+  visible.forEach(el => {
+    const key = el.dataset.key;
+    decisions[key] = value;
+  });
+  render();
+}
+
+function updateActionsBar() {
+  const counts = { apply: 0, keep: 0, skip: 0 };
+  Object.values(decisions).forEach(v => counts[v]++);
+  document.getElementById('count-apply').textContent = counts.apply;
+  document.getElementById('count-keep').textContent = counts.keep;
+  document.getElementById('count-skip').textContent = counts.skip;
+
+  const approvedRoutes = DATA.routes.filter(r => decisions[`${r.method} ${r.path}`] === 'apply');
+  const totalLoc = approvedRoutes.reduce((s, r) => s + r.loc, 0);
+  document.getElementById('loc-estimate').textContent =
+    `Estimativa: ~${totalLoc} LOC novas, ${approvedRoutes.length} arquivos a criar`;
+}
+
+function downloadDecisions(approveAll) {
+  if (approveAll) {
+    DATA.routes.forEach(r => { decisions[`${r.method} ${r.path}`] = 'apply'; });
+  }
+  const out = {
+    schema: 'blindar/frontend-decisions@v1',
+    project: DATA.project,
+    backend: DATA.backend,
+    decided_at: new Date().toISOString(),
+    mode: DATA.mode,
+    decisions: Object.entries(decisions).map(([key, value]) => {
+      const [method, ...pathParts] = key.split(' ');
+      return { method, path: pathParts.join(' '), decision: value };
+    }),
+    summary: {
+      apply: Object.values(decisions).filter(v => v === 'apply').length,
+      keep:  Object.values(decisions).filter(v => v === 'keep').length,
+      skip:  Object.values(decisions).filter(v => v === 'skip').length,
+    },
+    confirmed_by_user: true,
+    next_step: 'Salve este arquivo em .blindar/frontend-decisions.json e rode: blindar generate frontend --apply-decisions'
+  };
+  const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'frontend-decisions.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  alert(
+    'Arquivo baixado!\n\n' +
+    'Próximo passo:\n' +
+    '1. Salve como .blindar/frontend-decisions.json na raiz do projeto\n' +
+    '2. Rode: blindar generate frontend --apply-decisions\n\n' +
+    'Nada será escrito no projeto até você executar o comando E confirmar com "s" no terminal.'
+  );
+}
+
+function cancel() {
+  if (confirm('Cancelar revisão? Nada será escrito no projeto.\n(Você pode fechar esta página sem problemas — nenhuma decisão é aplicada automaticamente.)')) {
+    document.body.innerHTML = '<div style="text-align: center; padding: 80px 20px;"><h1>Cancelado</h1><p style="color: var(--muted); margin-top: 12px;">Nenhum arquivo do seu projeto foi tocado.</p></div>';
+  }
+}
+
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c])); }
+function escapeAttr(s) { return escapeHtml(s).replace(/"/g, '&quot;'); }
+
+init();
+</script>
+
+</body>
+</html>

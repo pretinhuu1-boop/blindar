@@ -1,4 +1,4 @@
-# Fase 6 — Relatório final
+# Fase 7 — Relatório final
 
 **Duração**: ~2 min
 

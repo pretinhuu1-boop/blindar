@@ -1,15 +1,40 @@
 # blindar
 
 Skill do [Claude Code](https://claude.com/claude-code) que **audita, blinda,
-otimiza e prepara projetos para produção** sem pedir confirmação a cada passo.
+otimiza e prepara projetos para produção** — e também sabe criar projetos
+novos do zero, gerar/refazer frontend lendo o backend, e entregar pacote
+completo (DEPLOY/MANUAL/API/Postman/diagramas/SLA) ao final.
 
-Roda autônomo: baseline → discovery (3 agentes paralelos) → bootstrap
-`sec.html` → rounds pequenos (1 PR cada, ≤80 LOC) → adversarial review a cada
-10 rounds → production checklist → relatório final.
+**v0.21 — 72 agentes em 15 módulos numerados.**
 
-Mantém `sec.html` na raiz do projeto como dashboard vivo.
+Comportamento: **launcher curto** no início (4 perguntas + menu de
+15 módulos, ≤30s) → roda autônomo até termination conforme modo escolhido:
 
-Termina quando: **0 crit + ≤2 high** após review adversarial.
+- **AUTO** — vai do início ao fim sem pausar (default)
+- **SUPERVISIONADO** — pausa entre rounds
+- **ESCOLHIDOS** — roda só os módulos numerados selecionados
+
+Pipeline interno: launcher → strategic-scan → baseline → discovery
+(3 agentes paralelos) → bootstrap `sec.html` → rounds pequenos (1 PR cada,
+≤80 LOC) → adversarial review a cada 10 rounds → production checklist →
+relatório final + delivery bundle.
+
+Mantém `sec.html`, `blindar-report.html` (técnico) e `client-report.html`
+(benefício pro cliente) na raiz do projeto.
+
+Termina quando: **0 crit + ≤2 high** após review adversarial (ou módulos
+selecionados completos em modo ESCOLHIDOS).
+
+## Recursos chave da v0.21
+
+- **15 módulos numerados** — operador escolhe "tudo", "defaults", "1,3,5", "1-8" ou "tudo menos 13,14"
+- **3 modos de execução** — AUTO / SUPERVISIONADO / ESCOLHIDOS
+- **72 agentes especialistas** em segurança, frontend, banco, API, performance, compliance, AI, payments, etc.
+- **Intelligence system** ([`schemas/intelligence.schema.json`](schemas/intelligence.schema.json)) — 11 agentes consultam `.blindar/intelligence.yml` pra evitar falso positivo
+- **Frontend generator com aprovação** — 3 portões (preview HTML + decisões + confirmação) antes de tocar em qualquer arquivo
+- **Project bootstrap** — cria projeto novo do zero (Next.js 15 / NestJS / Postgres / Stripe / etc.)
+- **Delivery bundle** — gera pasta `release/` com DEPLOY, MANUAL, API docs, Postman collection production-ready, diagramas Mermaid, SLA, checklist go-live
+- **2 relatórios HTML cumulativos** — técnico (timeline + módulo + agente) e cliente (por categoria de benefício, linguagem amigável)
 
 ## Instalação
 
@@ -62,36 +87,34 @@ blindar/
 ├── CHECKLIST.md          ← validação pós-download
 ├── README.md             ← este arquivo
 │
-├── pipeline/             ← as 8 fases (00 a 07) + 2 opcionais (08-09)
-│   └── 00-strategic-scan.md  ⭐ NOVA em v0.7.0 — pre-blindar scan + plano
+├── pipeline/             ← Fase 00 launcher + 10 fases (00-09) + MODULE-MAP.json
+│   ├── 00-launcher.md           ← 4 perguntas + menu de 15 módulos
+│   ├── 00-strategic-scan.md     ← pre-blindar scan + plano
+│   ├── 01-baseline.md
+│   ├── 02-discovery.md
+│   ├── 03-bootstrap-sec-html.md
+│   ├── 04-rounds-loop.md
+│   ├── 05-adversarial-review.md
+│   ├── 06-production-checklist.md
+│   ├── 07-final-report.md
+│   ├── 08-maintenance.md        (opcional)
+│   ├── 09-drift-detection.md    (opcional)
+│   └── MODULE-MAP.json          ⭐ fonte da verdade módulo→agentes (72 agentes em v0.21)
 │
-├── agents/               ← especialistas (segurança primeiro, sempre)
-│   │ ──── SEGURANÇA (10 técnicas clássicas de TI) ────
-│   ├── access-control.md       ← #1 auth, MFA, RBAC, least-privilege
-│   ├── cryptography.md         ← #2 TLS, at-rest, secrets, key mgmt
-│   ├── security.md             ← genérico (ATKs do catálogo)
-│   ├── frontend.md             ← CSP, XSS, Trusted Types
-│   ├── network-security.md     ← #3, #8 WAF, rate-limit, IaC SG
-│   ├── observability.md        ← #7 logs estruturados, métricas, audit
-│   ├── backup-recovery.md      ← #6 backup cifrado + restore testado
-│   ├── patch-management.md     ← #5 OS/runtime + Renovate/Dependabot
-│   ├── supply-chain.md         ← lockfiles, SHA-pin, gitleaks
-│   ├── pentest.md              ← #10 SAST, DAST, SCA, fuzz
-│   │
-│   │ ──── NÃO-SEGURANÇA (sob demanda) ────
-│   ├── performance.md
-│   ├── resilience.md           ← threads que não travam / breakers
-│   ├── scalability.md          ← ⚠ stub
-│   ├── compliance.md           ← audit chain genérico
-│   ├── compliance-lgpd-br.md   ← Brasil / ANPD
-│   ├── devops.md               ← CI/CD, boot scripts
-│   └── adversarial-reviewer.md ← Fase 4
+├── agents/               ← 72 especialistas em 15 módulos numerados
+│   │                       Roster completo em SKILL.md ou MODULE-MAP.json.
+│   │                       Categorias (frontmatter `category:`):
+│   │                       security · frontend · ops · data · compliance ·
+│   │                       performance · resilience · quality · cleanup ·
+│   │                       dx · ai · payments · scaffolding · delivery · ...
+│   └── (72 arquivos .md)
 │
 ├── frameworks/           ← mapeamento controles ↔ agentes (referência)
 │   ├── iso-27001.md      ← mais aceito globalmente
 │   ├── nist-csf.md       ← operacional, 6 funções v2.0
 │   ├── cis-controls.md   ← 18 controles pragmáticos
-│   ├── pci-dss.md        ← ⚠ condicional (só se processa cartão)
+│   ├── owasp-asvs.md     ← régua de verificação L1/L2/L3
+│   ├── pci-dss.md        ← condicional (cobertura pelo agente `compliance-pci-deep`)
 │   ├── soc2.md           ← SaaS / B2B
 │   └── cobit.md          ← ⚠ stub (governança corporativa)
 │
@@ -101,8 +124,16 @@ blindar/
 │   ├── security-awareness.md   ← #9 treinamento de usuário
 │   └── pentest-schedule.md     ← pentest humano (red team)
 │
+├── docs/                 ← documentação adicional
+│   ├── trends-2026.md          ← curadoria semestral de tendências
+│   └── specs/                  ← specs de itens do ROADMAP
+│
 ├── templates/
-│   ├── sec.html          ← dashboard HTML single-file
+│   ├── sec.html                 ← dashboard HTML single-file
+│   ├── execution-report.html    ← relatório técnico cumulativo
+│   ├── client-report.html       ← relatório por benefício (cliente final)
+│   ├── frontend-preview.html    ← preview/aprovação do frontend-generator (v0.20)
+│   ├── role-hierarchy.md        ← template Master/Admin/Gerencial/Operacional
 │   ├── accept-risk.md
 │   └── pr-message.md
 │
@@ -114,8 +145,10 @@ blindar/
 │   ├── arch.schema.json
 │   ├── findings.schema.json
 │   ├── verdict.schema.json
-│   ├── state.schema.json   ← .blindar/state.json no projeto-alvo
-│   └── config.schema.json  ← .blindar/config.yml no projeto-alvo
+│   ├── state.schema.json        ← .blindar/state.json no projeto-alvo
+│   ├── config.schema.json       ← .blindar/config.yml no projeto-alvo
+│   ├── plan.schema.json
+│   └── intelligence.schema.json ← .blindar/intelligence.yml (whitelist/exceções por agente)
 │
 ├── AI-ENTRYPOINT.md      ← AI lê primeiro (decision tree determinístico)
 ├── CONTRACT.md           ← estrutura `.blindar/` no projeto-alvo

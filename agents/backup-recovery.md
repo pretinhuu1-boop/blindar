@@ -1,4 +1,13 @@
-# agent: backup-recovery
+---
+name: backup-recovery
+category: data
+module: 7
+priority: P0
+description: |
+  Backup automatizado + restore testado mensalmente (drill real, não só backup). Cobre técnica #6 do baseline. PITR Postgres, cross-region replication, retention policy, encryption at-rest, runbook documentado.
+---
+
+# Agent: backup-recovery
 
 Cópias, restauração, DR. Cobre técnica #6 do baseline (backup e recuperação
 de dados).

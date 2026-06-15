@@ -1,4 +1,13 @@
-# agent: supply-chain
+---
+name: supply-chain
+category: security
+module: 5
+priority: P0
+description: |
+  Lockfile sempre commitado, SHA-pin em GitHub Actions (não tag), gitleaks no pre-commit, dependency audit em CI, npm registry verify, SBOM gerado (delegando ao sbom-slsa pra v0.19+).
+---
+
+# Agent: supply-chain
 
 Cadeia de fornecedores: deps, lockfiles, GitHub Actions, secrets.
 
