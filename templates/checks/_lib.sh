@@ -2,6 +2,15 @@
 # blindar checks — biblioteca compartilhada
 # Source este arquivo no início de cada check:  source "$(dirname "$0")/_lib.sh"
 
+# ─── Bash version check (warn, não fail) ───
+# blindar usa principalmente sintaxe compatível com bash 3.2 (macOS default),
+# mas algumas features (declare -a, fallback rg) são mais robustas em bash 4+.
+# Veja docs/BASH-COMPAT.md pra detalhes e instruções de upgrade no macOS.
+if [ -n "${BASH_VERSION:-}" ] && [ "${BASH_VERSINFO[0]}" -lt 4 ] && [ -z "${BLINDAR_BASH_WARN_SHOWN:-}" ]; then
+  echo "⚠ blindar foi testado em bash 4+ (você tem $BASH_VERSION). Pode haver bugs sutis — veja docs/BASH-COMPAT.md" >&2
+  export BLINDAR_BASH_WARN_SHOWN=1
+fi
+
 # Não usar pipefail nem errexit — checks fazem rg|grep|sort pipelines onde
 # rg sem match (exit 1) NÃO é erro. Cada check decide localmente seu controle.
 set -uo pipefail
@@ -167,9 +176,12 @@ check_ignored_by_intelligence() {
 # ─── Pegar começo de timestamp ───
 STARTED_AT=$(date -u +%s)
 
-# ─── Trap pra exit handler ───
-on_error() {
-  log_fail "Check abortado por erro inesperado"
-  emit_result "${BLINDAR_AGENT:-unknown}" "failed" "$?"
-}
-trap on_error ERR
+# ─── NOTA: `trap on_error ERR` foi REMOVIDO de propósito ───
+# `trap ERR` só dispara quando `set -e` (errexit) está ativo. Como esta
+# biblioteca explicitamente desliga errexit acima (`set +e +o pipefail`)
+# pra permitir pipelines com rg/grep sem match (exit 1 ≠ erro), o trap
+# era código morto: nunca disparava.
+#
+# Não recolocar sem antes reativar errexit — o que quebraria a maioria
+# dos checks. Cada check é responsável por gerenciar seus próprios
+# erros via `emit_result` (status passed|failed|skipped) e add_finding.

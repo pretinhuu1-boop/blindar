@@ -3,6 +3,79 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.38.0] — 2026-06-21
+
+**Fase A — Quick wins** (executado via 3 agentes paralelos). Destrava ecossistema (SARIF), 5-10× speedup (paralelização), PR-time gate (--since), debug humanizado (--verbose), fix de bugs descobertos na auditoria.
+
+### Novo: SARIF converter
+
+- `scripts/sarif-converter.js` — 367 linhas, zero deps, Node 20+ nativo
+- Converte `.blindar/results/check-*.json` → SARIF 2.1.0 válido
+- Severity mapping: crit/high → error, med → warning, low → note
+- Cada agente vira `tool.driver` com rules dedup'd `blindar.<agent>.<sev>`
+- Inclui `versionControlProvenance` quando `git_sha` presente
+- CLI: `--input DIR` (default `.blindar/results`), `--output FILE` (default stdout), `--help`
+- Sample fixture gerada em `tests/fixtures/clean-project/.blindar/sarif-sample.json`
+- **Destrava**: GitHub Code Scanning, Azure DevOps, Sonar, qualquer leitor SARIF
+
+### blindar-run.sh: 3 features novas
+
+**`--since REF` (diff mode / PR-time gate)**:
+- Roda `git diff --name-only "$REF"...HEAD`
+- Exporta `BLINDAR_CHANGED_FILES` (newline-separated) + `BLINDAR_SINCE_REF` pros checks
+- Adiciona `since` + `changed_files: []` no run-report.json
+- Exit 0 se zero arquivos mudaram ("no changes since X — nothing to check")
+- Valida: git instalado + repo git + ref existe (exit 73 se algo falha)
+
+**`--parallel N` (paralelização via xargs -P)**:
+- Default 1 (sequencial — preserva comportamento anterior)
+- `--parallel auto` detecta CPUs via nproc/sysctl, fallback 4
+- Worker grava 1 linha em `$RESULTS_DIR/.run-lines.log` (sem race em vars bash)
+- Agregação acontece DEPOIS do loop (lendo log)
+- 5-10× speedup em runs full (20+ agentes)
+
+**`--verbose` / `-v` (preserva stdout dos checks)**:
+- Sem flag: `bash $script >/dev/null 2>&1` (comportamento atual silent)
+- Com flag: `bash $script 2>&1 | sed "s/^/  [$agent] /"` (prefixa output com nome)
+- Debug humanizado — bugs sutis em checks ficam visíveis
+
+### _lib.sh: fixes
+
+**Trap ERR removido (era código morto)**:
+- `set +e +o pipefail` desativa errexit
+- `trap on_error ERR` só dispara com errexit ativo → nunca disparava
+- Removido + comentário longo explicando por que NÃO recolocar
+- Checks gerenciam erros via `emit_result` + `add_finding`
+
+**Bash version warn**:
+- Detecta bash < 4 e avisa (NÃO fail)
+- Variável `BLINDAR_BASH_WARN_SHOWN` impede repetir a cada source
+- Aponta pra `docs/BASH-COMPAT.md`
+
+### Novo: docs/BASH-COMPAT.md
+
+- Auditoria de 53 scripts blindar — **zero uso de features bash 4+** detectado
+- Codebase já é bash 3.2 compat
+- Matriz de plataformas + instruções `brew install bash` pra macOS
+- Tabela de features auditadas + padrão pra novos checks
+- Comandos pra auditar futuros checks
+
+### Validação multi-agente
+
+Executado via 3 Agent calls em paralelo (não Workflow):
+- Agent A (SARIF): 367 linhas, smoke test passou em 2 fixtures
+- Agent B (_lib + bash compat): 6/6 tests verde
+- Agent C (blindar-run refactor): 249 → 411 linhas (+162), smoke `--fast --verbose --parallel 4` rodou em 47s com 90% cobertura
+
+Sem conflitos entre agentes (cada um em arquivos diferentes — SARIF=new, _lib.sh=B, blindar-run.sh=C).
+
+### Próximo (Fase B / C)
+
+- Fase B: 9 agentes novos (5 AI-era + 4 verticais BR) — vira moat
+- Fase C: integração Semgrep/OSV/Trivy/Gitleaks + schema runtime + blindar-fix
+
+---
+
 ## [0.37.0] — 2026-06-21
 
 **Launcher: pergunta de escopo + flag `--with-evolution`.**

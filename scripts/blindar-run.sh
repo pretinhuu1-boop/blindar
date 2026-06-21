@@ -10,18 +10,28 @@
 # Exit codes: 0=GO, 1=CONDITIONAL-GO, 2=NO-GO, 3=DEFERRED (precisa Claude)
 #
 # Uso:
-#   bash scripts/blindar-run.sh [--strict] [--fast] [--module N,N,N] [--json]
+#   bash scripts/blindar-run.sh [opts]
 #
-#   --strict   Falha se algum agente está só como playbook (sem .sh nem .api.sh)
-#   --fast     Roda só agentes críticos (módulos 1, 2, 11, 12, 15)
-#   --module   Lista módulos por número (ex: --module 1,2,9)
-#   --json     Output JSON puro pra CI
+#   --strict          Falha se algum agente está só como playbook (sem .sh nem .api.sh)
+#   --fast            Roda só agentes críticos (módulos 1, 2, 11, 12, 15)
+#   --module N,N,N    Lista módulos por número (ex: --module 1,2,9)
+#   --json            Output JSON puro pra CI
+#   --with-evolution  Encadeia blindar-evolve.sh após hardening
+#   --since REF       Modo diff: roda checks só sobre arquivos mudados desde REF
+#                     (ex: --since HEAD~1, --since main, --since <SHA>)
+#                     Exporta BLINDAR_CHANGED_FILES pros checks consumirem.
+#                     Sai 0 se nenhum arquivo mudou.
+#   --parallel N      Roda checks em paralelo (N workers). Default 1.
+#                     Use --parallel auto pra detectar CPUs (fallback 4).
+#   --verbose         Preserva stdout/stderr dos checks (prefixado com agente).
+#                     Sem ela, output é silenciado (comportamento atual).
 #
 # Pré-requisitos:
 #   - bash 4+, grep, sed (POSIX)
 #   - Node 20+ (pra parsear MODULE-MAP)
 #   - jq OU node (auto-fallback)
 #   - ANTHROPIC_API_KEY (opcional, só pra wrappers API)
+#   - git (opcional, só pra --since)
 
 set -uo pipefail
 
@@ -58,6 +68,7 @@ mkdir -p "$RESULTS_DIR"
 
 # Parse args
 STRICT=0; FAST=0; JSON_ONLY=0; MODULES_FILTER=""; WITH_EVOLUTION=0
+SINCE_REF=""; PARALLEL="1"; VERBOSE=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --strict) STRICT=1; shift ;;
@@ -65,10 +76,29 @@ while [ $# -gt 0 ]; do
     --json)   JSON_ONLY=1; shift ;;
     --module) MODULES_FILTER="$2"; shift 2 ;;
     --with-evolution) WITH_EVOLUTION=1; shift ;;
-    -h|--help) sed -n '2,25p' "$0" | sed 's/^# //'; exit 0 ;;
+    --since)  SINCE_REF="$2"; shift 2 ;;
+    --parallel) PARALLEL="$2"; shift 2 ;;
+    --verbose|-v) VERBOSE=1; shift ;;
+    -h|--help) sed -n '2,38p' "$0" | sed 's/^# //; s/^#//'; exit 0 ;;
     *) echo "Arg desconhecido: $1" >&2; exit 64 ;;
   esac
 done
+
+# Resolve --parallel auto → nproc/sysctl, fallback 4
+if [ "$PARALLEL" = "auto" ]; then
+  if command -v nproc >/dev/null 2>&1; then
+    PARALLEL=$(nproc 2>/dev/null || echo 4)
+  elif command -v sysctl >/dev/null 2>&1; then
+    PARALLEL=$(sysctl -n hw.ncpu 2>/dev/null || echo 4)
+  else
+    PARALLEL=4
+  fi
+fi
+# Sanitize: precisa ser inteiro positivo
+case "$PARALLEL" in
+  ''|*[!0-9]*) PARALLEL=1 ;;
+esac
+[ "$PARALLEL" -lt 1 ] && PARALLEL=1
 
 if [ -t 1 ] && [ "$JSON_ONLY" -eq 0 ]; then
   R=$'\e[31m'; G=$'\e[32m'; Y=$'\e[33m'; B=$'\e[34m'; BOLD=$'\e[1m'; RST=$'\e[0m'
@@ -76,6 +106,54 @@ else R=''; G=''; Y=''; B=''; BOLD=''; RST=''; fi
 
 log() { [ "$JSON_ONLY" -eq 0 ] && echo "$@" >&2; }
 log_section() { log ""; log "${BOLD}═══ $* ═══${RST}"; }
+
+# ─── FEATURE 1: --since (diff mode) ─────────────────────────────────────────
+CHANGED_FILES=""
+CHANGED_FILES_JSON="[]"
+if [ -n "$SINCE_REF" ]; then
+  if ! command -v git >/dev/null 2>&1; then
+    echo "${R}ERRO: --since requer git${RST}" >&2
+    exit 73
+  fi
+  if ! git rev-parse --git-dir >/dev/null 2>&1; then
+    echo "${R}ERRO: --since requer estar em repo git${RST}" >&2
+    exit 73
+  fi
+  if ! git rev-parse --verify "$SINCE_REF" >/dev/null 2>&1; then
+    echo "${R}ERRO: ref '$SINCE_REF' não existe${RST}" >&2
+    exit 73
+  fi
+  CHANGED_FILES=$(git diff --name-only "$SINCE_REF"...HEAD 2>/dev/null || true)
+  # Inclui também working tree changes (uncommitted) opcionalmente — só committed por enquanto
+  if [ -z "$CHANGED_FILES" ]; then
+    log "${Y}no changes since $SINCE_REF — nothing to check${RST}"
+    # Ainda escreve um report mínimo
+    cat > "$RUN_REPORT" <<EOF
+{
+  "schema": "blindar/run-report@v1",
+  "ran_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "duration_sec": 0,
+  "since": "$SINCE_REF",
+  "changed_files": [],
+  "total_agents": 0,
+  "passed": 0, "failed": 0, "skipped": 0, "deferred": 0, "errored": 0,
+  "coverage_pct": 100,
+  "message": "no changes since $SINCE_REF",
+  "results": []
+}
+EOF
+    exit 0
+  fi
+  export BLINDAR_CHANGED_FILES="$CHANGED_FILES"
+  export BLINDAR_SINCE_REF="$SINCE_REF"
+  # Monta JSON array dos arquivos mudados
+  CHANGED_FILES_JSON=$(printf '%s\n' "$CHANGED_FILES" | node -e "
+    const lines=require('fs').readFileSync(0,'utf8').split('\n').filter(Boolean);
+    process.stdout.write(JSON.stringify(lines));
+  ")
+  CHANGED_COUNT=$(printf '%s\n' "$CHANGED_FILES" | grep -c .)
+  log "${B}--since $SINCE_REF${RST} → $CHANGED_COUNT arquivo(s) mudado(s)"
+fi
 
 # Extrai lista de agentes do MODULE-MAP (Node — sempre disponível)
 if ! command -v node >/dev/null 2>&1; then
@@ -114,65 +192,166 @@ console.log([...new Set(out)].join('\n'));
 " "$MODULE_MAP_NATIVE" "$FILTER")
 
 TOTAL=$(echo "$AGENTS_LIST" | grep -c .)
-log_section "blindar-run: $TOTAL agentes (modules=$FILTER, strict=$STRICT)"
+log_section "blindar-run: $TOTAL agentes (modules=$FILTER, strict=$STRICT, parallel=$PARALLEL, verbose=$VERBOSE${SINCE_REF:+, since=$SINCE_REF})"
 
-# Loop principal
-declare -a RESULTS=()
-PASSED=0; FAILED=0; SKIPPED=0; DEFERRED=0; ERRORED=0
 TOTAL_START=$(date +%s)
 
-while IFS=: read -r module_id agent; do
-  [ -z "$agent" ] && continue
-
-  det="$CHECKS_DIR/check-${agent}.sh"
-  api="$CHECKS_DIR/check-${agent}.api.sh"
-  result_json="$RESULTS_DIR/check-${agent}.json"
+# ─── Função: roda 1 check (usada tanto serial quanto em paralelo) ───────────
+# Args: $1=module_id  $2=agent
+# Lê: CHECKS_DIR, RESULTS_DIR, VERBOSE, JSON_ONLY (env)
+# Escreve: result_json (já feito pelo próprio check) + linha no stdout no formato:
+#   "module|agent|kind|status|findings"
+# Logs vão pro stderr.
+run_one_check() {
+  local module_id="$1"
+  local agent="$2"
+  local det="$CHECKS_DIR/check-${agent}.sh"
+  local api="$CHECKS_DIR/check-${agent}.api.sh"
+  local result_json="$RESULTS_DIR/check-${agent}.json"
+  local kind script status findings rc
 
   if [ -f "$det" ]; then
-    kind="deterministic"
-    script="$det"
+    kind="deterministic"; script="$det"
   elif [ -f "$api" ]; then
-    kind="api-wrapped"
-    script="$api"
+    kind="api-wrapped"; script="$api"
   else
-    kind="playbook-only"
-    script=""
+    kind="playbook-only"; script=""
   fi
 
   if [ -z "$script" ]; then
-    DEFERRED=$((DEFERRED+1))
-    status="deferred"
-    [ "$JSON_ONLY" -eq 0 ] && log "${Y}⏭${RST}  $agent (module $module_id) — playbook-only, requer Claude"
+    [ "$JSON_ONLY" -eq 0 ] && echo "${Y}⏭${RST}  $agent (module $module_id) — playbook-only, requer Claude" >&2
     cat > "$result_json" <<EOF
 {"schema":"blindar/check-result@v1","agent":"check-$agent","status":"deferred","kind":"playbook-only","module":"$module_id","findings_count":0,"findings":[],"message":"Agente disponível só como playbook em agents/$agent.md — requer Claude pra executar"}
 EOF
-    RESULTS+=("$module_id|$agent|$kind|deferred|0")
-    continue
+    echo "$module_id|$agent|$kind|deferred|0"
+    return 0
   fi
 
-  [ "$JSON_ONLY" -eq 0 ] && log "${B}▶${RST}  $agent (module $module_id, $kind)..."
-  bash "$script" >/dev/null 2>&1
-  rc=$?
+  [ "$JSON_ONLY" -eq 0 ] && echo "${B}▶${RST}  $agent (module $module_id, $kind)..." >&2
 
-  # Parse status do result.json
+  if [ "$VERBOSE" -eq 1 ]; then
+    # Preserva stdout/stderr, prefixa com nome do agente
+    bash "$script" 2>&1 | sed "s/^/  [$agent] /" >&2
+    rc=${PIPESTATUS[0]}
+  else
+    bash "$script" >/dev/null 2>&1
+    rc=$?
+  fi
+
   if [ -f "$result_json" ]; then
     status=$(grep -oE '"status"[[:space:]]*:[[:space:]]*"[a-z]+"' "$result_json" | head -1 | sed -E 's/.*"([a-z]+)".*/\1/')
     findings=$(grep -oE '"findings_count"[[:space:]]*:[[:space:]]*[0-9]+' "$result_json" | head -1 | sed -E 's/.*:[[:space:]]*([0-9]+).*/\1/')
     [ -z "$findings" ] && findings=0
   else
-    status="errored"
-    findings=0
+    status="errored"; findings=0
   fi
 
+  local ico
   case "$status" in
-    passed)  PASSED=$((PASSED+1));  ico="${G}✓${RST}" ;;
-    failed)  FAILED=$((FAILED+1));  ico="${R}✗${RST}" ;;
-    skipped) SKIPPED=$((SKIPPED+1)); ico="${Y}⏭${RST}" ;;
-    *)       ERRORED=$((ERRORED+1)); ico="${R}!${RST}"; status="errored" ;;
+    passed)  ico="${G}✓${RST}" ;;
+    failed)  ico="${R}✗${RST}" ;;
+    skipped) ico="${Y}⏭${RST}" ;;
+    deferred) ico="${Y}⏭${RST}" ;;
+    *) ico="${R}!${RST}"; status="errored" ;;
   esac
-  [ "$JSON_ONLY" -eq 0 ] && log "$ico  $agent → $status ($findings findings)"
-  RESULTS+=("$module_id|$agent|$kind|$status|$findings")
-done <<< "$AGENTS_LIST"
+  [ "$JSON_ONLY" -eq 0 ] && echo "$ico  $agent → $status ($findings findings)" >&2
+  echo "$module_id|$agent|$kind|$status|$findings"
+  return 0
+}
+export -f run_one_check 2>/dev/null || true
+
+# ─── Execução: serial ou paralela ───────────────────────────────────────────
+declare -a RESULTS=()
+RUN_LOG="$RESULTS_DIR/.run-lines.log"
+: > "$RUN_LOG"
+
+if [ "$PARALLEL" -gt 1 ]; then
+  # Modo paralelo: usa xargs -P. Cada worker chama bash -c que invoca run_one_check.
+  # Exportar variáveis necessárias pros subshells:
+  export CHECKS_DIR RESULTS_DIR VERBOSE JSON_ONLY R G Y B BOLD RST
+
+  # Cria um script-helper inline temporário pra invocar run_one_check com env passada
+  HELPER=$(mktemp 2>/dev/null || echo "$RESULTS_DIR/.parallel-helper.sh")
+  cat > "$HELPER" <<'HELPER_EOF'
+#!/usr/bin/env bash
+set -uo pipefail
+line="$1"
+module_id="${line%%:*}"
+agent="${line#*:}"
+[ -z "$agent" ] && exit 0
+
+det="$CHECKS_DIR/check-${agent}.sh"
+api="$CHECKS_DIR/check-${agent}.api.sh"
+result_json="$RESULTS_DIR/check-${agent}.json"
+
+if [ -f "$det" ]; then kind="deterministic"; script="$det"
+elif [ -f "$api" ]; then kind="api-wrapped"; script="$api"
+else kind="playbook-only"; script=""
+fi
+
+if [ -z "$script" ]; then
+  [ "${JSON_ONLY:-0}" -eq 0 ] && echo "${Y}⏭${RST}  $agent (module $module_id) — playbook-only, requer Claude" >&2
+  cat > "$result_json" <<EOF2
+{"schema":"blindar/check-result@v1","agent":"check-$agent","status":"deferred","kind":"playbook-only","module":"$module_id","findings_count":0,"findings":[],"message":"Agente disponível só como playbook em agents/$agent.md — requer Claude pra executar"}
+EOF2
+  echo "$module_id|$agent|$kind|deferred|0"
+  exit 0
+fi
+
+[ "${JSON_ONLY:-0}" -eq 0 ] && echo "${B}▶${RST}  $agent (module $module_id, $kind)..." >&2
+
+if [ "${VERBOSE:-0}" -eq 1 ]; then
+  bash "$script" 2>&1 | sed "s/^/  [$agent] /" >&2
+else
+  bash "$script" >/dev/null 2>&1
+fi
+
+if [ -f "$result_json" ]; then
+  status=$(grep -oE '"status"[[:space:]]*:[[:space:]]*"[a-z]+"' "$result_json" | head -1 | sed -E 's/.*"([a-z]+)".*/\1/')
+  findings=$(grep -oE '"findings_count"[[:space:]]*:[[:space:]]*[0-9]+' "$result_json" | head -1 | sed -E 's/.*:[[:space:]]*([0-9]+).*/\1/')
+  [ -z "$findings" ] && findings=0
+else
+  status="errored"; findings=0
+fi
+
+case "$status" in
+  passed)  ico="${G}✓${RST}" ;;
+  failed)  ico="${R}✗${RST}" ;;
+  skipped) ico="${Y}⏭${RST}" ;;
+  deferred) ico="${Y}⏭${RST}" ;;
+  *) ico="${R}!${RST}"; status="errored" ;;
+esac
+[ "${JSON_ONLY:-0}" -eq 0 ] && echo "$ico  $agent → $status ($findings findings)" >&2
+echo "$module_id|$agent|$kind|$status|$findings"
+HELPER_EOF
+  chmod +x "$HELPER" 2>/dev/null || true
+
+  # Dispara xargs -P. Output (linha por agente) vai pra RUN_LOG.
+  printf '%s\n' "$AGENTS_LIST" | grep . | \
+    xargs -I{} -P "$PARALLEL" bash "$HELPER" "{}" >> "$RUN_LOG" || true
+
+  rm -f "$HELPER" 2>/dev/null || true
+else
+  # Modo serial (loop original, agora via função)
+  while IFS=: read -r module_id agent; do
+    [ -z "$agent" ] && continue
+    run_one_check "$module_id" "$agent" >> "$RUN_LOG"
+  done <<< "$AGENTS_LIST"
+fi
+
+# Agrega resultados lendo o log
+PASSED=0; FAILED=0; SKIPPED=0; DEFERRED=0; ERRORED=0
+while IFS='|' read -r mid ag kind st fc; do
+  [ -z "$ag" ] && continue
+  case "$st" in
+    passed)   PASSED=$((PASSED+1))   ;;
+    failed)   FAILED=$((FAILED+1))   ;;
+    skipped)  SKIPPED=$((SKIPPED+1)) ;;
+    deferred) DEFERRED=$((DEFERRED+1)) ;;
+    *)        ERRORED=$((ERRORED+1)); st="errored" ;;
+  esac
+  RESULTS+=("$mid|$ag|$kind|$st|$fc")
+done < "$RUN_LOG"
 
 DURATION=$(( $(date +%s) - TOTAL_START ))
 
@@ -190,6 +369,12 @@ fi
   echo "  \"duration_sec\": $DURATION,"
   echo "  \"modules_filter\": \"$FILTER\","
   echo "  \"strict_mode\": $STRICT,"
+  echo "  \"parallel\": $PARALLEL,"
+  echo "  \"verbose\": $VERBOSE,"
+  if [ -n "$SINCE_REF" ]; then
+    echo "  \"since\": \"$SINCE_REF\","
+    echo "  \"changed_files\": $CHANGED_FILES_JSON,"
+  fi
   echo "  \"total_agents\": $TOTAL,"
   echo "  \"passed\": $PASSED,"
   echo "  \"failed\": $FAILED,"
