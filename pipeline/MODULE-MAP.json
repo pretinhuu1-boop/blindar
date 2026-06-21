@@ -1,6 +1,6 @@
 {
   "$schema": "https://github.com/pretinhuu1-boop/blindar/blob/main/schemas/module-map.schema.json",
-  "version": "0.36.0",
+  "version": "0.39.0",
   "description": "Mapa estruturado dos 15 módulos do launcher → agentes ativados → fases onde rodam. Consumido pelas Fases 02 (discovery), 04 (rounds-loop) e 06 (production-checklist) pra filtrar agentes pelo array config.selected_modules.",
   "modules": {
     "1": {
@@ -22,6 +22,11 @@
         "security",
         "auth-premium",
         "ai-llm-safety",
+        "prompt-injection-defense",
+        "mcp-security",
+        "rag-quality",
+        "vector-db-security",
+        "fine-tune-data-leak",
         "tenant-isolation-tests",
         "file-uploads",
         "mlops"
@@ -67,7 +72,7 @@
       "name": "Compliance: LGPD + GDPR + HIPAA + PCI-DSS + frameworks",
       "mandatory": false,
       "default_on_when": ["data_sensitivity:high", "data_sensitivity:medium", "rigor:compliance"],
-      "agents": ["compliance-lgpd-br", "compliance", "compliance-gdpr", "compliance-hipaa", "compliance-pci-deep"],
+      "agents": ["compliance-lgpd-br", "compliance", "compliance-gdpr", "compliance-hipaa", "compliance-pci-deep", "fintech-banking-br", "healthtech-fhir", "ecom-checkout-conversion"],
       "phases": ["04-rounds-loop", "06-production-checklist"]
     },
     "9": {
@@ -81,7 +86,7 @@
       "name": "Fluidez completa + SEO + Frontend gen + Search + Push + Mobile native + Analytics + Audio + Video",
       "mandatory": false,
       "default_on_when": ["ui_detected"],
-      "agents": ["frontend-performance", "responsive-a11y", "pwa-installable", "i18n-tz", "state-cache-data", "onboarding-ux", "seo-marketing-meta", "frontend-generator", "search-quality", "push-notifications", "mobile-native", "embedded-analytics", "audio-voice", "video-streaming"],
+      "agents": ["frontend-performance", "responsive-a11y", "govtech-acessibilidade", "pwa-installable", "i18n-tz", "state-cache-data", "onboarding-ux", "seo-marketing-meta", "frontend-generator", "search-quality", "push-notifications", "mobile-native", "embedded-analytics", "audio-voice", "video-streaming"],
       "phases": ["04-rounds-loop", "06-production-checklist"]
     },
     "11": {

@@ -3,6 +3,74 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.39.0] — 2026-06-21
+
+**Fase B — Moats reais.** 9 agentes novos materializados via 4 sub-agentes paralelos. Foco: AI-era (5) + verticais BR (4). Esta é a defensibilidade que blindar tem que Snyk/Semgrep não copia em 6 meses.
+
+### 5 agentes AI-era (módulo 2 — security core)
+
+| Agente | Tipo | Cobre |
+|---|---|---|
+| `prompt-injection-defense` | `.sh` | OWASP LLM01 — system+user concat, tool output em eval/innerHTML, sem rate-limit, sem max_tokens |
+| `mcp-security` | `.sh` | Audita MCPs em `~/.claude.json` — capability bleed, plain-text tokens, não-whitelisted vs catalog |
+| `rag-quality` | `.api.sh` | chunking, embedding model, top-k, reranking, citation grounding, eval framework |
+| `vector-db-security` | `.api.sh` | tenant isolation, PII em embeddings, encryption at rest, query injection via metadata |
+| `fine-tune-data-leak` | `.api.sh` | PII em training set, prompt-completion ratio, memorization risk, eval split |
+
+### 4 agentes verticais BR (módulos 8 e 10 — moat real)
+
+| Agente | Tipo | Cobre |
+|---|---|---|
+| `fintech-banking-br` | `.sh` | PIX (idempotência, MED, QR), Open Finance Fases 1-4 (FAPI/MTLS/PS256), BACEN 4658, money em float, webhook sem signature |
+| `ecom-checkout-conversion` | `.sh` | Multi-step >3, autocomplete cc-*, 3DS2 (R$ 500+), Apple/Google Pay, cart persist, frete pré-checkout, ViaCEP |
+| `healthtech-fhir` | `.sh` | Patient sem identifier, PHI em log, telemedicina CFM 2299, Consent ausente, Provenance ausente, timezone Encounter |
+| `govtech-acessibilidade` | `.sh` | eMAG (atalhos Alt+1/2/3, foco-visible, alto-contraste), gov.br SSO, VLibras, mapa do site, LAI `/transparencia` |
+
+### Estatística
+
+- **18 arquivos novos** (9 .md + 9 .sh/.api.sh)
+- **~3.000 linhas** total
+- 4 sub-agentes paralelos: ~9 min wall-clock (vs ~36 min sequencial estimado)
+- Zero conflito (cada agente em arquivos diferentes)
+
+### MODULE-MAP atualizado
+
+- Módulo 2 ganhou 5 agentes (15 total)
+- Módulo 8 ganhou 3 agentes (8 total)
+- Módulo 10 ganhou 1 agente (15 total)
+- Versão `pipeline/MODULE-MAP.json` → 0.39.0
+
+### Cobertura geral atualizada
+
+| Tipo | v0.38 | v0.39 |
+|---|---|---|
+| Scripts determinísticos | 55 | **62** |
+| Wrappers API | 4 | **7** |
+| Agentes só playbook | 22 | **13** |
+| **Cobertura executável** | 80% | **84%** |
+
+### Smoke real
+
+Rodado em `tests/fixtures/clean-project` com `--module 2,8,10 --parallel 4`:
+- 38 agentes selecionados
+- 11 passed, 0 failed, 13 skipped (não-aplicável à fixture), 14 deferred (playbook-only), 0 errored
+- 63% cobertura executável neste filtro
+- Test suite blindar: 6/6 verde
+
+### Diferencial competitivo agora
+
+| Recurso | blindar | Snyk | Semgrep | SonarQube |
+|---|---|---|---|---|
+| LGPD-BR nativa | ✅ | ❌ | ❌ | ❌ |
+| PIX/Open Finance/BACEN | ✅ | ❌ | ❌ | ❌ |
+| FHIR + telemedicina CFM | ✅ | ❌ | ❌ | ❌ |
+| eMAG gov BR | ✅ | ❌ | ❌ | ❌ |
+| MCP security audit | ✅ | ❌ | ❌ | ❌ |
+| RAG/Vector DB security | ✅ | ❌ | ❌ | ❌ |
+| Prompt injection defense | ✅ | parcial | parcial | ❌ |
+
+---
+
 ## [0.38.0] — 2026-06-21
 
 **Fase A — Quick wins** (executado via 3 agentes paralelos). Destrava ecossistema (SARIF), 5-10× speedup (paralelização), PR-time gate (--since), debug humanizado (--verbose), fix de bugs descobertos na auditoria.
