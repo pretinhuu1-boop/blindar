@@ -47,6 +47,15 @@ for script in "$TEMPLATES/checks/"*.sh; do
 done
 
 echo ""
+echo "1b. Orquestrador único..."
+copy_if_absent "$SKILL_DIR/scripts/blindar-run.sh" "scripts/blindar-run.sh" "entrypoint mandatório"
+
+echo ""
+echo "1c. MODULE-MAP (consumido pelo orquestrador)..."
+mkdir -p "scripts/blindar/pipeline"
+copy_if_absent "$SKILL_DIR/pipeline/MODULE-MAP.json" "scripts/blindar/pipeline/MODULE-MAP.json" "fonte da verdade"
+
+echo ""
 echo "2. GitHub Actions workflow..."
 copy_if_absent "$TEMPLATES/.github/workflows/blindar.yml" \
                ".github/workflows/blindar.yml" "CI"

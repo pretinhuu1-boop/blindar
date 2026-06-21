@@ -1,6 +1,6 @@
 {
   "$schema": "https://github.com/pretinhuu1-boop/blindar/blob/main/schemas/module-map.schema.json",
-  "version": "0.21.0",
+  "version": "0.34.0",
   "description": "Mapa estruturado dos 15 módulos do launcher → agentes ativados → fases onde rodam. Consumido pelas Fases 02 (discovery), 04 (rounds-loop) e 06 (production-checklist) pra filtrar agentes pelo array config.selected_modules.",
   "modules": {
     "1": {
@@ -74,7 +74,7 @@
       "name": "Performance backend + Query + CDN strategy",
       "mandatory": false,
       "default_on_when": ["project_type:saas", "project_type:ecom", "project_type:api"],
-      "agents": ["performance", "db-architect", "cdn-strategy"],
+      "agents": ["performance", "db-architect", "cdn-strategy", "redis-patterns"],
       "phases": ["04-rounds-loop"]
     },
     "10": {
@@ -110,14 +110,14 @@
       "name": "DX + Flags + Backoffice + Email + Docs + Reports + Architect + Delivery + Project bootstrap (scaffold do zero)",
       "mandatory": false,
       "default_on_when": ["always"],
-      "agents": ["devops", "feature-flags", "backoffice-admin", "email-deliverability", "documentation-live", "execution-report", "architect", "delivery-bundle", "project-bootstrap"],
+      "agents": ["devops", "feature-flags", "backoffice-admin", "email-deliverability", "documentation-live", "execution-report", "architect", "delivery-bundle", "project-bootstrap", "mcp-recommender"],
       "phases": ["03-bootstrap-sec-html", "04-rounds-loop", "06-production-checklist", "07-final-report"]
     },
     "15": {
       "name": "Pentest + adversarial review",
       "mandatory": true,
       "skip_token": "always-on",
-      "agents": ["pentest", "adversarial-reviewer"],
+      "agents": ["pentest", "adversarial-reviewer", "wave-guardian"],
       "phases": ["05-adversarial-review", "06-production-checklist"]
     }
   },

@@ -19,7 +19,7 @@ IGNORE=('!node_modules' '!dist' '!build' '!.next' '!**/*.test.*' '!**/*.spec.*'
 # 1. URLs https://*.com hardcoded em código
 log_info "Buscando URLs de produção hardcoded..."
 TMP=$(mktemp)
-rg -n "https?://[a-z0-9.-]+\.(com|net|io|app|br)" --type ts --type tsx --type py --type go "${IGNORE[@]}" 2>/dev/null | \
+rg -n "https?://[a-z0-9.-]+\.(com|net|io|app|br)" --type ts --type py --type go "${IGNORE[@]}" 2>/dev/null | \
   grep -vE "(localhost|127\.0\.0\.1|0\.0\.0\.0|example\.com|github\.com|w3\.org|schema\.org|@blindar:hardcode-ok)" > "$TMP" || true
 
 URL_COUNT=$(wc -l < "$TMP" || echo 0)
@@ -80,7 +80,7 @@ fi
 # 4. Cores hex em JSX/TSX (deveriam ser design tokens)
 log_info "Buscando cores hex em componentes..."
 TMP=$(mktemp)
-rg -n "#[0-9a-fA-F]{3,8}\b" --type tsx --type jsx --type css "${IGNORE[@]}" 2>/dev/null | \
+rg -n "#[0-9a-fA-F]{3,8}\b" --type css "${IGNORE[@]}" 2>/dev/null | \
   grep -vE "(tokens|theme|design-system|@blindar:hardcode-ok)" > "$TMP" || true
 
 COLOR_COUNT=$(wc -l < "$TMP" || echo 0)

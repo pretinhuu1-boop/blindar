@@ -18,3 +18,7 @@ desktop.ini
 
 # Logs locais
 *.log
+
+# Outputs transientes do blindar (gerados em fixtures durante testes)
+.blindar/
+tests/fixtures/**/.blindar/

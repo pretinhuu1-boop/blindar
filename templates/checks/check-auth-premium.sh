@@ -54,7 +54,7 @@ rm -f "$TMP"
 # 3. Token em localStorage (CRIT — XSS lê)
 log_info "Buscando JWT em localStorage..."
 TMP=$(mktemp)
-rg -n "localStorage\.setItem.*['\"](token|access[_-]?token|jwt|auth)" --type ts --type tsx --type js --type jsx "${IGNORE[@]}" > "$TMP" 2>/dev/null || true
+rg -n "localStorage\.setItem.*['\"](token|access[_-]?token|jwt|auth)" --type ts --type js  "${IGNORE[@]}" > "$TMP" 2>/dev/null || true
 LS_TOKEN=$(wc -l < "$TMP" || echo 0)
 if [ "$LS_TOKEN" -gt 0 ]; then
   while IFS=: read -r file line content; do

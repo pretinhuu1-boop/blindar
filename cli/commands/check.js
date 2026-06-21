@@ -1,16 +1,16 @@
 // blindar check — wraps shell scripts em CLI Node
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import { existsSync } from 'node:fs';
-import kleur from 'kleur';
+import kleur from '../lib/colors.js';
 
 export default async function check({ args, skillRoot }) {
   const cwd = process.cwd();
 
-  // Verifica se está num repo git
-  if (!existsSync(join(cwd, '.git'))) {
-    console.error(kleur.red('❌ Não está em um repositório git.'));
-    return 1;
+  // Git é recomendado mas não obrigatório (apenas para sha em result)
+  const gitCheck = spawnSync('git', ['rev-parse', '--is-inside-work-tree'], { cwd, stdio: 'ignore' });
+  if (gitCheck.status !== 0 && !args.force) {
+    console.error(kleur.yellow('⚠  Não está em repo git. Continuando sem git_sha em resultados (passe --force pra suprimir).'));
   }
 
   // Determina caminho dos scripts: prioriza scripts/blindar/ local; fallback templates/checks/ do skill

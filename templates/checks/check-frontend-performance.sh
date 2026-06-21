@@ -35,7 +35,7 @@ fi
 # 2. next/image em vez de <img>
 if is_nextjs; then
   log_info "Verificando next/image..."
-  RAW_IMG=$(rg -c "<img " --type tsx --type jsx "${IGNORE[@]}" 2>/dev/null | wc -l || echo 0)
+  RAW_IMG=$(rg -c "<img "   "${IGNORE[@]}" 2>/dev/null | wc -l || echo 0)
   if [ "$RAW_IMG" -gt 3 ]; then
     add_finding "high" "$RAW_IMG <img> sem next/image — perde optimization (AVIF/WebP/lazy)" "" ""
     log_warn "$RAW_IMG <img> raw em Next.js"
@@ -46,7 +46,7 @@ fi
 if is_nextjs && has_dir "app"; then
   log_info "Buscando 'use client' desnecessário..."
   TMP=$(mktemp)
-  for f in $(rg -lE "^'use client'" --type tsx --type jsx app/ 2>/dev/null); do
+  for f in $(rg -lE "^'use client'"   app/ 2>/dev/null); do
     if ! grep -qE "useState|useEffect|useRef|useReducer|onClick|onChange|onSubmit" "$f" 2>/dev/null; then
       echo "$f" >> "$TMP"
     fi
@@ -73,7 +73,7 @@ fi
 
 # 5. Dynamic imports / code splitting
 log_info "Verificando code splitting..."
-DYNAMIC=$(rg -c "(dynamic\(|lazy\(|import\()" --type tsx --type jsx --type ts "${IGNORE[@]}" 2>/dev/null | wc -l || echo 0)
+DYNAMIC=$(rg -c "(dynamic\(|lazy\(|import\()" --type ts "${IGNORE[@]}" 2>/dev/null | wc -l || echo 0)
 if [ "$DYNAMIC" -eq 0 ] && [ "$HAS_UI" -eq 1 ]; then
   add_finding "low" "Sem dynamic import / React.lazy — tudo carrega no bundle inicial" "" ""
 fi

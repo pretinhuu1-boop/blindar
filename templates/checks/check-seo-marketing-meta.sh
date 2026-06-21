@@ -21,7 +21,7 @@ fi
 
 # 3. metadata.robots = 'noindex' em rota pública (provável erro)
 TMP=$(mktemp)
-rg -nE "robots:\s*['\"]noindex" --type ts --type tsx "${IGNORE[@]}" 2>/dev/null > "$TMP" || true
+rg -nE "robots:\s*['\"]noindex" --type ts  "${IGNORE[@]}" 2>/dev/null > "$TMP" || true
 NOINDEX=$(wc -l < "$TMP" || echo 0)
 # Só warn se acharmos noindex fora de /admin /app /dashboard
 while IFS=: read -r file line content; do
@@ -44,7 +44,7 @@ fi
 
 # 5. Title duplicado em todas as páginas (sinal de SEO ruim)
 TMP=$(mktemp)
-rg -hoE "title:\s*['\"][^'\"]+['\"]" --type tsx --type ts app/ 2>/dev/null | sort -u > "$TMP" || true
+rg -hoE "title:\s*['\"][^'\"]+['\"]" --type ts app/ 2>/dev/null | sort -u > "$TMP" || true
 UNIQUE_TITLES=$(wc -l < "$TMP" || echo 0)
 ALL_PAGES=$(find app -name "page.tsx" 2>/dev/null | wc -l || echo 0)
 if [ "$ALL_PAGES" -gt 5 ] && [ "$UNIQUE_TITLES" -lt 3 ]; then
@@ -53,7 +53,7 @@ fi
 rm -f "$TMP"
 
 # 6. JSON-LD structured data
-HAS_JSONLD=$(rg -lE "application/ld\+json" --type tsx --type ts --type html "${IGNORE[@]}" 2>/dev/null | head -1)
+HAS_JSONLD=$(rg -lE "application/ld\+json" --type ts --type html "${IGNORE[@]}" 2>/dev/null | head -1)
 [ -z "$HAS_JSONLD" ] && add_finding "low" "Sem JSON-LD structured data — perde rich snippets" "" ""
 
 emit_result "$BLINDAR_AGENT" "passed" 0

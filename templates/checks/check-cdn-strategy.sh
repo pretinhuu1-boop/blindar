@@ -22,12 +22,12 @@ fi
 rm -f "$TMP"
 
 # 2. <img> sem next/image (já coberto por frontend-performance, mas relevante aqui)
-RAW_IMG=$(rg -c "<img " --type tsx --type jsx "${IGNORE[@]}" 2>/dev/null | wc -l || echo 0)
+RAW_IMG=$(rg -c "<img "   "${IGNORE[@]}" 2>/dev/null | wc -l || echo 0)
 [ "$RAW_IMG" -gt 5 ] && add_finding "low" "$RAW_IMG <img> sem next/image — perde optimization + cache CDN" "" ""
 
 # 3. Asset path sem hash (cache eterno = bug eterno)
 TMP=$(mktemp)
-rg -nE "src=['\"]/(images|assets)/[^'\"]*\\.(js|css|png|jpg)['\"]" --type tsx --type jsx --type html "${IGNORE[@]}" 2>/dev/null | \
+rg -nE "src=['\"]/(images|assets)/[^'\"]*\\.(js|css|png|jpg)['\"]" --type html "${IGNORE[@]}" 2>/dev/null | \
   grep -vE "[a-f0-9]{6,}" > "$TMP" || true
 NO_HASH=$(wc -l < "$TMP" || echo 0)
 [ "$NO_HASH" -gt 0 ] && add_finding "med" "$NO_HASH asset sem hash no path — mudar = bug de cache" "" ""
@@ -41,7 +41,7 @@ CORS_STAR=$(wc -l < "$TMP" || echo 0)
 rm -f "$TMP"
 
 # 5. preload="auto" em <video> (baixa video todo desnecessário)
-PRELOAD_AUTO=$(rg -cE "preload=['\"]auto" --type tsx --type jsx --type html "${IGNORE[@]}" 2>/dev/null | wc -l || echo 0)
+PRELOAD_AUTO=$(rg -cE "preload=['\"]auto" --type html "${IGNORE[@]}" 2>/dev/null | wc -l || echo 0)
 [ "$PRELOAD_AUTO" -gt 0 ] && add_finding "med" "$PRELOAD_AUTO <video preload=auto> — banda perdida" "" ""
 
 emit_result "$BLINDAR_AGENT" "passed" 0

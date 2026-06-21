@@ -1,5 +1,5 @@
 // blindar help
-import kleur from 'kleur';
+import kleur from '../lib/colors.js';
 
 export default function help({ cliRoot, skillRoot }) {
   console.log(kleur.bold('blindar') + ' — audita, blinda e prepara projetos pra produção');

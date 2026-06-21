@@ -2,7 +2,7 @@
 import { spawn } from 'node:child_process';
 import { join } from 'node:path';
 import { existsSync } from 'node:fs';
-import kleur from 'kleur';
+import kleur from '../lib/colors.js';
 
 export default async function fix({ args, skillRoot }) {
   const cwd = process.cwd();

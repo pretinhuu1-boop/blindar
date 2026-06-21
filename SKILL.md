@@ -20,6 +20,32 @@ triggers:
 
 # blindar — orquestrador
 
+## ENTRYPOINT ÚNICO E OBRIGATÓRIO (v0.33+)
+
+**Quando blindar é invocado, a PRIMEIRA AÇÃO é sempre:**
+
+```bash
+bash scripts/blindar-run.sh [--fast] [--strict]
+```
+
+Este script é a **única forma garantida** de rodar a suíte. Ele:
+1. Lê `pipeline/MODULE-MAP.json` (fonte da verdade)
+2. Itera todo agente do módulos selecionados
+3. Pra cada um, executa `check-<agent>.sh` (determinístico) ou `check-<agent>.api.sh` (Claude API wrapper)
+4. Se agente é só playbook (.md), marca `deferred` no relatório
+5. Gera `.blindar/run-report.json` com cobertura executável real
+
+**Você NÃO deve pular este passo nem rodar agentes manualmente.** O orquestrador é a contraparte determinística do skill — sem ele, não há garantia.
+
+**Exit codes:**
+- `0` GO — tudo passou
+- `1` CONDITIONAL-GO — alguns deferred (playbooks pendentes)
+- `2` NO-GO — failed críticos
+- `3` STRICT-FAIL — strict mode + deferred
+- `4` ERRORED — bug em algum script
+
+**Após o run-report:** examine `deferred` agents e execute manualmente os playbooks em `agents/<agent>.md` que correspondem. Cada playbook deve produzir `.blindar/results/check-<agent>.json` no mesmo formato.
+
 ## Princípio fundador: SECURITY-FIRST
 
 **Segurança é a fundação.** Toda decisão (back, front, banco, infra, CI)

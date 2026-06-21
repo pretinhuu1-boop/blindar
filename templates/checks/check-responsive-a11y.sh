@@ -27,7 +27,7 @@ FAIL=0
 # 1. <img> sem alt (CRIT a11y)
 log_info "Buscando <img> sem alt..."
 TMP=$(mktemp)
-rg -nP "<img(?![^>]*\balt=)" --type tsx --type jsx --type html "${IGNORE[@]}" > "$TMP" 2>/dev/null || true
+rg -nP "<img(?![^>]*\balt=)" --type html "${IGNORE[@]}" > "$TMP" 2>/dev/null || true
 IMG_NO_ALT=$(wc -l < "$TMP" || echo 0)
 if [ "$IMG_NO_ALT" -gt 0 ]; then
   while IFS=: read -r file line content; do
@@ -41,7 +41,7 @@ rm -f "$TMP"
 # 2. outline:none sem :focus-visible substituto
 log_info "Buscando outline:none..."
 TMP=$(mktemp)
-rg -n "outline\s*:\s*(none|0)" --type css --type scss --type tsx --type jsx "${IGNORE[@]}" > "$TMP" 2>/dev/null || true
+rg -n "outline\s*:\s*(none|0)" --type css --type scss   "${IGNORE[@]}" > "$TMP" 2>/dev/null || true
 OUTLINE_NONE=$(wc -l < "$TMP" || echo 0)
 if [ "$OUTLINE_NONE" -gt 0 ]; then
   add_finding "high" "$OUTLINE_NONE outline:none — sem foco visível quebra a11y de teclado" "" ""
@@ -52,7 +52,7 @@ rm -f "$TMP"
 # 3. <button> sem texto/aria-label (apenas ícone)
 log_info "Buscando <button> só com <svg>..."
 TMP=$(mktemp)
-rg -nU "<button[^>]*>\s*<svg" --type tsx --type jsx "${IGNORE[@]}" 2>/dev/null | grep -v "aria-label" > "$TMP" || true
+rg -nU "<button[^>]*>\s*<svg"   "${IGNORE[@]}" 2>/dev/null | grep -v "aria-label" > "$TMP" || true
 BTN_NO_LABEL=$(wc -l < "$TMP" || echo 0)
 if [ "$BTN_NO_LABEL" -gt 0 ]; then
   add_finding "high" "$BTN_NO_LABEL <button> com <svg> sem aria-label — screen reader não anuncia" "" ""
@@ -62,7 +62,7 @@ rm -f "$TMP"
 # 4. Placeholder substituindo label
 log_info "Buscando <input> sem <label>..."
 TMP=$(mktemp)
-rg -nU "<input[^>]*placeholder=" --type tsx --type jsx "${IGNORE[@]}" 2>/dev/null | grep -v "aria-label\|<label" > "$TMP" || true
+rg -nU "<input[^>]*placeholder="   "${IGNORE[@]}" 2>/dev/null | grep -v "aria-label\|<label" > "$TMP" || true
 NO_LABEL=$(wc -l < "$TMP" || echo 0)
 if [ "$NO_LABEL" -gt 5 ]; then
   add_finding "med" "$NO_LABEL <input> com placeholder mas sem <label> visível detectado" "" ""

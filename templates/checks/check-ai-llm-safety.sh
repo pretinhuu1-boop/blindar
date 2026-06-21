@@ -87,7 +87,7 @@ rm -f "$TMP"
 
 # 6. UI sem aviso "é IA"
 if grep -lE "(react|vue|svelte|next)" package.json 2>/dev/null | head -1 | grep -q .; then
-  HAS_AI_DISCLAIMER=$(rg -lE "(é IA|is AI|pode conter erros|may be inaccurate|AI-generated)" --type tsx --type jsx 2>/dev/null | head -1)
+  HAS_AI_DISCLAIMER=$(rg -lE "(é IA|is AI|pode conter erros|may be inaccurate|AI-generated)"   2>/dev/null | head -1)
   if [ -z "$HAS_AI_DISCLAIMER" ]; then
     add_finding "med" "Sem aviso 'pode conter erros' em UI de IA — overreliance risk (LLM09)" "" ""
   fi

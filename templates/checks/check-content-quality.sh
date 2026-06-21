@@ -19,7 +19,7 @@ FAIL=0
 log_info "Buscando erro técnico em texto de UI..."
 TMP=$(mktemp)
 rg -nE "(throw new \w*Error|return.*['\"])(undefined|null|NaN|TypeError|ReferenceError|Cannot read|stack)" \
-   --type tsx --type jsx "${IGNORE[@]}" > "$TMP" 2>/dev/null || true
+     "${IGNORE[@]}" > "$TMP" 2>/dev/null || true
 TECH_LEAK=$(wc -l < "$TMP" || echo 0)
 if [ "$TECH_LEAK" -gt 0 ]; then
   while IFS=: read -r file line content; do
@@ -31,7 +31,7 @@ rm -f "$TMP"
 
 # 2. "Tem certeza?" sem contexto
 log_info "Buscando 'Tem certeza?' vago..."
-VAGUE=$(rg -n "['\"]Tem certeza\?['\"]" --type tsx --type jsx "${IGNORE[@]}" 2>/dev/null | wc -l || echo 0)
+VAGUE=$(rg -n "['\"]Tem certeza\?['\"]"   "${IGNORE[@]}" 2>/dev/null | wc -l || echo 0)
 if [ "$VAGUE" -gt 0 ]; then
   add_finding "med" "$VAGUE 'Tem certeza?' sem contexto — explicitar o que acontece" "" ""
 fi
@@ -39,7 +39,7 @@ fi
 # 3. "OK"/"Cancelar" em destrutivo
 log_info "Buscando OK/Cancelar em delete..."
 TMP=$(mktemp)
-rg -nB 5 -A 5 "(delete|remove|destroy|drop)" --type tsx --type jsx "${IGNORE[@]}" 2>/dev/null | \
+rg -nB 5 -A 5 "(delete|remove|destroy|drop)"   "${IGNORE[@]}" 2>/dev/null | \
   grep -E "['\"]OK['\"]|['\"]Cancelar['\"]" | head -10 > "$TMP" || true
 OK_DESTRUCTIVE=$(wc -l < "$TMP" || echo 0)
 if [ "$OK_DESTRUCTIVE" -gt 0 ]; then
@@ -50,7 +50,7 @@ rm -f "$TMP"
 # 4. Concatenação que vira plural quebrado
 log_info "Buscando plural por concatenação..."
 TMP=$(mktemp)
-rg -n "['\"][a-z]+\s*['\"]\s*\+\s*\w+\s*\+\s*['\"]\s*s\b" --type ts --type tsx "${IGNORE[@]}" > "$TMP" 2>/dev/null || true
+rg -n "['\"][a-z]+\s*['\"]\s*\+\s*\w+\s*\+\s*['\"]\s*s\b" --type ts  "${IGNORE[@]}" > "$TMP" 2>/dev/null || true
 PLURAL_BROKEN=$(wc -l < "$TMP" || echo 0)
 if [ "$PLURAL_BROKEN" -gt 0 ]; then
   add_finding "med" "$PLURAL_BROKEN plural via concatenação — usar ICU MessageFormat" "" ""
@@ -61,7 +61,7 @@ rm -f "$TMP"
 log_info "Buscando termos discriminatórios..."
 TMP=$(mktemp)
 rg -niE "\b(blacklist|whitelist|master\/slave|slave|grandfather(ed)?|sanity check)\b" \
-   --type tsx --type ts --type md "${IGNORE[@]}" > "$TMP" 2>/dev/null || true
+ --type ts --type md "${IGNORE[@]}" > "$TMP" 2>/dev/null || true
 DISCRIMINATORY=$(wc -l < "$TMP" || echo 0)
 if [ "$DISCRIMINATORY" -gt 0 ]; then
   while IFS=: read -r file line content; do
@@ -79,7 +79,7 @@ if has_file ".blindar/copy-style.yml"; then
   if [ -n "$FORBIDDEN" ]; then
     while read -r word; do
       [ -z "$word" ] && continue
-      HITS=$(rg -ci "$word" --type tsx --type jsx --type md "${IGNORE[@]}" 2>/dev/null | wc -l || echo 0)
+      HITS=$(rg -ci "$word" --type md "${IGNORE[@]}" 2>/dev/null | wc -l || echo 0)
       if [ "$HITS" -gt 0 ]; then
         add_finding "med" "$HITS uso(s) de '$word' (proibido por .blindar/copy-style.yml)" "" ""
       fi

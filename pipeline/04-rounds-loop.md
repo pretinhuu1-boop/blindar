@@ -6,6 +6,29 @@
 
 Fechar gaps da matrix, um por vez, cada um virando um PR mergeado.
 
+## Gate obrigatório no fim de cada onda (v0.34+)
+
+**Antes de fechar QUALQUER onda**, invocar o `wave-guardian`:
+
+```bash
+WAVE_NUMBER=<N> \
+WAVE_AGENTS="<lista,csv>" \
+MIN_COVERAGE_PCT=90 \
+bash templates/checks/check-wave-guardian.sh
+```
+
+Decisão:
+- **Exit 0 (PASS)**: gera `wave-N-report.md`, abre checkpoint de merge, segue
+- **Exit 1 (BLOCKED)**: lê `.blindar/wave-<N>-guardian.md`, corrige causas, re-roda blindar-run + guardian. **NÃO feche a onda sem PASS.**
+
+Pré-requisito: `bash scripts/blindar-run.sh --strict --module <ids-da-onda>`
+deve ter rodado antes — guardian valida o `.blindar/run-report.json` gerado por ele.
+
+**Anti-padrão**: rodar guardian, dar BLOCK, e fechar a onda mesmo assim. Se você
+precisa fechar com débito, registre em `.blindar/debt.md` E reduza scope da
+onda — não mascare o guardian.
+
+
 ## Filtragem por módulo selecionado (v0.8+)
 
 **ANTES de pickar um gap**, consultar `pipeline/MODULE-MAP.json`:

@@ -67,7 +67,7 @@ fi
 if [ -z "$ONLY_CHECK" ] || [ "$ONLY_CHECK" = "mock-killer" ]; then
   log_info "Procurando TODOs sem issue link..."
   # SÓ sugere (não aplica — operador precisa criar issue)
-  TODO_COUNT=$(rg -n "TODO[^(]" --type ts --type tsx 2>/dev/null | grep -v "TODO(issue-\|@blindar:keep-todo" | wc -l || echo 0)
+  TODO_COUNT=$(rg -n "TODO[^(]" --type ts  2>/dev/null | grep -v "TODO(issue-\|@blindar:keep-todo" | wc -l || echo 0)
   if [ "$TODO_COUNT" -gt 0 ]; then
     SUGGESTIONS+=("$TODO_COUNT TODOs sem issue — crie issues e use TODO(issue-#N): ... (não auto-fixed)")
   fi
@@ -102,7 +102,7 @@ fi
 # ─── FIX 4: <img> sem alt em projetos React → adicionar alt="" placeholder ───
 # (NÃO aplica automaticamente — risco de gerar alt errado. Só sugere.)
 if [ -z "$ONLY_CHECK" ] || [ "$ONLY_CHECK" = "responsive-a11y" ]; then
-  IMG_NO_ALT=$(rg -cP "<img(?![^>]*\balt=)" --type tsx --type jsx 2>/dev/null | wc -l || echo 0)
+  IMG_NO_ALT=$(rg -cP "<img(?![^>]*\balt=)"   2>/dev/null | wc -l || echo 0)
   if [ "$IMG_NO_ALT" -gt 0 ]; then
     SUGGESTIONS+=("$IMG_NO_ALT <img> sem alt — adicione alt descritivo manualmente (não auto-fixed pra evitar gerar alt errado)")
   fi

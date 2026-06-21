@@ -1,7 +1,7 @@
 // blindar report — copia templates HTML pro projeto + atualiza com aggregate.json
 import { join } from 'node:path';
 import { existsSync, copyFileSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
-import kleur from 'kleur';
+import kleur from '../lib/colors.js';
 
 export default async function report({ skillRoot }) {
   const cwd = process.cwd();

@@ -32,8 +32,8 @@ HAS_DPO=$(grep -rlE "dpo@|encarregado@" public/ docs/ src/ 2>/dev/null | head -1
 [ -z "$HAS_DPO" ] && add_finding "med" "Sem contato de DPO/encarregado público (LGPD Art. 41)" "" ""
 
 # 5. Cookie banner real (opt-in)
-HAS_BANNER=$(rg -lE "(cookie.*consent|cookieConsent|CookieBanner|Klaro)" --type tsx --type jsx 2>/dev/null | head -1)
-if [ -z "$HAS_BANNER" ] && rg -lE "(analytics|gtag|fbq)" --type tsx 2>/dev/null | head -1 | grep -q .; then
+HAS_BANNER=$(rg -lE "(cookie.*consent|cookieConsent|CookieBanner|Klaro)"   2>/dev/null | head -1)
+if [ -z "$HAS_BANNER" ] && rg -lE "(analytics|gtag|fbq)"  2>/dev/null | head -1 | grep -q .; then
   add_finding "high" "Analytics sem cookie banner — LGPD Art. 7-9 violação" "" ""
 fi
 

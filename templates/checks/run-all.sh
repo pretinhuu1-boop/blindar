@@ -111,10 +111,16 @@ for check in "${CHECKS[@]}"; do
     bash "$script" > /dev/null 2>&1 || true
   fi
 
+  # _lib.sh cria como ${agent}.json onde agent = "check-XYZ"
   result_file="$RESULTS_DIR/${check%.sh}.json"
-  result_file="${result_file/check-/}"
   if [ -f "$result_file" ]; then
-    status=$(jq -r '.status' "$result_file" 2>/dev/null || echo "unknown")
+    # jq preferido; fallback grep+sed pra ambientes sem jq (Windows)
+    if command -v jq >/dev/null 2>&1; then
+      status=$(jq -r '.status' "$result_file" 2>/dev/null || echo "unknown")
+    else
+      status=$(grep -oE '"status"[[:space:]]*:[[:space:]]*"[a-z]+"' "$result_file" | head -1 | sed -E 's/.*"([a-z]+)".*/\1/')
+      [ -z "$status" ] && status="unknown"
+    fi
     case "$status" in
       passed)  PASS_COUNT=$((PASS_COUNT+1)) ;;
       failed)  FAIL_COUNT=$((FAIL_COUNT+1)); FAILED_CHECKS+=("$check") ;;
@@ -128,8 +134,25 @@ done
 
 TOTAL_DURATION=$(( $(date +%s) - TOTAL_START ))
 
-# Aggregate
+# Aggregate (jq se disponível, senão concatena com Node)
 AGGREGATE="$RESULTS_DIR/aggregate.json"
+
+if ! command -v jq >/dev/null 2>&1; then
+  # Fallback Node.js: concatena results em um aggregate.json simples
+  if command -v node >/dev/null 2>&1; then
+    node -e "
+      const fs=require('fs'),p=require('path');
+      const dir='$RESULTS_DIR';
+      const files=fs.readdirSync(dir).filter(f=>f.endsWith('.json')&&f!=='aggregate.json');
+      const results=files.map(f=>{try{return JSON.parse(fs.readFileSync(p.join(dir,f),'utf8'))}catch(e){return null}}).filter(Boolean);
+      const sev=s=>results.flatMap(r=>r.findings||[]).filter(f=>f.severity===s).length;
+      const agg={schema:'blindar/aggregate@v1',ran_at:new Date().toISOString(),duration_sec:$TOTAL_DURATION,total_checks:results.length,passed:results.filter(r=>r.status==='passed').length,failed:results.filter(r=>r.status==='failed').length,skipped:results.filter(r=>r.status==='skipped').length,total_findings:results.reduce((a,r)=>a+(r.findings_count||0),0),findings_by_severity:{crit:sev('crit'),high:sev('high'),med:sev('med'),low:sev('low')},results};
+      fs.writeFileSync('$AGGREGATE',JSON.stringify(agg,null,2));
+    " 2>/dev/null || echo '{"error":"aggregate failed (node missing)"}' > "$AGGREGATE"
+  else
+    echo '{"error":"aggregate requires jq or node"}' > "$AGGREGATE"
+  fi
+else
 jq -s '
   {
     schema: "blindar/aggregate@v1",
@@ -150,6 +173,7 @@ jq -s '
   }
 ' "$RESULTS_DIR"/*.json | jq 'del(.results[] | select(.agent == null))' > "$AGGREGATE" 2>/dev/null || \
   echo '{"error": "aggregate failed"}' > "$AGGREGATE"
+fi
 
 if [ "$JSON_ONLY" -eq 1 ]; then
   cat "$AGGREGATE"
