@@ -3,6 +3,139 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.22.0] — 2026-06-14
+
+### Adicionou — Deterministic Layer (resolve "blindar não garante 100% em AUTO")
+
+Materializa agentes em **scripts shell executáveis** + CI workflow
+obrigatório + branch protection. Resultado: validação roda **independente
+do LLM**, com `exit 0` / `exit 1` auditáveis.
+
+#### 8 check scripts representativos em `templates/checks/`
+
+| Script | Materializa agente | O que checa |
+|---|---|---|
+| `check-secrets.sh` | runtime-secrets + supply-chain | gitleaks scan, CRIT se algo |
+| `check-mock-killer.sh` | mock-killer | console.log/TODO/mock/onClick={} em código de prod, respeita `// @blindar:keep` |
+| `check-config-externalization.sh` | config-externalization | URLs hardcoded, passwords inline, .env.example sync, cores hex em JSX |
+| `check-deps-audit.sh` | patch-management + supply-chain | npm audit, pip-audit, govulncheck, cargo audit, trivy fs |
+| `check-prisma-schema.sh` | db-architect | UUID v7 em PKs, audit columns, tenant_id em multi-tenant, currency em BigInt, timezones |
+| `check-payments.sh` | payments | CVV em código (PCI violation), PAN em log, webhook sem signature, money em Float |
+| `check-file-uploads.sh` | file-uploads | multer em prod (preferir presigned), SVG sem DOMPurify, S3 public-read |
+| `check-tenant-isolation.sh` | tenant-isolation-tests | findMany sem where tenantId, queryRawUnsafe, falta de testes de isolation, RLS hints |
+
+Cada script:
+- Detecta stack (Node/Python/Go/Rust/Prisma) e roda só se aplicável
+- Emite JSON estruturado em `.blindar/results/<agent>.json`
+- Exit 0/1/2 conforme severidade dos findings
+- Respeita `intelligence.yml` (whitelist via `// @blindar:keep`, `-- @blindar:global`, etc.)
+
+#### `run-all.sh` — orquestrador master
+
+```bash
+bash scripts/blindar/run-all.sh             # roda todos
+bash scripts/blindar/run-all.sh --fast      # subset (secrets + mock) pra pre-commit
+bash scripts/blindar/run-all.sh --json      # output JSON pra CI
+```
+
+Agrega `aggregate.json` com `findings_by_severity`, `passed/failed/skipped`,
+duração total.
+
+#### `check-termination.sh` — decisão matemática de release
+
+```
+Exit 0 = release liberada
+Exit 1 = crit aberto (BLOQUEIA)
+Exit 2 = high > 2 sem accept-risk (BLOQUEIA)
+Exit 3 = coverage < threshold
+Exit 4 = CI green streak insuficiente
+```
+
+Thresholds via env: `MAX_CRIT`, `MAX_HIGH_ACCEPTED`, `MIN_COVERAGE_PCT`,
+`MIN_CI_GREEN_STREAK`.
+
+#### CI workflow obrigatório (`templates/.github/workflows/blindar.yml`)
+
+- Roda em `push: main` + `pull_request` + manual
+- Instala gitleaks + rg + jq + trivy automaticamente
+- Roda `run-all.sh` → falha build se algum check fail
+- Roda `check-termination.sh` no final
+- Posta comentário no PR com resumo de findings por severidade
+- Upload de `.blindar/results/*` como artifact
+
+#### Husky hooks templates
+
+- `pre-commit`: lint-staged + blindar fast (≤ 5s)
+- `pre-push`: lint + type-check + test + blindar full + termination
+
+#### Installer + doc completa
+
+- `scripts/install-deterministic-checks.sh` — copia tudo pro projeto-alvo,
+  idempotente, suporta `--force`, detecta deps faltantes
+- `docs/deterministic-layer.md` — arquitetura, formato JSON, comparação
+  v0.21 vs v0.22, como configurar branch protection
+
+#### Comparação prescrição vs determinístico
+
+| Aspecto | v0.21 | v0.22 |
+|---|---|---|
+| Cobertura | "Claude deve fazer X" | Script executa X |
+| Auditoria | "Claude disse que rodou" | JSON timestamp + git_sha |
+| Bloqueio | Anti-padrão documentado | CI fail + branch protection |
+| Idempotência | Variável (LLM) | Determinística |
+| Velocidade | Depende do contexto | Segundos |
+
+#### Como configurar branch protection (manual no GitHub)
+
+```
+Settings → Branches → main → Add rule:
+  ☑ Require pull request before merging
+  ☑ Require status checks: blindar-checks
+  ☑ Do not allow bypassing
+```
+
+Merge **literalmente impossível** sem todos verdes.
+
+### Quem faz o quê agora
+
+| Tarefa | Camada determinística | Claude (blindar) |
+|---|---|---|
+| "Tem secret em código?" | ✅ gitleaks | — |
+| "Há queries sem tenant_id?" | ✅ grep | — |
+| "Como reorganizar essa pasta?" | — | ✅ architect agent |
+| "Refatorar pra optimistic locking" | — | ✅ db-architect agent |
+| "Gerar manual do cliente" | — | ✅ delivery-bundle |
+| "Validar migration" | ✅ Prisma migrate --dry-run | — |
+| "Bloquear merge se algo crítico" | ✅ CI + protection | — |
+
+### Total de agentes
+
+**72** (mesma de v0.21 — esta release é foco em infraestrutura, não em
+novos agentes). Próximas releases materializam mais agentes em scripts.
+
+### Migração v0.21.0 → v0.22.0
+
+No projeto-alvo, rodar:
+
+```bash
+bash ~/.claude/skills/blindar/scripts/install-deterministic-checks.sh
+```
+
+Adicionar ao `package.json`:
+
+```json
+"scripts": {
+  "blindar:check":     "bash scripts/blindar/run-all.sh",
+  "blindar:fast":      "bash scripts/blindar/run-all.sh --fast",
+  "blindar:terminate": "bash scripts/blindar/check-termination.sh"
+}
+```
+
+Configurar branch protection no GitHub. Pronto — merge sem CI verde
+agora é **impossível**.
+
+---
+
 ## [0.21.0] — 2026-06-14
 
 ### Adicionou — Intelligence em mais 5 agentes

@@ -220,6 +220,29 @@ Discovery (Fase 2) detecta se projeto declara um framework alvo
 (`.compliance-target`, `README`, `package.json`) e gera coverage report
 no relatório final (Fase 6).
 
+## Deterministic Layer (⭐ v0.22)
+
+Camada de scripts shell que **materializa agentes em checks executáveis**
++ CI workflow que bloqueia merge. Resolve "blindar não garante 100% no
+modo AUTO" — agora roda **independente da diligência do LLM**.
+
+Templates em [`templates/checks/`](templates/checks/). Instalador:
+
+```bash
+cd seu-projeto
+bash ~/.claude/skills/blindar/scripts/install-deterministic-checks.sh
+```
+
+Resultado no projeto-alvo:
+- `scripts/blindar/*.sh` — 8 checks executáveis (secrets, mock-killer,
+  config-ext, deps audit, prisma schema, payments, file-uploads, tenant-isolation)
+- `.github/workflows/blindar.yml` — CI obrigatório
+- `.husky/pre-commit + pre-push` — gates locais
+- `.blindar/results/*.json` — output auditável + agregado
+- `scripts/blindar/check-termination.sh` — decisão matemática de release
+
+Doc completa: [`docs/deterministic-layer.md`](docs/deterministic-layer.md).
+
 ## Intelligence System (⭐ v0.20)
 
 Registry compartilhado de exceções/whitelist que TODOS os agentes

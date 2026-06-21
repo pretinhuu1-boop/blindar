@@ -1,0 +1,14 @@
+#!/usr/bin/env sh
+# blindar pre-commit — checks rápidos antes de commitar
+# Copia esse arquivo pra .husky/pre-commit no projeto-alvo
+# Roda em < 5s. Bloqueia commit se algo falhar.
+
+# 1. lint-staged (Prettier + ESLint nos arquivos staged)
+if command -v npx >/dev/null 2>&1 && [ -f "package.json" ]; then
+  npx lint-staged
+fi
+
+# 2. blindar fast checks (secrets + mock-killer)
+if [ -x "scripts/blindar/run-all.sh" ]; then
+  bash scripts/blindar/run-all.sh --fast
+fi
