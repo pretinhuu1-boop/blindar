@@ -3,6 +3,54 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.36.0] — 2026-06-21
+
+**Módulo 16 — Product Evolution** (opt-in, escopo separado do core hardening).
+
+### Novo: 5 agentes evolution (todos API-wrapped)
+
+| Agente | Cobre |
+|---|---|
+| `api-frontend-coverage` | APIs sem front-end + propõe tela/componente alinhado com stack |
+| `user-journey-simulator` | Detecta perfis, simula cenários, identifica fricções por jornada |
+| `feature-gap-analyzer` | Features parciais: schema sem API, API sem UI, UI sem validação, flag morta |
+| `growth-opportunities` | Wishlist por ROI: retenção, automação, IA, multi-canal, monetização |
+| `product-critic` | Adversarial PO: inconsistências, over/under-engineering, telas órfãs, dark patterns |
+
+### Novo: orquestrador dedicado
+
+`scripts/blindar-evolve.sh` — separado do `blindar-run.sh`:
+- Roda apenas módulo 16
+- Requer `ANTHROPIC_API_KEY`
+- Gera `.blindar/evolution-report.md` consolidado (markdown legível, ordenado por severity)
+- Inclui roadmap recomendado em 5 ondas
+
+### Atualizações
+
+- `pipeline/MODULE-MAP.json` v0.36.0 — módulo 16 com `entrypoint` próprio + nota explicando escopo
+- `SKILL.md` — seção "Módulo 16 — Product Evolution" deixando claro: escopo separado, NÃO entra no fluxo padrão
+
+### Decisão arquitetural
+
+Mantido **fora do core** porque:
+1. Hardening (core) = determinístico, exit code, CI gate
+2. Evolution = subjetivo, baseado em julgamento LLM, exploração estratégica
+3. Misturar dilui a promessa "exit 0 = release"
+4. Frequência diferente: core a cada commit; evolution uma vez por sprint
+
+### Uso
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...
+cd seu-projeto
+bash ~/.claude/skills/blindar/scripts/blindar-evolve.sh
+cat .blindar/evolution-report.md
+```
+
+Smoke (sem API key): skip gracioso com mensagem clara.
+
+---
+
 ## [0.35.0] — 2026-06-21
 
 **Pronto pra uso em projeto real.** Polish completo de install + UX + orquestrador resiliente a layouts diferentes.

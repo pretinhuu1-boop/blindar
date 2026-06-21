@@ -46,6 +46,24 @@ Este script é a **única forma garantida** de rodar a suíte. Ele:
 
 **Após o run-report:** examine `deferred` agents e execute manualmente os playbooks em `agents/<agent>.md` que correspondem. Cada playbook deve produzir `.blindar/results/check-<agent>.json` no mesmo formato.
 
+## Módulo 16 — Product Evolution (opt-in, escopo separado)
+
+Quando o usuário pedir **auditoria de produto/evolução** (não hardening),
+rode o orquestrador dedicado:
+
+```bash
+bash scripts/blindar-evolve.sh
+```
+
+Cobre: APIs sem front-end, funcionalidades parciais, jornadas por perfil,
+oportunidades de crescimento por ROI, críticas adversariais de produto.
+Gera `.blindar/evolution-report.md` consolidado.
+
+**REQUER `ANTHROPIC_API_KEY`** (todos 5 agentes são API-wrapped).
+
+NÃO entra no fluxo padrão de hardening. NÃO confunda com `blindar-run.sh`.
+São escopos diferentes: hardening = "seguro pra produção"; evolution = "o que falta de produto".
+
 ## Princípio fundador: SECURITY-FIRST
 
 **Segurança é a fundação.** Toda decisão (back, front, banco, infra, CI)

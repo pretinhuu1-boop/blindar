@@ -1,6 +1,6 @@
 {
   "$schema": "https://github.com/pretinhuu1-boop/blindar/blob/main/schemas/module-map.schema.json",
-  "version": "0.34.0",
+  "version": "0.36.0",
   "description": "Mapa estruturado dos 15 módulos do launcher → agentes ativados → fases onde rodam. Consumido pelas Fases 02 (discovery), 04 (rounds-loop) e 06 (production-checklist) pra filtrar agentes pelo array config.selected_modules.",
   "modules": {
     "1": {
@@ -119,6 +119,16 @@
       "skip_token": "always-on",
       "agents": ["pentest", "adversarial-reviewer", "wave-guardian"],
       "phases": ["05-adversarial-review", "06-production-checklist"]
+    },
+    "16": {
+      "name": "Product Evolution (opt-in, escopo separado do hardening)",
+      "mandatory": false,
+      "default_on_when": [],
+      "skip_token": "evolution-only",
+      "agents": ["api-frontend-coverage", "user-journey-simulator", "feature-gap-analyzer", "growth-opportunities", "product-critic"],
+      "phases": ["07-evolution"],
+      "entrypoint": "scripts/blindar-evolve.sh",
+      "notes": "Roda separado via scripts/blindar-evolve.sh. NUNCA entra no --fast. Requer ANTHROPIC_API_KEY (todos agentes API-wrapped)."
     }
   },
   "resolution_rules": {
