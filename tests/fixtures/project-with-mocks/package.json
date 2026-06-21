@@ -1,0 +1,6 @@
+{
+  "name": "project-with-mocks",
+  "version": "1.0.0",
+  "description": "Fixture: deve FALHAR check-mock-killer",
+  "private": true
+}

@@ -32,21 +32,35 @@ for arg in "$@"; do
   esac
 done
 
-# Lista de checks por modo
+# Lista de checks por modo (18 em v0.23)
 FULL_CHECKS=(
-  check-secrets.sh
-  check-mock-killer.sh
-  check-config-externalization.sh
-  check-deps-audit.sh
-  check-prisma-schema.sh
-  check-payments.sh
-  check-file-uploads.sh
-  check-tenant-isolation.sh
+  check-secrets.sh                    # gitleaks
+  check-mock-killer.sh                # console.log + TODO + mock + onClick={}
+  check-config-externalization.sh     # URLs hardcoded + .env.example sync
+  check-deps-audit.sh                 # npm/pip/go/cargo audit + trivy
+  check-prisma-schema.sh              # UUID v7 + audit + tenant_id + BigInt
+  check-payments.sh                   # CVV/PAN/webhook signature/money em Float
+  check-file-uploads.sh               # multer/SVG sanitize/public bucket
+  check-tenant-isolation.sh           # queries sem tenant_id + queryRawUnsafe
+  check-auth-premium.sh               # bcrypt/HS256/localStorage token/refresh rotation
+  check-network-security.sh           # headers HTTP + CORS + rate limit + CSP
+  check-observability.sh              # logger + health endpoints + PII em log
+  check-api-design.sh                 # OpenAPI + RFC 7807 + idempotency + webhook
+  check-i18n-tz.sh                    # @db.Time + money Float + locales sync
+  check-pwa-installable.sh            # manifest + SW + icons 192/512/maskable
+  check-responsive-a11y.sh            # <img> sem alt + outline:none + button SVG
+  check-process-resilience.sh         # SIGTERM + health + connection pool + unbounded
+  check-frontend-performance.sh       # size-limit + next/image + use client + RSC
+  check-content-quality.sh            # erro técnico em UI + Tem certeza? + plural
+  check-lighthouse.sh                 # Lighthouse CI (Perf/A11y/BP/SEO ≥ 90)
+  check-bundle-size.sh                # size-limit (≤ 400KB gzipped)
+  check-visual-regression.sh          # Chromatic (Storybook)
 )
 
 FAST_CHECKS=(
   check-secrets.sh
   check-mock-killer.sh
+  check-config-externalization.sh
 )
 
 if [ "$MODE" = "fast" ]; then

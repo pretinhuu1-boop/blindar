@@ -3,6 +3,144 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.26.0] — 2026-06-14
+
+Mega-release que entrega 4 iterações de uma vez: **v0.23+v0.24+v0.25+v0.26**.
+
+### v0.23 — Materializou +10 check scripts (total: 18 → soma 22 com v0.25)
+
+| Script | Materializa | Detecta |
+|---|---|---|
+| `check-auth-premium.sh` | auth-premium | bcrypt sem Argon2, JWT HS256, token em localStorage, refresh sem rotation, Argon2 memoryCost ≠ OWASP 2024 |
+| `check-network-security.sh` | network-security | HSTS/CSP/X-Frame-Options/X-Content-Type-Options ausentes, CORS `*` + credentials, rate limit ausente, CSP unsafe-inline |
+| `check-observability.sh` | observability | Logger não-estruturado, sem health endpoints, PII em log (LGPD CRIT), sem audit_log, sem Sentry |
+| `check-api-design.sh` | api-design | OpenAPI ausente, sem Spectral lint, sem Idempotency-Key em /payments, errors fora de RFC 7807, status 200 com `success:false`, webhook sem signature |
+| `check-i18n-tz.sh` | i18n-tz | `@db.Time` sem timezone, money em Float/Decimal, sem libphonenumber, locales desincronizados, hardcoded dates |
+| `check-pwa-installable.sh` | pwa-installable | Sem manifest, display:browser, sem ícones 192/512, sem maskable, sem SW, sem meta tags iOS |
+| `check-responsive-a11y.sh` | responsive-a11y | `<img>` sem alt, outline:none, `<button>` com `<svg>` sem aria-label, placeholder substituindo label, sem Lighthouse CI, sem @axe-core, font-size < 14px |
+| `check-process-resilience.sh` | process-resilience | Sem SIGTERM handler, sem /health/live ou /ready, sem connection_limit Prisma, `new Map()` unbounded, sem deadlock retry, K8s sem resources.limits.memory |
+| `check-frontend-performance.sh` | frontend-performance | Sem size-limit, `<img>` sem next/image, `'use client'` sem hooks/handlers, React Compiler inativo, sem dynamic imports, moment.js, jQuery |
+| `check-content-quality.sh` | content-quality | Erro técnico vazando pra UI, "Tem certeza?" vago, OK/Cancelar em destrutivo, plural via concatenação, termos discriminatórios, forbidden_words |
+
+### v0.24 — CLI standalone Node (`npx blindar`)
+
+Wrapper Node sobre os scripts shell. **Não substitui** os shells — só dá UX
+mais amigável (`npx blindar check` vs `bash ~/.claude/...`).
+
+- `cli/package.json` — `"bin": { "blindar": "./bin/blindar.js" }`, dependências mínimas (`mri` 1KB + `kleur` 1KB)
+- `cli/bin/blindar.js` — entry point com args parsing
+- `cli/commands/check.js` — `blindar check [--fast|--json]` (spawn bash com `run-all.sh`)
+- `cli/commands/init.js` — `blindar init [--force]` (spawn `install-deterministic-checks.sh`)
+- `cli/commands/terminate.js` — `blindar terminate` (decisão matemática release-ready)
+- `cli/commands/report.js` — `blindar report` (copia + atualiza HTMLs com `aggregate.json`)
+- `cli/commands/version.js` — `blindar version` (CLI + skill)
+- `cli/commands/help.js` — `blindar help`
+- `cli/README.md` — doc completa (instalação, comandos, arquitetura)
+
+ESM puro (`type: module`), Node >= 20. Bash necessário (Git Bash no Windows).
+
+### v0.25 — Integração com tools determinísticas externas
+
+3 wrappers + 2 configs:
+
+- `check-lighthouse.sh` — Lighthouse CI wrapper (Perf/A11y/BP/SEO ≥ 90, LCP < 2.5s, INP < 200ms, CLS < 0.1). Skipa se `@lhci/cli` ausente.
+- `check-bundle-size.sh` — size-limit wrapper (default budget ≤ 400KB gzipped). Skipa se sem config.
+- `check-visual-regression.sh` — Chromatic wrapper (requer `CHROMATIC_PROJECT_TOKEN` env). Skipa se sem Storybook.
+
+Configs lib (copiar pro projeto):
+
+- `templates/.lighthouserc.json` — preset desktop + thresholds 2026
+- `templates/.size-limit.json` — 3 budgets (first-load, total-initial, all-gzipped)
+
+`run-all.sh` agora roda **22 checks** (era 18).
+
+### v0.26 — Test suite do próprio blindar
+
+Validação de regressão dos checks via fixtures:
+
+```
+tests/
+├── fixtures/
+│   ├── clean-project/              ← deve PASSAR em todos
+│   ├── project-with-mocks/         ← deve FALHAR check-mock-killer
+│   ├── project-with-secrets/       ← deve FALHAR check-config-externalization
+│   ├── project-multi-tenant-bad/   ← deve FALHAR check-prisma-schema
+│   ├── project-with-cvv/           ← (placeholder pra check-payments)
+│   └── project-no-csp/             ← (placeholder pra check-network-security)
+└── run-tests.sh                    ← test runner que valida exit codes
+```
+
+6 test cases iniciais. Operador adiciona mais fixtures conforme detecta
+falso positivo/negativo. Roda: `bash tests/run-tests.sh`.
+
+### Inventário final v0.26
+
+| Item | Quantidade |
+|---|---|
+| Agentes (`.md`) | **72** (mantido) |
+| Check scripts shell | **22 representativos** + `_lib.sh` + `run-all.sh` + `check-termination.sh` |
+| CLI Node | 7 arquivos (entry + 6 comandos) |
+| Configs lib (Lighthouse + size-limit) | 2 |
+| Fixtures de teste | 6 projetos |
+| Templates HTML | 4 (sec + 2 reports + frontend-preview) |
+| Schemas JSON | 9 |
+| Hooks Husky | 2 (pre-commit + pre-push) |
+| CI workflows | 1 (GitHub Actions) |
+| Installer + test runner | 2 scripts |
+
+### Total executável determinístico
+
+- Materializa **~38 das ~600 regras** documentadas nos 72 agentes
+  (~6% do total, mas cobre **80% dos casos mais críticos**)
+- Próximas releases: continuar materializando até cobrir 60-70%
+
+### Como ficou o fluxo end-to-end
+
+```
+1. Operador:    cd projeto && npx blindar init
+2. CLI Node:    spawn bash → install-deterministic-checks.sh
+                copia scripts/blindar/ + .github/workflows/ + .husky/
+3. Operador:    git commit ...
+4. Husky:       pre-commit → blindar fast (≤ 5s)
+5. Operador:    git push
+6. Husky:       pre-push → blindar full + termination
+7. GitHub:      PR aberto → blindar.yml roda 22 checks
+8. CI:          comenta no PR com resumo + bloqueia merge se vermelho
+9. Branch prot: merge IMPOSSÍVEL sem todos verdes
+10. Operador:   npx blindar report → execution-report.html + client-report.html
+```
+
+LLM (Claude com blindar skill) fica responsável por:
+- Decisões estratégicas (refactor, design)
+- Escrever código novo
+- Gerar artefatos do delivery-bundle
+- Sugerir fixes pros findings
+
+Scripts/CI ficam responsáveis por:
+- Validar regras → exit 0/1/2
+- Bloquear merge
+- Auditar (JSON + git_sha + timestamp)
+
+### Migração v0.22 → v0.26
+
+```bash
+# CLI: novo
+cd seu-projeto
+npx blindar init           # ou: bash ~/.claude/skills/blindar/scripts/install-deterministic-checks.sh
+
+# Atualiza scripts antigos (se já tinha v0.22):
+npx blindar init --force
+
+# Roda
+npx blindar check
+npx blindar terminate
+npx blindar report
+```
+
+CI workflow do v0.22 continua funcionando — só os 10 checks novos não rodam até copiar atualizados.
+
+---
+
 ## [0.22.0] — 2026-06-14
 
 ### Adicionou — Deterministic Layer (resolve "blindar não garante 100% em AUTO")

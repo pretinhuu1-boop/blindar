@@ -1,0 +1,6 @@
+{
+  "name": "clean-project",
+  "version": "1.0.0",
+  "description": "Fixture: projeto sem problemas — TODOS os checks devem passar",
+  "private": true
+}

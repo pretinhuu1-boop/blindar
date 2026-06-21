@@ -1,0 +1,6 @@
+{
+  "name": "project-with-secrets",
+  "version": "1.0.0",
+  "description": "Fixture: deve FALHAR check-secrets + check-config-externalization",
+  "private": true
+}
