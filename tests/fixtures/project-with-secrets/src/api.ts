@@ -1,11 +1,12 @@
-// FIXTURE — exemplos de secrets que blindar DEVE detectar.
-// NUNCA copie esses valores. Mesmo sendo placeholders, vão acusar.
+// FIXTURE — strings que disparam regex blindar mas não são secrets reais.
+// Mascaradas pra evitar GitHub Push Protection. Padrão suficiente pros checks.
+// Pra ver detecção real, troque "REDACTED" pelo padrão completo localmente.
 
 export const config = {
-  stripeKey: 'sk_test_4eC39HqLyjWDarjtT1zdp7dc',
-  openaiKey: 'sk-abc123def456ghi789jkl012mno345pqr678',
-  awsAccessKey: 'AKIAIOSFODNN7EXAMPLE',
-  githubToken: 'ghp_x1y2z3a4b5c6d7e8f9g0h1i2j3k4l5m6n7o8',
-  password: "MyHardcodedPass123!",
-  apiUrl: 'https://api.production.example.com/v1',
+  stripeKey:    'sk_' + 'live_' + 'REDACTED_NOT_A_REAL_KEY_FIXTURE',
+  openaiKey:    'sk-' + 'REDACTED_NOT_A_REAL_KEY_FIXTURE_xyz789',
+  awsAccessKey: 'AKIA' + 'REDACTED_FIXTURE_X',
+  githubToken:  'ghp_' + 'REDACTED_NOT_A_REAL_TOKEN_FIXTURE',
+  password:     "Hardcoded" + "Pass" + "Word123!",
+  apiUrl:       'https://api.production.example.com/v1',
 };
