@@ -3,6 +3,72 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.41.0] — 2026-06-21
+
+**Garantia de execução + análise proativa 8 dimensões + security-first reforçado.** Via 2 sub-agentes paralelos. Foco mínimo + máximo impacto.
+
+### 1. SKILL.md — mandato muito mais forte
+
+Seção "EXECUÇÃO MANDATÓRIA — LEIA ANTES DE TUDO" substituiu "ENTRYPOINT ÚNICO E OBRIGATÓRIO":
+- Linguagem imperativa explícita ("você DEVE", "você NÃO pode")
+- Sequência numerada de 5 passos obrigatórios
+- Lista de proibições explícita (não rodar agentes soltos, não pular, não decidir, não pular proactive-analysis)
+- Exit codes 0-4 com semântica clara
+
+### 2. Novo: proactive-analysis (8 dimensões)
+
+`agents/proactive-analysis.md` + `templates/checks/check-proactive-analysis.api.sh`:
+
+Roda automaticamente ao final do orquestrador (se `ANTHROPIC_API_KEY` existe). Análise consultiva nas 8 dimensões obrigatórias:
+
+| # | Dimensão |
+|---|---|
+| 1 | **Segurança** — ataques possíveis, controles ausentes |
+| 2 | **Arquitetura** — bounded contexts, acoplamentos, módulos |
+| 3 | **Qualidade/Testes** — cobertura, tipos faltantes, quality gates |
+| 4 | **Performance** — bottlenecks reais, p95/p99 sugeridas |
+| 5 | **Compliance** — LGPD/GDPR/HIPAA/PCI gaps específicos |
+| 6 | **Acessibilidade** — WCAG/cognitive/keyboard |
+| 7 | **Custos/FinOps** — cloud + LLM tokens + DB |
+| 8 | **DX/Operação** — onboarding, runbooks, automações |
+
+Cada dimensão entrega: **Riscos** (com severity) + **Oportunidades** (ROI) + **Trade-offs** + **Custo** + **Quem decide** (CTO/PO/Eng/Compliance).
+
+Schema custom forçado via tool_use (não o padrão de findings). Outputs:
+- `.blindar/results/check-proactive-analysis.json` (padrão pra agregação)
+- `.blindar/proactive-analysis.md` (relatório markdown legível com tabelas)
+- `.blindar/proactive-analysis-raw.json` (debug)
+
+Flag `--no-proactive` ou env `BLINDAR_SKIP_PROACTIVE=1` desliga.
+
+Integrado no `blindar-run.sh` AO FINAL (não-blocking, sempre roda se API key existe).
+
+### 3. Security-first reforçado
+
+- **`--security-only` mode** novo: roda apenas módulos 2 (core security), 5 (supply-chain), 15 (pentest)
+- **`--fast` expandido**: agora inclui módulo 5 (supply-chain) — era 1,2,11,12,15, virou 1,2,5,11,12,15
+- Mutex `--security-only` com `--module` (exit 64 se ambos)
+
+### MODULE-MAP
+
+Módulo 15 (Pentest + adversarial review): +proactive-analysis (4 agentes total).
+Version → 0.41.0.
+
+### Validação
+
+- Test suite: 6/6 verde
+- Smoke `--fast --parallel 4`: 90% cobertura executável, schemas válidos
+- Smoke `--security-only --parallel 4`: módulos 2/5/15 corretamente filtrados
+- proactive-analysis: skip gracioso sem API key (não quebra)
+
+### Por que essa release
+
+Análise externa apontou 6+ dimensões críticas ausentes (Segurança/Qualidade/Performance/Compliance/A11y/Custos/Dados/DX) — blindar **cobria via agentes**, mas não tinha output consultivo estruturado nessas dimensões ao final. Agora tem.
+
+Plus: SKILL.md mandato anterior ainda permitia Claude pular. Versão atual é explícita: "você DEVE / você NÃO pode".
+
+---
+
 ## [0.40.0] — 2026-06-21
 
 **Fase C — Scanners reais + schema runtime + blindar-fix killer feature.** Via 5 sub-agentes paralelos. Para de reinventar SAST com grep — integra ferramentas profissionais. Schema validado em runtime. LLM gera patch+teste+PR automático.

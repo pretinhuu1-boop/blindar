@@ -20,31 +20,37 @@ triggers:
 
 # blindar — orquestrador
 
-## ENTRYPOINT ÚNICO E OBRIGATÓRIO (v0.33+)
+## EXECUÇÃO MANDATÓRIA — LEIA ANTES DE TUDO
 
-**Quando blindar é invocado, a PRIMEIRA AÇÃO é sempre:**
+Quando esta skill for invocada (`blindar`, `blinda este projeto`, etc.), você (Claude) DEVE executar EXATAMENTE esta sequência, sem pular, sem perguntar antes de cada passo, sem alternativas:
 
-```bash
-bash scripts/blindar-run.sh [--fast] [--strict]
-```
+1. `bash ~/.claude/skills/blindar/scripts/blindar-run.sh --parallel auto` (ou `--fast` se usuário pediu rápido)
+2. Aguardar conclusão (exit code 0-4)
+3. Ler `.blindar/run-report.json` que foi gerado
+4. Ler `.blindar/proactive-analysis.md` se existir (análise consultiva nas 8 dimensões)
+5. Apresentar ao usuário:
+   - Resumo numérico (passed/failed/skipped/deferred/cobertura%)
+   - Top 5 findings críticos (severity crit/high)
+   - Análise proativa resumida (se gerada)
+   - Recomendação de próxima ação
 
-Este script é a **única forma garantida** de rodar a suíte. Ele:
-1. Lê `pipeline/MODULE-MAP.json` (fonte da verdade)
-2. Itera todo agente do módulos selecionados
-3. Pra cada um, executa `check-<agent>.sh` (determinístico) ou `check-<agent>.api.sh` (Claude API wrapper)
-4. Se agente é só playbook (.md), marca `deferred` no relatório
-5. Gera `.blindar/run-report.json` com cobertura executável real
+**Você NÃO pode**:
+- Rodar agentes individualmente sem o orquestrador
+- Pular passos da sequência acima
+- "Decidir" que algum agente não é necessário
+- Apresentar findings sem antes rodar o orquestrador
+- Pular `proactive-analysis` se ANTHROPIC_API_KEY existe
 
-**Você NÃO deve pular este passo nem rodar agentes manualmente.** O orquestrador é a contraparte determinística do skill — sem ele, não há garantia.
+**Se algo falhar**: reporte exit code + arquivo de log, NÃO tente "consertar" rodando outras coisas.
 
-**Exit codes:**
-- `0` GO — tudo passou
-- `1` CONDITIONAL-GO — alguns deferred (playbooks pendentes)
-- `2` NO-GO — failed críticos
-- `3` STRICT-FAIL — strict mode + deferred
-- `4` ERRORED — bug em algum script
+Esta restrição existe porque blindar foi desenhado pra ser determinístico e auditável. Pular passos quebra a garantia de cobertura.
 
-**Após o run-report:** examine `deferred` agents e execute manualmente os playbooks em `agents/<agent>.md` que correspondem. Cada playbook deve produzir `.blindar/results/check-<agent>.json` no mesmo formato.
+Exit codes:
+- 0 = PASS (release-ready)
+- 1 = CONDITIONAL (deferred — Claude precisa rodar playbooks .md restantes)
+- 2 = NO-GO (failed crit/high)
+- 3 = STRICT-FAIL (deferred em modo strict)
+- 4 = ERRORED (bug em script blindar — reporte bug)
 
 ## Módulo 16 — Product Evolution (opt-in, escopo separado)
 

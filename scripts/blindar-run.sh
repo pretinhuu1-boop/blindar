@@ -13,7 +13,10 @@
 #   bash scripts/blindar-run.sh [opts]
 #
 #   --strict          Falha se algum agente está só como playbook (sem .sh nem .api.sh)
-#   --fast            Roda só agentes críticos (módulos 1, 2, 11, 12, 15)
+#   --fast            Roda módulos críticos incluindo segurança e supply-chain
+#                     (módulos 1, 2, 5, 11, 12, 15)
+#   --security-only   Roda APENAS módulos de segurança: 2 (core security),
+#                     5 (supply-chain), 15 (pentest). Mutex com --module.
 #   --module N,N,N    Lista módulos por número (ex: --module 1,2,9)
 #   --json            Output JSON puro pra CI
 #   --with-evolution  Encadeia blindar-evolve.sh após hardening
@@ -67,22 +70,33 @@ RUN_REPORT="${BLINDAR_DIR:-$PROJECT_DIR/.blindar}/run-report.json"
 mkdir -p "$RESULTS_DIR"
 
 # Parse args
-STRICT=0; FAST=0; JSON_ONLY=0; MODULES_FILTER=""; WITH_EVOLUTION=0
-SINCE_REF=""; PARALLEL="1"; VERBOSE=0
+STRICT=0; FAST=0; SECURITY_ONLY=0; JSON_ONLY=0; MODULES_FILTER=""; WITH_EVOLUTION=0
+SINCE_REF=""; PARALLEL="1"; VERBOSE=0; NO_PROACTIVE=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --strict) STRICT=1; shift ;;
     --fast)   FAST=1; shift ;;
+    --security-only) SECURITY_ONLY=1; shift ;;
     --json)   JSON_ONLY=1; shift ;;
     --module) MODULES_FILTER="$2"; shift 2 ;;
     --with-evolution) WITH_EVOLUTION=1; shift ;;
     --since)  SINCE_REF="$2"; shift 2 ;;
     --parallel) PARALLEL="$2"; shift 2 ;;
     --verbose|-v) VERBOSE=1; shift ;;
-    -h|--help) sed -n '2,38p' "$0" | sed 's/^# //; s/^#//'; exit 0 ;;
+    --no-proactive) NO_PROACTIVE=1; shift ;;
+    -h|--help) sed -n '2,40p' "$0" | sed 's/^# //; s/^#//'; exit 0 ;;
     *) echo "Arg desconhecido: $1" >&2; exit 64 ;;
   esac
 done
+
+# Permite desligar via env var também
+[ "${BLINDAR_SKIP_PROACTIVE:-0}" = "1" ] && NO_PROACTIVE=1
+
+# Mutex: --security-only não pode coexistir com --module
+if [ "$SECURITY_ONLY" -eq 1 ] && [ -n "$MODULES_FILTER" ]; then
+  echo "ERRO: --security-only é mutex com --module" >&2
+  exit 64
+fi
 
 # Resolve --parallel auto → nproc/sysctl, fallback 4
 if [ "$PARALLEL" = "auto" ]; then
@@ -163,11 +177,16 @@ fi
 
 [ ! -f "$MODULE_MAP" ] && { echo "${R}MODULE-MAP.json não encontrado em $MODULE_MAP${RST}" >&2; exit 71; }
 
-# fast mode: módulos 1,2,11,12,15. Manual: o que veio em --module.
-if [ -n "$MODULES_FILTER" ]; then
+# fast mode: módulos 1,2,5,11,12,15 (críticos + supply-chain).
+# security-only: apenas 2 (core security), 5 (supply-chain), 15 (pentest).
+# Manual: o que veio em --module.
+if [ "$SECURITY_ONLY" -eq 1 ]; then
+  FILTER="2,5,15"
+  log_section "Security-only mode — rodando módulos 2 (core security), 5 (supply-chain), 15 (pentest)"
+elif [ -n "$MODULES_FILTER" ]; then
   FILTER="$MODULES_FILTER"
 elif [ "$FAST" -eq 1 ]; then
-  FILTER="1,2,11,12,15"
+  FILTER="1,2,5,11,12,15"
 else
   FILTER="all"
 fi
@@ -420,6 +439,16 @@ if command -v node >/dev/null 2>&1 && [ -f "$VALIDATOR" ] && [ -d "$SKILL_DIR/sc
   elif echo "$VAL_OUT" | grep -q "^⚠"; then
     BAD_COUNT=$(echo "$VAL_OUT" | grep -oE '^⚠ [0-9]+' | grep -oE '[0-9]+' | head -1)
     log "${Y}⚠ ${BAD_COUNT:-?} arquivo(s) com schema inválido${RST} (rode: node \"$VALIDATOR\" --input \"$RESULTS_DIR\")"
+  fi
+fi
+
+# ─── Análise proativa (auto se ANTHROPIC_API_KEY) ───
+if [ "$NO_PROACTIVE" -eq 0 ] && [ -n "${ANTHROPIC_API_KEY:-}" ] && [ -f "$CHECKS_DIR/check-proactive-analysis.api.sh" ]; then
+  log ""
+  log_section "Análise proativa (8 dimensões)"
+  bash "$CHECKS_DIR/check-proactive-analysis.api.sh" 2>&1 | tail -5
+  if [ -f "${BLINDAR_DIR:-$PROJECT_DIR/.blindar}/proactive-analysis.md" ]; then
+    log "Relatório consultivo: ${BLINDAR_DIR:-$PROJECT_DIR/.blindar}/proactive-analysis.md"
   fi
 fi
 

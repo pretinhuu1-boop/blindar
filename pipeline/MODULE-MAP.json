@@ -1,6 +1,6 @@
 {
   "$schema": "https://github.com/pretinhuu1-boop/blindar/blob/main/schemas/module-map.schema.json",
-  "version": "0.40.0",
+  "version": "0.41.0",
   "description": "Mapa estruturado dos 15 módulos do launcher → agentes ativados → fases onde rodam. Consumido pelas Fases 02 (discovery), 04 (rounds-loop) e 06 (production-checklist) pra filtrar agentes pelo array config.selected_modules.",
   "modules": {
     "1": {
@@ -124,7 +124,7 @@
       "name": "Pentest + adversarial review",
       "mandatory": true,
       "skip_token": "always-on",
-      "agents": ["pentest", "adversarial-reviewer", "wave-guardian"],
+      "agents": ["pentest", "adversarial-reviewer", "wave-guardian", "proactive-analysis"],
       "phases": ["05-adversarial-review", "06-production-checklist"]
     },
     "16": {
