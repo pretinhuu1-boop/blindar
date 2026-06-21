@@ -57,13 +57,14 @@ RUN_REPORT="${BLINDAR_DIR:-$PROJECT_DIR/.blindar}/run-report.json"
 mkdir -p "$RESULTS_DIR"
 
 # Parse args
-STRICT=0; FAST=0; JSON_ONLY=0; MODULES_FILTER=""
+STRICT=0; FAST=0; JSON_ONLY=0; MODULES_FILTER=""; WITH_EVOLUTION=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --strict) STRICT=1; shift ;;
     --fast)   FAST=1; shift ;;
     --json)   JSON_ONLY=1; shift ;;
     --module) MODULES_FILTER="$2"; shift 2 ;;
+    --with-evolution) WITH_EVOLUTION=1; shift ;;
     -h|--help) sed -n '2,25p' "$0" | sed 's/^# //'; exit 0 ;;
     *) echo "Arg desconhecido: $1" >&2; exit 64 ;;
   esac
@@ -223,9 +224,25 @@ log "Cobertura executável: $(( (PASSED + FAILED + SKIPPED) * 100 / (TOTAL > 0 ?
 log ""
 log "Report: $RUN_REPORT"
 
-# Decisão de exit
-if [ "$ERRORED" -gt 0 ]; then exit 4; fi
-if [ "$FAILED" -gt 0 ]; then exit 2; fi
-if [ "$STRICT" -eq 1 ] && [ "$DEFERRED" -gt 0 ]; then exit 3; fi
-if [ "$DEFERRED" -gt 0 ]; then exit 1; fi  # CONDITIONAL-GO
-exit 0
+# Captura exit code do hardening pra preservar
+if [ "$ERRORED" -gt 0 ]; then HARDENING_EXIT=4
+elif [ "$FAILED" -gt 0 ]; then HARDENING_EXIT=2
+elif [ "$STRICT" -eq 1 ] && [ "$DEFERRED" -gt 0 ]; then HARDENING_EXIT=3
+elif [ "$DEFERRED" -gt 0 ]; then HARDENING_EXIT=1
+else HARDENING_EXIT=0; fi
+
+# --with-evolution: invoca blindar-evolve.sh após hardening
+if [ "$WITH_EVOLUTION" -eq 1 ]; then
+  log ""
+  log_section "Encadeando: blindar-evolve.sh (módulo 16)"
+  EVOLVE_SCRIPT="$SCRIPT_DIR/blindar-evolve.sh"
+  [ ! -f "$EVOLVE_SCRIPT" ] && EVOLVE_SCRIPT="$SKILL_DIR/scripts/blindar-evolve.sh"
+  if [ -f "$EVOLVE_SCRIPT" ]; then
+    bash "$EVOLVE_SCRIPT" || EVOL_RC=$?
+    # Hardening exit code prevalece (gate de release); evolution é informativo
+  else
+    log "${Y}⚠${RST}  blindar-evolve.sh não encontrado — skip"
+  fi
+fi
+
+exit "$HARDENING_EXIT"

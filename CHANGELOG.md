@@ -3,6 +3,50 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.37.0] — 2026-06-21
+
+**Launcher: pergunta de escopo + flag `--with-evolution`.**
+
+### Launcher (pipeline/00-launcher.md)
+
+Pergunta 4/4 virou Pergunta 4/5. Nova **Pergunta 5/5 — Escopo**:
+- **A** Hardening completo (módulos 1-15) — default
+- **B** Hardening + Evolução (1-16) — review técnico + análise produto
+- **C** Só evolução (16) — APIs órfãs, gaps, oportunidades, crítica
+- **D** Custom — escolho módulos
+
+Validação automática: se B/C/D-com-16 sem `ANTHROPIC_API_KEY`, avisa e pergunta abort/continue.
+
+Menu agora mostra módulo 16 com tag `[escopo B|C]`. Atalho novo: `"evolution"`.
+
+### Flag --with-evolution
+
+`scripts/blindar-run.sh --with-evolution` encadeia automaticamente:
+1. Roda hardening normal
+2. Captura exit code (preservado pra CI gate)
+3. Invoca `blindar-evolve.sh` no final
+4. Sai com o exit code do hardening (evolution é informativo)
+
+Equivale ao escopo **B** do launcher numa linha só.
+
+### GETTING-STARTED.md
+
+Nova tabela "Escopos por contexto":
+- Daily commit/PR → `--fast`
+- Fim de sprint → `--with-evolution`
+- Sprint planning → `blindar-evolve.sh`
+- CI gate → `--strict --json`
+- Investigação pontual → `--module N,N`
+
+### Smoke
+
+Rodado `--fast --with-evolution` em clean-project:
+- Hardening: 90% cobertura, exit 1 (deferred)
+- Evolution: skip limpo sem API key, mensagem clara
+- Exit final: 1 (hardening, preserva gate)
+
+---
+
 ## [0.36.0] — 2026-06-21
 
 **Módulo 16 — Product Evolution** (opt-in, escopo separado do core hardening).

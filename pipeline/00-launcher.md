@@ -59,7 +59,7 @@ Como devo rodar?
 Responda 1 / 2 / 3.
 ```
 
-### Pergunta 4/4 — Nível de rigor
+### Pergunta 4/5 — Nível de rigor
 
 ```
 Rigor?
@@ -67,6 +67,20 @@ Rigor?
   C) COMPLIANCE — produção + framework alvo (LGPD/SOC2/PCI/ISO)
   M) MVP        — gates essenciais (segurança + funcional E2E), sem perfumaria
 Responda P / C / M.
+```
+
+### Pergunta 5/5 — Escopo
+
+```
+Escopo desejado?
+  A) Hardening completo (módulos 1-15) — default rápido, CI-ready
+  B) Hardening + Evolução de produto (1-16) — review técnico + análise produto
+  C) Só evolução de produto (16) — APIs órfãs, gaps, oportunidades, crítica
+  D) Custom — escolho módulos manualmente no menu seguinte
+Responda A / B / C / D.
+
+Observação: B e C requerem ANTHROPIC_API_KEY no env (módulo 16 é API-wrapped).
+Sem key: avisa e segue como A (hardening puro).
 ```
 
 ---
@@ -97,14 +111,16 @@ das respostas das perguntas 1–4 — elas só ajustam defaults).
  13   Resiliência & escalabilidade (breakers, 10x)         [rigor≠mvp]
  14   DX & onboarding (.env.example, scripts, README)      ✓ ON
  15   Pentest + adversarial review                         ✓ ON
+ 16   Product Evolution (APIs órfãs/gaps/UX/oportunidades) [escopo B|C]
 ═══════════════════════════════════════════════════════════════════
 
 Como você quer rodar?
-  • "tudo"        → roda os 15 módulos
+  • "tudo"        → roda os 16 módulos (módulo 16 só se ANTHROPIC_API_KEY)
   • "defaults"    → roda apenas os marcados ✓ ON (recomendado por padrão)
   • "1,3,5,7,10"  → roda apenas esses
   • "1-8"         → roda do 1 ao 8 (faixa)
   • "tudo menos 13,14" → roda todos exceto os listados
+  • "evolution"   → atalho para [16] (auditoria de produto)
 ```
 
 ### Resolução dos defaults
@@ -117,6 +133,18 @@ Aplique nesta ordem (cada regra sobrepõe a anterior):
 4. **ON se sensibilidade ≠ B**: 8
 5. **ON se tipo ∈ {SaaS, E-com, API}**: 4, 6, 9, 13
 6. **ON sempre**: 5, 14
+7. **ON apenas se Pergunta 5 = B ou C** (escopo evolução): 16
+
+### Resolução do escopo (Pergunta 5)
+
+- **A (Hardening)** → módulos 1-15 conforme regras acima. Após `blindar-run.sh`, terminar.
+- **B (Hardening + Evolução)** → módulos 1-15 + módulo 16. Após `blindar-run.sh --strict`, invocar `bash scripts/blindar-evolve.sh`. Consolidar reports no final.
+- **C (Só evolução)** → apenas módulo 16 + módulo 1 (strategic-scanner como pré-flight). Invocar **diretamente** `bash scripts/blindar-evolve.sh`.
+- **D (Custom)** → ir pra menu manual. Se incluir 16, validar ANTHROPIC_API_KEY antes.
+
+Se B/C/D-com-16 e **sem `ANTHROPIC_API_KEY`**:
+- Avisar: "Sem ANTHROPIC_API_KEY — módulo 16 será skipped."
+- Perguntar: "Continuar mesmo assim? (S/N — N aborta pra você definir a key)"
 
 Se o usuário respondeu **rigor = MVP**: desligue 13 e exiba aviso "rigor MVP →
 módulo 13 desativado por padrão (escalabilidade não cabe em MVP)".

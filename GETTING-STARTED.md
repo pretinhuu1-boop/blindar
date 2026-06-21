@@ -65,10 +65,10 @@ Roda o launcher interativo (4 perguntas + menu de 15 módulos). Claude segue o `
 ## Comandos essenciais
 
 ```bash
-# Roda tudo
+# Hardening completo (módulos 1-15)
 bash ~/.claude/skills/blindar/scripts/blindar-run.sh
 
-# Só módulos críticos (security + tests + mocks + pentest)
+# Só módulos críticos (1, 2, 11, 12, 15)
 bash ~/.claude/skills/blindar/scripts/blindar-run.sh --fast
 
 # Módulos específicos
@@ -77,9 +77,25 @@ bash ~/.claude/skills/blindar/scripts/blindar-run.sh --module 2,9,11
 # Strict: deferred (playbook não-executado) = fail
 bash ~/.claude/skills/blindar/scripts/blindar-run.sh --strict
 
+# Hardening + Evolução de produto (módulos 1-16) — requer ANTHROPIC_API_KEY
+bash ~/.claude/skills/blindar/scripts/blindar-run.sh --with-evolution
+
+# Só evolução de produto (módulo 16) — requer ANTHROPIC_API_KEY
+bash ~/.claude/skills/blindar/scripts/blindar-evolve.sh
+
 # JSON puro pra CI
 bash ~/.claude/skills/blindar/scripts/blindar-run.sh --json > report.json
 ```
+
+### Escopos (escolha por contexto)
+
+| Contexto | Comando | Tempo | Custo token |
+|---|---|---|---|
+| **Daily commit/PR** | `blindar-run.sh --fast` | ~30s | 0 |
+| **Fim de sprint** | `blindar-run.sh --with-evolution` | ~5min | $$ |
+| **Sprint planning** | `blindar-evolve.sh` | ~3min | $ |
+| **CI gate** | `blindar-run.sh --strict --json` | ~2min | 0 |
+| **Investigação pontual** | `blindar-run.sh --module 2,9` | ~1min | 0 |
 
 ## Wave-guardian (gate de onda)
 
