@@ -19,6 +19,10 @@ export default function help({ cliRoot, skillRoot }) {
   console.log('');
   console.log('  ' + kleur.cyan('report') + '      Gera blindar-report.html + client-report.html');
   console.log('');
+  console.log('  ' + kleur.cyan('fix') + '         Aplica auto-fixes seguros (TODO/console.log/env)');
+  console.log('    --apply        Aplica de verdade (cria branch + commit)');
+  console.log('    --check <X>    Roda só fixes de um agente específico');
+  console.log('');
   console.log('  ' + kleur.cyan('version') + '     Mostra versão');
   console.log('  ' + kleur.cyan('help') + '        Esta mensagem');
   console.log('');

@@ -34,6 +34,7 @@ const COMMANDS = {
   init:       './commands/init.js',
   terminate:  './commands/terminate.js',
   report:     './commands/report.js',
+  fix:        './commands/fix.js',
   version:    './commands/version.js',
   help:       './commands/help.js',
 };

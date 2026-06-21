@@ -55,6 +55,17 @@ FULL_CHECKS=(
   check-lighthouse.sh                 # Lighthouse CI (Perf/A11y/BP/SEO ≥ 90)
   check-bundle-size.sh                # size-limit (≤ 400KB gzipped)
   check-visual-regression.sh          # Chromatic (Storybook)
+  check-scheduled-jobs.sh             # Redlock + watchdog + DLQ
+  check-sbom-slsa.sh                  # SBOM + SHA pin + Cosign
+  check-ai-llm-safety.sh              # OWASP LLM Top 10
+  check-realtime.sh                   # WS auth + rooms multi-tenant
+  check-feature-flags.sh              # Flag inline + sistema dedicado
+  check-email-deliverability.sh       # DKIM/SPF/DMARC + supressão
+  check-cdn-strategy.sh               # Cache + immutable + asset hash
+  check-seo-marketing-meta.sh         # sitemap + JSON-LD + canonical
+  check-backup-recovery.sh            # PITR + drill + encryption
+  check-compliance-lgpd-br.sh         # ANPD + endpoints Art. 18 + DPO
+  check-cost-observability.sh         # LLM usage + S3 lifecycle + budget
 )
 
 FAST_CHECKS=(

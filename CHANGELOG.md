@@ -3,6 +3,140 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.30.0] — 2026-06-21
+
+Mega-release que entrega top-4 prioridades de uma vez: **+10 scripts**,
+**npm publish setup**, **GitHub Action publicada**, **auto-fix mode**.
+
+### v0.27 — +10 check scripts (cobertura 22 → 32)
+
+| Script | O que detecta |
+|---|---|
+| `check-scheduled-jobs.sh` | @Cron sem Redlock, queue.add sem retry, sem watchdog, sem DLQ tracking, setInterval sem clearInterval |
+| `check-sbom-slsa.sh` | Lockfile ausente, Dockerfile FROM :latest (CRIT), GH Actions sem SHA pin, sem SBOM/SLSA/Cosign, build não-reprodutível |
+| `check-ai-llm-safety.sh` | LLM call sem max_tokens, userInput em system prompt (CRIT prompt injection), output em eval/innerHTML (CRIT), sem rate limit, PII em prompt, sem aviso "é IA", tool destrutiva sem confirmação |
+| `check-realtime.sh` | WS sem auth no handshake (CRIT), io.emit sem namespace tenant, token em URL, sem heartbeat |
+| `check-feature-flags.sh` | process.env.FEATURE inline, if(true)/if(false), flag "temporário", sem tabela feature_flags |
+| `check-email-deliverability.sh` | Env-aware (DMARC strict só em prod), template hardcoded, send sem check de supressão, sem bounce webhook, no-reply@ |
+| `check-cdn-strategy.sh` | Cache-Control:no-cache espalhado, <img> sem next/image, asset sem hash no path, CORS:* em CDN, video preload=auto |
+| `check-seo-marketing-meta.sh` | sitemap ausente, robots ausente, noindex em rota pública, sem og:image, title duplicado, sem JSON-LD |
+| `check-backup-recovery.sh` | Sem runbook, sem restore drill, backup sem encryption, sem PITR |
+| `check-compliance-lgpd-br.sh` | Sem política privacidade, sem runbook ANPD 72h, < 6 endpoints LGPD, sem DPO público, analytics sem cookie banner, sem age gate, sem anonimização irreversível |
+| `check-cost-observability.sh` | LLM sem tabela llm_usage, S3 sem lifecycle policy, sem budget alert, sem slow query monitoring, sem per-feature cost |
+
+**Total: 36 arquivos em templates/checks/** (32 checks + _lib + run-all + termination + auto-fix).
+
+### v0.28 — npm publish setup
+
+- `cli/.npmignore` — exclui node_modules, tests, .git
+- `.github/workflows/npm-publish.yml` — auto-publica quando criar tag `v*.*.*`:
+  - Sincroniza version de VERSION → cli/package.json
+  - `npm publish --provenance --access public` (com OIDC + SLSA 3)
+  - Cria GitHub Release com generate_release_notes
+- Requer: secret `NPM_TOKEN` no GitHub
+
+Próximo passo: `gh secret set NPM_TOKEN` + `git tag v0.30.0 && git push --tags`
+
+### v0.36 — GitHub Action publicada
+
+`action.yml` na raiz do repo → permite usar como step em qualquer workflow:
+
+```yaml
+- uses: pretinhuu1-boop/blindar@v0.30
+  with:
+    mode: full              # ou: fast
+    fail-on: high           # crit | high | med | low
+    skip-checks: ""         # CSV
+    post-comment: true      # resumo no PR
+```
+
+Outputs: `status`, `crits`, `highs` (utilizáveis em steps seguintes).
+
+Auto-instala gitleaks/ripgrep/jq se ausentes. Posta comentário rico no PR.
+
+### v0.43 — Auto-fix mode (game-changer de produtividade)
+
+Novo comando: `blindar fix [--apply] [--check <agent>]`
+
+- `templates/checks/auto-fix.sh` — aplica correções SEGURAS + ÓBVIAS:
+  - **FIX 1**: console.log em `*.dev.ts` → adiciona `// @blindar:keep`
+  - **FIX 2**: TODOs sem issue → sugere (não aplica — precisa criar issue antes)
+  - **FIX 3**: `.env.example` sync — adiciona vars usadas no código mas ausentes
+  - **FIX 4**: `<img>` sem alt — só sugere (não inventa alt errado)
+  - **FIX 5**: GH Actions sem SHA pin — sugere usar `pinact`
+  - **FIX 6**: Dockerfile :latest — sugere versão major + SHA
+
+- `cli/commands/fix.js` — wrapper Node
+  - Modo dry-run default (mostra o que faria)
+  - `--apply` cria branch + commit automático
+  - Co-Authored-By: blindar no commit pra rastreabilidade
+  - `--check <name>` foca em fixes de um agente específico
+
+### Atualização CLI
+
+`cli/bin/blindar.js` ganha comando `fix` no roteador.
+`cli/commands/help.js` lista comando novo.
+
+### Validação
+
+- 37 scripts shell: `bash -n` ✅ (todos passam)
+- 8 arquivos Node: `node --check` ✅ (todos passam)
+- 2 workflows YAML: structure valid ✅
+- 1 action.yml: composite action valid ✅
+
+### Como usar tudo isso
+
+```bash
+# 1. Instalar localmente no projeto
+npx blindar init
+
+# 2. Rodar checks
+npx blindar check
+
+# 3. Auto-fixar o que dá
+npx blindar fix --apply
+
+# 4. Decidir release
+npx blindar terminate
+
+# 5. Gerar relatórios pro cliente
+npx blindar report
+```
+
+Em CI (qualquer projeto):
+```yaml
+- uses: pretinhuu1-boop/blindar@v0.30
+  with: { mode: full, fail-on: high }
+```
+
+### Total inventário v0.30
+
+| Item | Quantidade |
+|---|---|
+| Agentes (.md) | 72 |
+| Scripts check shell | **32 + 4 utils** (_lib, run-all, termination, auto-fix) |
+| CLI Node | 8 arquivos (entry + 7 comandos) |
+| Test fixtures | 6 |
+| Configs lib | 2 (Lighthouse + size-limit) |
+| Templates HTML | 4 |
+| Schemas JSON | 9 |
+| Hooks Husky | 2 |
+| GitHub workflows | 2 (lint + npm-publish) |
+| **GitHub Action publicada** | **1 (action.yml)** |
+| Installer + test runner | 2 |
+
+### Próximas iterações
+
+| v | Foco |
+|---|---|
+| 0.31 | Materializar restante (~40 scripts) → cobertura ~70% |
+| 0.32 | Dashboard web hosted (cliente abre URL) |
+| 0.37 | i18n da skill (EN-US + ES-ES) |
+| 0.38 | AI-powered intelligence (context-aware via LLM local) |
+| 0.50 | v1.0 LTS stable API |
+
+---
+
 ## [0.26.0] — 2026-06-14
 
 Mega-release que entrega 4 iterações de uma vez: **v0.23+v0.24+v0.25+v0.26**.
