@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/pretinhuu1-boop/blindar/blob/main/schemas/check-result.schema.json",
+  "title": "blindar check-result (per agent)",
+  "description": "Output gerado por cada check-<agent>.sh em .blindar/results/check-<agent>.json. Consumido por blindar-run.sh, dashboards e integrações CI.",
+  "type": "object",
+  "required": [
+    "schema",
+    "agent",
+    "status",
+    "findings_count",
+    "findings"
+  ],
+  "properties": {
+    "schema": {
+      "type": "string",
+      "const": "blindar/check-result@v1"
+    },
+    "agent": {
+      "type": "string",
+      "description": "Nome do agente, normalmente prefixado com 'check-' (ex: 'check-security')."
+    },
+    "ran_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 UTC timestamp de quando o check rodou."
+    },
+    "git_sha": {
+      "type": "string",
+      "description": "SHA curto/longo do commit em que o check rodou."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["passed", "failed", "skipped", "deferred", "errored"]
+    },
+    "exit_code": {
+      "type": "integer",
+      "description": "Exit code retornado pelo script do check."
+    },
+    "duration_sec": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "findings_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["severity", "message"],
+        "properties": {
+          "severity": {
+            "type": "string",
+            "enum": ["crit", "high", "med", "low"]
+          },
+          "message": { "type": "string" },
+          "file": { "type": "string" },
+          "line": {
+            "anyOf": [
+              { "type": "string" },
+              { "type": "integer" }
+            ]
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "kind": {
+      "type": "string",
+      "enum": ["deterministic", "api-wrapped", "playbook-only"]
+    },
+    "module": { "type": "string" },
+    "message": { "type": "string" }
+  },
+  "additionalProperties": true
+}

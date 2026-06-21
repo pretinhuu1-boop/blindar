@@ -47,31 +47,39 @@ fatos do projeto persistem.
 Para cada round: você implementa, eu valido, eu confirmo merge.
 ```
 
-Depois cole `SKILL.md` + `pipeline/00-baseline.md`. Em conversas com
-janela menor, cole os outros arquivos sob demanda.
+Depois cole `SKILL.md` + `pipeline/00-launcher.md` + `pipeline/01-baseline.md`.
+Em conversas com janela menor, cole os outros arquivos sob demanda.
 
-### Passo 1 — Baseline (Fase 0)
+### Passo 1 — Launcher (Fase 00, v0.8+)
 
-Cole [`pipeline/00-baseline.md`](pipeline/00-baseline.md). Peça:
+Cole [`pipeline/00-launcher.md`](pipeline/00-launcher.md). Peça:
+> "Atue como Launcher do blindar. Faça as 4 perguntas, exiba o menu de
+> 15 módulos, grave .blindar/config.yml conforme schema."
+
+Você responde as perguntas, o agente grava o config. Depois pula pra Passo 2.
+
+### Passo 2 — Baseline (Fase 01)
+
+Cole [`pipeline/01-baseline.md`](pipeline/01-baseline.md). Peça:
 > "Atue como agente de Baseline. Detecte stack, conte testes, verifique
 > git status. Retorne JSON conforme schema."
 
-### Passo 2 — Discovery (Fase 1)
+### Passo 3 — Discovery (Fase 02)
 
 3 turnos separados (sequencial):
-1. **Inventory**: cola `pipeline/01-discovery.md`, papel "inventory"
+1. **Inventory**: cola `pipeline/02-discovery.md`, papel "inventory"
 2. **Threats**: novo turno, papel "threat-model"
 3. **Architecture**: novo turno, papel "architecture"
 
 Cada turno responde JSON do schema. **Não misture** num turno só — a
 isolação é o que vale.
 
-### Passo 3 — Bootstrap sec.html
+### Passo 4 — Bootstrap sec.html (Fase 03)
 
 Cole [`templates/sec.html`](templates/sec.html) + outputs dos 3 turnos
 acima. Peça a AI para popular os arrays JS no topo conforme discovery.
 
-### Passo 4 — Rounds (Fase 3)
+### Passo 5 — Rounds (Fase 04)
 
 **Cada round = ≥2 turnos**:
 
@@ -84,7 +92,7 @@ acima. Peça a AI para popular os arrays JS no topo conforme discovery.
 
 Se verifier passar: merge. Se não: round volta com finding como input.
 
-### Passo 5 — Adversarial review (Fase 4)
+### Passo 6 — Adversarial review (Fase 05)
 
 A cada 10 rounds, **4 turnos separados** — 1 por lens:
 - security, races, failmodes, regression
@@ -93,12 +101,12 @@ Depois, **para cada finding**, 1 turno de verify (default refute).
 
 Confirmados (`isReal=true`) → entram na fila como novos rounds.
 
-### Passo 6 — Production checklist (Fase 5)
+### Passo 7 — Production checklist (Fase 06)
 
-Cole [`pipeline/05-production-checklist.md`](pipeline/05-production-checklist.md).
+Cole [`pipeline/06-production-checklist.md`](pipeline/06-production-checklist.md).
 Peça checklist preenchido por agente "auditor" (1 turno).
 
-### Passo 7 — Relatório final (Fase 6)
+### Passo 8 — Relatório final (Fase 07)
 
 Cole histórico (sumário de cada round + sec.html final). Peça PR de
 relatório (1 turno).
@@ -123,18 +131,21 @@ relatório (1 turno).
 ## Receita rápida pra começar em qualquer AI
 
 ```
-1. Cola SKILL.md, README.md, pipeline/00-baseline.md no chat
-2. "Atue como agente Baseline conforme blindar. Output JSON do schema."
-3. Cola pipeline/01-discovery.md
-4. 3 turnos de discovery (inventory, threats, architecture)
-5. Cola templates/sec.html
-6. "Popule arrays com base nos 3 outputs anteriores. Cole sec.html pronto."
-7. Você commita sec.html no projeto. Abre no browser.
-8. Cola pipeline/03-rounds-loop.md + agents/<categoria>.md do top gap
-9. "Atue como agente <categoria>. Implemente o round."
-10. Você revisa diff, roda testes, commita, mergeia.
-11. A cada 10 rounds: 4 turnos de adversarial + N turnos de verify.
-12. Termina conforme pipeline/06-final-report.md.
+1. Cola SKILL.md + pipeline/00-launcher.md no chat (v0.8+)
+2. Responde as 4 perguntas + menu → AI grava .blindar/config.yml
+3. Cola pipeline/01-baseline.md
+4. "Atue como agente Baseline conforme blindar. Output JSON do schema."
+5. Cola pipeline/02-discovery.md → 3 turnos (inventory, threats, architecture)
+6. Cola templates/sec.html + pipeline/03-bootstrap-sec-html.md
+7. "Popule arrays com base nos 3 outputs anteriores. Cole sec.html pronto."
+8. Você commita sec.html no projeto. Abre no browser.
+9. Cola pipeline/04-rounds-loop.md + pipeline/MODULE-MAP.json
+10. AI filtra agentes por .blindar/config.yml > selected_modules
+11. Cola agents/<categoria>.md do top gap → "Implemente o round."
+12. Você revisa diff, roda testes, commita, mergeia.
+13. A cada 10 rounds: 4 turnos de adversarial (Fase 05) + N turnos de verify.
+14. Production checklist: cola pipeline/06-production-checklist.md.
+15. Termina conforme pipeline/07-final-report.md.
 ```
 
 Single-thread funciona. Só é mais lento.

@@ -1,4 +1,4 @@
-# Fase 1 — Discovery
+# Fase 2 — Discovery
 
 **Duração**: ~3 min (3 agentes paralelos)
 
@@ -44,7 +44,35 @@ const [inventory, threats, arch] = await parallel([
 Discovery agent identifica stack e marca categorias extras pra adicionar na
 matrix da Fase 2. Ver [`stacks.md`](../stacks.md).
 
+## Detecção de capabilities do projeto (v0.8+)
+
+Discovery agent também marca flags consumidas pelo MODULE-MAP:
+
+```bash
+# UI detectada?
+ui_detected = exists(package.json com react|vue|svelte|next|nuxt|astro)
+              OR exists(index.html)
+              OR exists(public/)
+
+# DB detectado?
+db_detected = exists(.env* com DATABASE_URL|DB_HOST|POSTGRES|MYSQL|MONGO)
+              OR exists(prisma/schema.prisma)
+              OR exists(drizzle.config.*)
+              OR exists(migrations/) OR exists(db/migrate/)
+
+# API detectada?
+api_detected = exists(routes/) OR exists(api/) OR exists(controllers/)
+               OR rg("app\.(get|post|put|delete)|router\.(get|post)")
+```
+
+Essas flags vão pra `.blindar/config.yml` (atualiza `ui_detected`, `db_detected`)
+e são usadas pelo `pipeline/MODULE-MAP.json` pra resolver quais módulos
+ficam ON por default.
+
 ## Saída
 
-Três JSONs validados por schema (`schemas/` quando criado).
-Alimentam a Fase 2 (bootstrap do `sec.html`).
+Três JSONs validados por schema (`schemas/` quando criado) + atualização do
+`.blindar/config.yml` com flags de detecção.
+
+Alimentam a Fase 2 (bootstrap do `sec.html`) e a Fase 3 (rounds-loop), que
+filtra agentes por `config.selected_modules` ∩ `MODULE-MAP[module].agents`.

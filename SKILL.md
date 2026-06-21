@@ -1,12 +1,14 @@
 ---
 name: blindar
 description: |
-  Audita, blinda, otimiza e prepara o projeto para produção. Roda autônomo:
-  baseline → discovery (3 agentes paralelos) → bootstrap sec.html → rounds
-  pequenos (cada um = 1 PR mergeado) → adversarial review a cada 10 rounds
-  → production checklist → relatório. Mantém sec.html como dashboard vivo.
-  Termina quando: 0 crit + ≤2 high após review adversarial. Sem perguntar
-  nada, sem pausar, sem pedir confirmação.
+  Audita, blinda, otimiza e prepara o projeto para produção. Pipeline:
+  launcher interativo (4 perguntas + menu de 15 módulos) → baseline →
+  discovery → bootstrap sec.html → rounds pequenos (1 PR cada) →
+  adversarial review → production checklist → relatório. Mantém sec.html
+  como dashboard vivo. Termina quando: 0 crit + ≤2 high após adversarial.
+  Modos: AUTO (sem pausar), SUPERVISIONADO (pausa por módulo), ESCOLHIDOS
+  (só módulos selecionados). Cobre segurança, escalabilidade, fluidez,
+  LGPD, a11y, responsividade e elimina mocks/console.log/TODOs.
 
 triggers:
   - "blindar"
@@ -17,6 +19,56 @@ triggers:
 ---
 
 # blindar — orquestrador
+
+## EXECUÇÃO MANDATÓRIA — LEIA ANTES DE TUDO
+
+Quando esta skill for invocada (`blindar`, `blinda este projeto`, etc.), você (Claude) DEVE executar EXATAMENTE esta sequência, sem pular, sem perguntar antes de cada passo, sem alternativas:
+
+1. `bash ~/.claude/skills/blindar/scripts/blindar-run.sh --parallel auto` (ou `--fast` se usuário pediu rápido)
+2. Aguardar conclusão (exit code 0-4)
+3. Ler `.blindar/run-report.json` que foi gerado
+4. Ler `.blindar/proactive-analysis.md` se existir (análise consultiva nas 8 dimensões)
+5. Apresentar ao usuário:
+   - Resumo numérico (passed/failed/skipped/deferred/cobertura%)
+   - Top 5 findings críticos (severity crit/high)
+   - Análise proativa resumida (se gerada)
+   - Recomendação de próxima ação
+
+**Você NÃO pode**:
+- Rodar agentes individualmente sem o orquestrador
+- Pular passos da sequência acima
+- "Decidir" que algum agente não é necessário
+- Apresentar findings sem antes rodar o orquestrador
+- Pular `proactive-analysis` se ANTHROPIC_API_KEY existe
+
+**Se algo falhar**: reporte exit code + arquivo de log, NÃO tente "consertar" rodando outras coisas.
+
+Esta restrição existe porque blindar foi desenhado pra ser determinístico e auditável. Pular passos quebra a garantia de cobertura.
+
+Exit codes:
+- 0 = PASS (release-ready)
+- 1 = CONDITIONAL (deferred — Claude precisa rodar playbooks .md restantes)
+- 2 = NO-GO (failed crit/high)
+- 3 = STRICT-FAIL (deferred em modo strict)
+- 4 = ERRORED (bug em script blindar — reporte bug)
+
+## Módulo 16 — Product Evolution (opt-in, escopo separado)
+
+Quando o usuário pedir **auditoria de produto/evolução** (não hardening),
+rode o orquestrador dedicado:
+
+```bash
+bash scripts/blindar-evolve.sh
+```
+
+Cobre: APIs sem front-end, funcionalidades parciais, jornadas por perfil,
+oportunidades de crescimento por ROI, críticas adversariais de produto.
+Gera `.blindar/evolution-report.md` consolidado.
+
+**REQUER `ANTHROPIC_API_KEY`** (todos 5 agentes são API-wrapped).
+
+NÃO entra no fluxo padrão de hardening. NÃO confunda com `blindar-run.sh`.
+São escopos diferentes: hardening = "seguro pra produção"; evolution = "o que falta de produto".
 
 ## Princípio fundador: SECURITY-FIRST
 
@@ -29,7 +81,7 @@ Aplicação prática:
 - **Quality gate**: PR não-security só mergeia se NÃO degradar nenhuma
   defesa existente (grep estático cobre isso).
 - **Discovery sempre roda lens de segurança primeiro.**
-- **Adversarial review** (Fase 4) tem lens `security` obrigatório, mesmo
+- **Adversarial review** (Fase 5) tem lens `security` obrigatório, mesmo
   que outras lenses sejam opcionais.
 - **Frontend / backend / DB**: cada camada tem seu agente de segurança
   ativável — não é "1 agente cobre tudo".
@@ -45,10 +97,74 @@ Em outras AIs: role-play sequencial, contexto isolado por turno.
 
 ## Comportamento
 
-Invocado → executa do início ao fim sozinho. Não pede confirmação. Não pausa
-entre fases. Reporta status só ao terminar (ou ao bater gate bloqueante).
+Invocado → roda **launcher curto** (4 perguntas + menu) → depois executa o
+que foi escolhido conforme o modo:
 
+- **AUTO** → vai do início ao fim sem pedir confirmação (default sugerido)
+- **SUPERVISIONADO** → pausa entre módulos pra revisar
+- **ESCOLHIDOS** → roda só os módulos numerados que o operador selecionou
+
+Após o launcher, não há mais perguntas (a não ser em modo supervisionado).
 Operador acompanha em tempo real abrindo `sec.html` no browser.
+
+### Launcher (Fase 00)
+
+Ver [`pipeline/00-launcher.md`](pipeline/00-launcher.md). Faz 4 perguntas
+objetivas:
+
+1. **Tipo de projeto** (SaaS / MVP / LP / E-com / API / Mobile / CLI)
+2. **Sensibilidade de dados** (Alta / Média / Baixa — define peso do módulo LGPD)
+3. **Modo de execução** (Auto / Supervisionado / Escolhidos)
+4. **Rigor** (Produção / Compliance / MVP)
+
+E exibe o menu numerado de **15 módulos** (próxima seção). Aceita "tudo",
+"defaults", "1,3,5,7", "1-8", "tudo menos 13,14".
+
+Grava `.blindar/config.yml` com as escolhas. Pula automaticamente em
+`--resume` ou `--headless` (CI/cron).
+
+## Menu de módulos (15 numerados)
+
+| # | Módulo | Quando default ON | Agentes |
+|---|---|---|---|
+| 1 | Baseline & Discovery | sempre | [`strategic-scanner`](agents/strategic-scanner.md) |
+| 2 | Segurança aplicacional core + AI/LLM + Tenant isolation + File uploads + MLOps | sempre | [`access-control`](agents/access-control.md), [`cryptography`](agents/cryptography.md), [`business-logic`](agents/business-logic.md), [`runtime-secrets`](agents/runtime-secrets.md), [`security`](agents/security.md), [`auth-premium`](agents/auth-premium.md), [`ai-llm-safety`](agents/ai-llm-safety.md), [`tenant-isolation-tests`](agents/tenant-isolation-tests.md), [`file-uploads`](agents/file-uploads.md), [`mlops`](agents/mlops.md) |
+| 3 | Frontend hardening (CSP/XSS/SRI/Trusted Types) | se UI detectada | [`frontend`](agents/frontend.md) |
+| 4 | Rede & API + Payments + Realtime + API Gateway + GraphQL + gRPC | tipo ∈ SaaS/E-com/API | [`network-security`](agents/network-security.md), [`api-design`](agents/api-design.md), [`payments`](agents/payments.md), [`realtime`](agents/realtime.md), [`api-gateway`](agents/api-gateway.md), [`graphql`](agents/graphql.md), [`grpc-internal`](agents/grpc-internal.md) |
+| 5 | Supply chain & patch + SBOM/SLSA (compliance 2026) | sempre | [`supply-chain`](agents/supply-chain.md), [`patch-management`](agents/patch-management.md), [`sbom-slsa`](agents/sbom-slsa.md) |
+| 6 | Observabilidade & audit + Cost monitoring | tipo ∈ SaaS/E-com/API | [`observability`](agents/observability.md), [`cost-observability`](agents/cost-observability.md) |
+| 7 | Banco de dados + Backup & DR + Multi-region + Data Warehouse/ETL | se DB detectado | [`backup-recovery`](agents/backup-recovery.md), [`db-architect`](agents/db-architect.md), [`multi-region`](agents/multi-region.md), [`data-warehouse-etl`](agents/data-warehouse-etl.md) |
+| 8 | Compliance: LGPD + GDPR + HIPAA + PCI-DSS + frameworks | sensibilidade ≠ Baixa OU compliance | [`compliance-lgpd-br`](agents/compliance-lgpd-br.md), [`compliance`](agents/compliance.md), [`compliance-gdpr`](agents/compliance-gdpr.md), [`compliance-hipaa`](agents/compliance-hipaa.md), [`compliance-pci-deep`](agents/compliance-pci-deep.md) |
+| 9 | Performance backend + Query + CDN strategy | tipo ∈ SaaS/E-com/API | [`performance`](agents/performance.md), [`db-architect`](agents/db-architect.md), [`cdn-strategy`](agents/cdn-strategy.md) |
+| 10 | Fluidez completa + SEO + Frontend gen + Search + Push + Mobile native + Analytics + Audio + Video | se UI detectada | [`frontend-performance`](agents/frontend-performance.md), [`responsive-a11y`](agents/responsive-a11y.md), [`pwa-installable`](agents/pwa-installable.md), [`i18n-tz`](agents/i18n-tz.md), [`state-cache-data`](agents/state-cache-data.md), [`onboarding-ux`](agents/onboarding-ux.md), [`seo-marketing-meta`](agents/seo-marketing-meta.md), [`frontend-generator`](agents/frontend-generator.md), [`search-quality`](agents/search-quality.md), [`push-notifications`](agents/push-notifications.md), [`mobile-native`](agents/mobile-native.md), [`embedded-analytics`](agents/embedded-analytics.md), [`audio-voice`](agents/audio-voice.md), [`video-streaming`](agents/video-streaming.md) |
+| 11 | Funcional E2E + Testing strategy + Visual regression | sempre | [`functional-e2e`](agents/functional-e2e.md), [`testing-strategy`](agents/testing-strategy.md), [`visual-regression`](agents/visual-regression.md) |
+| 12 | Anti-mock + Externalização + Content quality (gramática/tom/glossário) | sempre | [`mock-killer`](agents/mock-killer.md), [`config-externalization`](agents/config-externalization.md), [`content-quality`](agents/content-quality.md) |
+| 13 | Resiliência + escalabilidade + Process + Scheduled jobs + Chaos + Event-driven | rigor ≠ MVP | [`resilience`](agents/resilience.md), [`scalability`](agents/scalability.md), [`process-resilience`](agents/process-resilience.md), [`scheduled-jobs`](agents/scheduled-jobs.md), [`chaos-engineering`](agents/chaos-engineering.md), [`event-driven`](agents/event-driven.md) |
+| 14 | DX + Flags + Backoffice + Email + Docs + Reports + Architect + Delivery + Project bootstrap | sempre | [`devops`](agents/devops.md), [`feature-flags`](agents/feature-flags.md), [`backoffice-admin`](agents/backoffice-admin.md), [`email-deliverability`](agents/email-deliverability.md), [`documentation-live`](agents/documentation-live.md), [`execution-report`](agents/execution-report.md), [`architect`](agents/architect.md), [`delivery-bundle`](agents/delivery-bundle.md), [`project-bootstrap`](agents/project-bootstrap.md) |
+| 15 | Pentest + adversarial review | sempre | [`pentest`](agents/pentest.md), [`adversarial-reviewer`](agents/adversarial-reviewer.md) |
+
+> **Total**: 72 agentes em v0.21. Fonte da verdade: [`pipeline/MODULE-MAP.json`](pipeline/MODULE-MAP.json).
+
+**Módulos não-negociáveis** (sempre rodam, mesmo em "MVP"): **1, 2, 11, 12, 15**.
+
+## Modos de execução
+
+| Modo | Comportamento | Quando usar |
+|---|---|---|
+| `auto` | Roda módulos selecionados do início ao fim, sem pausar. Default. | Operador confia, projeto familiar |
+| `supervised` | Pausa após cada módulo, pede "seguir? (s/n)" | Primeira vez no projeto, ou módulo crítico |
+| `chosen` | Roda só os módulos em `selected_modules`, em ordem numérica, termina | A-la-carte (ex: só LGPD, ou só pentest) |
+
+Em `auto`, ainda assim **bloqueia** se gate fatal (CI vermelha, suite quebrada,
+crit não-confirmado) — não bypassa qualidade.
+
+## Smart loop
+
+- Termination padrão: **0 crit + ≤2 high após adversarial**
+- **Auto-skip**: se um módulo não tem ATKs aplicáveis (ex: módulo 8 LGPD num
+  CLI), pula com 1 round vazio em vez de loopar
+- **Budget opcional** (`max_budget_usd` no config): para quando ultrapassa
+- **Resume**: estado em `.blindar/state.json` permite retomar de onde parou
 
 ## Defaults (não negocia)
 
@@ -79,11 +195,12 @@ Operador acompanha em tempo real abrindo `sec.html` no browser.
 11. Cache health checks com TTL
 12. Nenhum agente novo sem bug real observado em produção
 
-## Pipeline (sequencial, sem perguntar)
+## Pipeline (sequencial, com launcher na frente)
 
 | Fase | Arquivo | Duração |
 |---|---|---|
-| 0 — **Strategic Scan & Planning** ⭐ v0.7.0 | [`pipeline/00-strategic-scan.md`](pipeline/00-strategic-scan.md) | ~3 min |
+| **00 — Launcher** ⭐ v0.8 | [`pipeline/00-launcher.md`](pipeline/00-launcher.md) | 30s–2min |
+| 0 — Strategic Scan & Planning | [`pipeline/00-strategic-scan.md`](pipeline/00-strategic-scan.md) | ~3 min |
 | 1 — Baseline | [`pipeline/01-baseline.md`](pipeline/01-baseline.md) | ~2 min |
 | 2 — Discovery | [`pipeline/02-discovery.md`](pipeline/02-discovery.md) | ~3 min |
 | 3 — Bootstrap sec.html | [`pipeline/03-bootstrap-sec-html.md`](pipeline/03-bootstrap-sec-html.md) | ~1 min |
@@ -120,12 +237,15 @@ Agentes de **não-segurança** (carregados sob demanda):
 |---|---|
 | Performance (backend / gargalo medido) | [`agents/performance.md`](agents/performance.md) |
 | Fluidez frontend (Web Vitals / CWV) | [`agents/frontend-performance.md`](agents/frontend-performance.md) |
+| **Responsivo + a11y (mobile-first/WCAG AA)** ⭐ v0.8 | [`agents/responsive-a11y.md`](agents/responsive-a11y.md) |
+| **Funcional E2E (cada botão funciona)** ⭐ v0.8 | [`agents/functional-e2e.md`](agents/functional-e2e.md) |
+| **Anti-mock & cleanup** ⭐ v0.8 | [`agents/mock-killer.md`](agents/mock-killer.md) |
 | Resiliência (threads/breakers/pools) | [`agents/resilience.md`](agents/resilience.md) |
 | Escalabilidade (10x carga) | [`agents/scalability.md`](agents/scalability.md) |
 | Compliance genérico | [`agents/compliance.md`](agents/compliance.md) |
 | LGPD / ANPD (Brasil) | [`agents/compliance-lgpd-br.md`](agents/compliance-lgpd-br.md) |
 | DevOps / CI/CD / boot scripts | [`agents/devops.md`](agents/devops.md) |
-| Adversarial review (Fase 4) | [`agents/adversarial-reviewer.md`](agents/adversarial-reviewer.md) |
+| Adversarial review (Fase 5) | [`agents/adversarial-reviewer.md`](agents/adversarial-reviewer.md) |
 
 ## Frameworks de referência
 
@@ -146,14 +266,97 @@ estão referenciadas em [`agents/pentest.md`](agents/pentest.md), não em
 arquivos separados — todas tratam de **como testar**, não **o que
 implementar**.
 
-Discovery (Fase 1) detecta se projeto declara um framework alvo
+Discovery (Fase 2) detecta se projeto declara um framework alvo
 (`.compliance-target`, `README`, `package.json`) e gera coverage report
 no relatório final (Fase 6).
+
+## Deterministic Layer (⭐ v0.22)
+
+Camada de scripts shell que **materializa agentes em checks executáveis**
++ CI workflow que bloqueia merge. Resolve "blindar não garante 100% no
+modo AUTO" — agora roda **independente da diligência do LLM**.
+
+Templates em [`templates/checks/`](templates/checks/). Instalador:
+
+```bash
+cd seu-projeto
+bash ~/.claude/skills/blindar/scripts/install-deterministic-checks.sh
+```
+
+Resultado no projeto-alvo:
+- `scripts/blindar/*.sh` — 8 checks executáveis (secrets, mock-killer,
+  config-ext, deps audit, prisma schema, payments, file-uploads, tenant-isolation)
+- `.github/workflows/blindar.yml` — CI obrigatório
+- `.husky/pre-commit + pre-push` — gates locais
+- `.blindar/results/*.json` — output auditável + agregado
+- `scripts/blindar/check-termination.sh` — decisão matemática de release
+
+Doc completa: [`docs/deterministic-layer.md`](docs/deterministic-layer.md).
+
+## Intelligence System (⭐ v0.20)
+
+Registry compartilhado de exceções/whitelist que TODOS os agentes
+consultam pra evitar falso positivo. Vive em
+`.blindar/intelligence.yml` no projeto-alvo.
+
+Schema formal: [`schemas/intelligence.schema.json`](schemas/intelligence.schema.json).
+
+Por que existe: cada projeto tem casos legítimos onde uma "regra" não
+aplica (ex: tabela `feature_flags` legitimamente não tem `tenant_id`).
+Sem este registry, agentes geram ruído contínuo.
+
+Cada agente declara sua seção. Exemplos:
+
+```yaml
+schema: blindar/intelligence@v1
+mock-killer:
+  ignore_paths: ["**/*.gen.ts", "**/__mocks__/**"]
+db-architect:
+  global_tables: [feature_flags, system_logs, migrations]
+content-quality:
+  protected_terms: ["Stripe", "WhatsApp", "MASTER"]
+architect:
+  router_mode: { auto_detect: true }
+```
+
+### Inline markers no código
+
+Sem precisar editar YAML:
+
+```ts
+// @blindar:keep -- log intencional pra debug
+console.warn('Falha de DB');
+
+// @blindar:hardcode-ok -- código HTTP padrão
+if (res.status === 429) backoff();
+```
+
+```sql
+-- @blindar:global -- tabela legitimamente sem tenant_id
+CREATE TABLE feature_flags ( ... );
+```
+
+### Learning mode
+
+Quando ativado em `intelligence.yml`:
+
+```yaml
+global:
+  learning_mode: true
+```
+
+Operador aprova override 1x interativamente → blindar grava em
+`intelligence.yml` automaticamente. Próximas execuções respeitam sem
+perguntar de novo.
 
 ## Templates
 
 - [`templates/sec.html`](templates/sec.html) — dashboard single-file
+- [`templates/execution-report.html`](templates/execution-report.html) — relatório técnico cumulativo
+- [`templates/client-report.html`](templates/client-report.html) — relatório do cliente
+- [`templates/frontend-preview.html`](templates/frontend-preview.html) ⭐ v0.20 — preview/aprovação de frontend
 - [`templates/accept-risk.md`](templates/accept-risk.md) — riscos aceitos
+- [`templates/role-hierarchy.md`](templates/role-hierarchy.md) — template de roles
 - [`templates/pr-message.md`](templates/pr-message.md) — formato de PR
 
 ## Runbooks (fora de código, para projetos-alvo)
@@ -169,6 +372,13 @@ em PR**: antivírus em laptop, treinamento de RH, pentest manual humano.
 ## Adaptação por stack
 
 [`stacks.md`](stacks.md) — categorias extras por stack (Python/Node/Go/Rust/SPA/Mobile).
+
+## Tendências 2026 (curadoria semestral)
+
+[`docs/trends-2026.md`](docs/trends-2026.md) — React Compiler v1, RSC default,
+Edge runtime, performance budget 400KB, headers HTTP, supply chain SHA-pin,
+ANPD 2026 (crianças/IA/scraping/SCC/breach 3d). Agentes relevantes consultam
+ao rodar.
 
 ## Quality gates (sem exceção)
 
@@ -192,7 +402,7 @@ Para quando todas as condições são verdadeiras:
 - [ ] Categorias críticas ≥ 80% covered+partial
 - [ ] 3 runbooks gerados em `docs/`: incident-response, key-rotation, supply-chain
 - [ ] CI verde por 3 PRs consecutivos
-- [ ] Production checklist Fase 5 ✓
+- [ ] Production checklist Fase 6 ✓
 - [ ] Coverage report do framework alvo (se declarado) gerado
 
 ## Quando NÃO rodar

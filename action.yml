@@ -1,0 +1,121 @@
+# blindar GitHub Action
+# Permite usar blindar como step em workflows:
+#
+# - uses: pretinhuu1-boop/blindar@v0.30
+#   with:
+#     mode: full         # full | fast
+#     skip-checks: ""    # CSV de checks a pular (ex: check-lighthouse.sh)
+#     fail-on: high      # crit | high | med — bloqueia merge nessa severidade ou pior
+#     post-comment: true # posta resumo no PR
+
+name: blindar
+description: Audita, blinda e prepara projetos pra produção (72 agentes + 32 checks determinísticos)
+author: pretinhuu1-boop
+
+branding:
+  icon: shield
+  color: blue
+
+inputs:
+  mode:
+    description: 'Modo de execução: full (todos os checks) ou fast (subset rápido)'
+    required: false
+    default: 'full'
+  skip-checks:
+    description: 'Lista CSV de checks a pular (ex: check-lighthouse.sh,check-bundle-size.sh)'
+    required: false
+    default: ''
+  fail-on:
+    description: 'Severidade mínima que faz CI falhar: crit | high | med | low'
+    required: false
+    default: 'high'
+  post-comment:
+    description: 'Postar comentário no PR com resumo (true/false)'
+    required: false
+    default: 'true'
+  install-deps:
+    description: 'Instalar dependências automaticamente (gitleaks/rg/jq)'
+    required: false
+    default: 'true'
+
+outputs:
+  status:
+    description: 'passed | failed'
+    value: ${{ steps.blindar.outputs.status }}
+  crits:
+    description: 'Número de findings crit'
+    value: ${{ steps.blindar.outputs.crits }}
+  highs:
+    description: 'Número de findings high'
+    value: ${{ steps.blindar.outputs.highs }}
+
+runs:
+  using: composite
+  steps:
+    - name: Setup dependencies
+      if: inputs.install-deps == 'true'
+      shell: bash
+      run: |
+        if ! command -v gitleaks >/dev/null 2>&1; then
+          curl -sSfL https://raw.githubusercontent.com/gitleaks/gitleaks/master/install.sh | sh -s -- -b /usr/local/bin
+        fi
+        if ! command -v rg >/dev/null 2>&1; then
+          sudo apt-get update && sudo apt-get install -y ripgrep jq bc
+        fi
+
+    - name: Install blindar
+      shell: bash
+      run: |
+        if ! command -v blindar >/dev/null 2>&1; then
+          npm install -g blindar
+        fi
+
+    - name: Run blindar checks
+      id: blindar
+      shell: bash
+      run: |
+        # Roda npx blindar check com mode
+        if [ "${{ inputs.mode }}" = "fast" ]; then
+          npx blindar check --fast --json > /tmp/blindar.json || true
+        else
+          npx blindar check --json > /tmp/blindar.json || true
+        fi
+
+        # Parse aggregate
+        STATUS="passed"
+        CRITS=$(jq '.findings_by_severity.crit // 0' /tmp/blindar.json 2>/dev/null || echo 0)
+        HIGHS=$(jq '.findings_by_severity.high // 0' /tmp/blindar.json 2>/dev/null || echo 0)
+        MEDS=$(jq '.findings_by_severity.med // 0' /tmp/blindar.json 2>/dev/null || echo 0)
+
+        FAIL_ON="${{ inputs.fail-on }}"
+        if [ "$FAIL_ON" = "crit" ] && [ "$CRITS" -gt 0 ]; then STATUS="failed"; fi
+        if [ "$FAIL_ON" = "high" ] && [ "$((CRITS + HIGHS))" -gt 0 ]; then STATUS="failed"; fi
+        if [ "$FAIL_ON" = "med" ] && [ "$((CRITS + HIGHS + MEDS))" -gt 0 ]; then STATUS="failed"; fi
+
+        echo "status=$STATUS" >> $GITHUB_OUTPUT
+        echo "crits=$CRITS" >> $GITHUB_OUTPUT
+        echo "highs=$HIGHS" >> $GITHUB_OUTPUT
+
+        [ "$STATUS" = "failed" ] && exit 1 || exit 0
+
+    - name: Post PR comment
+      if: inputs.post-comment == 'true' && github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          let agg;
+          try { agg = JSON.parse(fs.readFileSync('/tmp/blindar.json', 'utf8')); } catch { return; }
+          const status = '${{ steps.blindar.outputs.status }}' === 'passed' ? '✅' : '❌';
+          const body = `## ${status} blindar checks (${agg.total_checks} total)
+          - ✅ Passed: ${agg.passed}
+          - ❌ Failed: ${agg.failed}
+          - ⏭️ Skipped: ${agg.skipped}
+
+          **Findings**: 🔴 ${agg.findings_by_severity.crit} crit · 🟠 ${agg.findings_by_severity.high} high · 🟡 ${agg.findings_by_severity.med} med · ⚪ ${agg.findings_by_severity.low} low`;
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body,
+          });

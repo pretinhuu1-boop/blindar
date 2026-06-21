@@ -1,4 +1,13 @@
-# agent: security
+---
+name: security
+category: security
+module: 2
+priority: P0
+description: |
+  Generic — fecha vetores de ataque (ATKs) do catálogo OWASP Top 10 que não cabem em agentes específicos. Cross-cutting concerns de segurança aplicacional.
+---
+
+# Agent: security
 
 Especialista em fechar vetores de ataque (ATKs) do catálogo.
 

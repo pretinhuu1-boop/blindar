@@ -95,18 +95,33 @@ Digite **uma** das frases-gatilho:
 - `production ready`
 - `harden this project`
 
-### 3.4. Confirme se for perguntado
+### 3.4. Responda o launcher (v0.8+)
 
-Em modo padrão Claude Code pede permissão pra ações sensíveis (rodar Bash,
-gh, criar branches). Confirmar. **O skill em si não pede confirmação a
-cada round — só o harness do Claude.**
+Na primeira execução em projeto novo, o blindar abre o **launcher**
+(Fase 00) com 4 perguntas objetivas (≤30s):
 
-Se quiser autonomia total, use modo `--accept-edits` ou similar do Claude
-Code.
+1. Tipo do projeto (1-8)
+2. Sensibilidade de dados (A/M/B)
+3. Modo de execução (1=AUTO, 2=SUPERVISIONADO, 3=ESCOLHIDOS)
+4. Rigor (P/C/M)
+
+Depois exibe **menu de 15 módulos** com defaults inteligentes. Você
+escolhe: `tudo`, `defaults`, `1,3,5,7,10`, `1-8`, ou `tudo menos 13,14`.
+
+Após a confirmação final, o skill roda do começo ao fim conforme o modo:
+
+- **AUTO**: não pede mais nada
+- **SUPERVISIONADO**: pausa entre rounds, pede "seguir? (s/n)"
+- **ESCOLHIDOS**: roda só os módulos selecionados e termina
+
+> Modo padrão do Claude Code ainda pede permissão pra ações sensíveis
+> (Bash, gh, branches). Use `--accept-edits` ou similar do harness pra
+> autonomia total.
 
 ### 3.5. Deixe rolar
 
-O skill agora roda do começo ao fim. Você acompanha em **3 lugares**:
+O skill roda do começo ao fim (respeitando o modo escolhido). Você
+acompanha em **3 lugares**:
 
 - **Terminal do Claude Code** — narração curta de cada fase
 - **Browser com `sec.html`** — dashboard vivo
@@ -120,18 +135,31 @@ O skill agora roda do começo ao fim. Você acompanha em **3 lugares**:
 
 | Fase | Duração | O que acontece |
 |---|---|---|
-| 0 — Baseline | ~2 min | Detecta stack, conta testes, conferência |
-| 1 — Discovery | ~3 min | 3 agentes paralelos mapeiam tudo |
-| 2 — Bootstrap sec.html | ~1 min | PR único com dashboard |
-| 3 — Loop de rounds | **horas a dias** | 1 PR a cada ~20-60 min |
-| 4 — Adversarial review | ~10 min cada 10 rounds | tentativa de refutar |
-| 5 — Production checklist | ~3 min | gates finais |
-| 6 — Relatório final | ~2 min | PR de sumário |
+| 00 — Launcher | ≤2 min | 4 perguntas + menu, grava config |
+| 0 — Strategic Scan | ~3 min | Scan arquitetural + plano de paralelismo |
+| 1 — Baseline | ~2 min | Detecta stack, conta testes, confere git |
+| 2 — Discovery | ~3 min | 3 agentes paralelos mapeiam tudo + detecta UI/DB |
+| 3 — Bootstrap sec.html | ~1 min | PR único com dashboard |
+| 4 — Loop de rounds | **horas a dias** | 1 PR a cada ~20-60 min (filtrado por módulos) |
+| 5 — Adversarial review | ~10 min cada 10 rounds | 4 lentes + verify |
+| 6 — Production checklist | ~3 min | gates finais |
+| 7 — Relatório final | ~2 min | PR de sumário |
 
 ### Saída no terminal — exemplo real
 
 ```
-[Fase 0] Baseline...
+[Fase 00] Launcher...
+  tipo: saas | sensibilidade: alta | modo: auto | rigor: producao
+  modulos selecionados: 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 (todos)
+  config gravado em .blindar/config.yml
+  ✓ seguindo pra Fase 0
+
+[Fase 0] Strategic Scan...
+  14 categorias varridas, 23 findings (4 crit, 8 high, 11 med)
+  plano de paralelismo otimizado (8 cores)
+  ✓ pode prosseguir
+
+[Fase 1] Baseline...
   stack: python+postgres
   tests: 142 passando, 0 falhas
   type-check: clean
@@ -139,10 +167,11 @@ O skill agora roda do começo ao fim. Você acompanha em **3 lugares**:
   CI: github-actions
   ✓ pode prosseguir
 
-[Fase 1] Discovery (3 agentes paralelos)...
+[Fase 2] Discovery (3 agentes paralelos)...
   ✓ inventory: 47 endpoints, 8 externals
   ✓ threat-model: 31 ATKs aplicáveis (12 crit, 14 high, 5 med)
   ✓ architecture: monolito Flask + Postgres + Redis + Cloudflare
+  ✓ detectado ui_detected=true, db_detected=true → config.yml atualizado
 
 [Fase 2] Bootstrap sec.html...
   ✓ docs(blindar): bootstrap sec.html dashboard #142 (mergeado)
@@ -213,9 +242,12 @@ skill vai bater no gate "CI ainda não verde" e ficar esperando.
 ### Retomar
 
 Invoque `blindar` novamente. Ele:
-1. Roda Fase 0 (baseline) — encontra `sec.html` existente
-2. Pula bootstrap (Fase 2 — reusa o `sec.html`)
-3. Continua a Fase 3 do próximo gap não-coberto
+1. Detecta `.blindar/config.yml` existente → pula Fase 00 (launcher)
+2. Roda Fase 1 (baseline) — encontra `sec.html` existente
+3. Pula bootstrap (Fase 3 — reusa o `sec.html`)
+4. Continua a Fase 4 (rounds-loop) do próximo gap não-coberto
+
+Pra forçar re-execução do launcher: use `--reset` (apaga `.blindar/`).
 
 Schema do `sec.html` é estável entre rodadas. Pode retomar quantas vezes
 quiser.
@@ -240,6 +272,30 @@ Quando termina, abre PR final com sumário e te avisa no terminal.
 ---
 
 ## 8. Casos especiais
+
+### Frontend generator — releitura com aprovação (v0.20+)
+
+Quando você quer **refazer o frontend** lendo o backend (OpenAPI + schema
++ roles), o agente [`frontend-generator`](agents/frontend-generator.md)
+**NUNCA reescreve nada sem aprovação explícita**. Fluxo em 3 portões:
+
+1. **Portão 1 — Pergunta**: 4 opções (gerar do zero / **refazer com aprovação** /
+   atualizar só faltantes / cancelar).
+2. **Portão 2 — Preview**: gera `frontend-preview.html` na raiz do projeto.
+   Você abre no browser, vê CADA rota proposta com checkbox individual
+   (`Aprovar / Manter atual / Pular`), mockup dos dashboards por role,
+   forms gerados de Zod, deps a adicionar, estimativa de LOC. Decide,
+   baixa `frontend-decisions.json` e salva em `.blindar/`.
+3. **Portão 3 — Confirmação**: blindar lê suas decisões, mostra resumo final
+   no terminal e pede `(s/N)` default **N**. Você precisa digitar `s`
+   explícito pra escrever qualquer arquivo.
+
+**Nada do projeto é tocado** nos portões 1 e 2. `Ctrl+C` em qualquer ponto =
+zero perda. Estado registrado em `.blindar/frontend-state.json` pra
+auditoria. `--reset` recomeça do zero.
+
+Modo strangler-fig: gera em `frontend.next/` ao lado do antigo, nunca
+apaga código existente — você migra feature por feature em PRs separados.
 
 ### Projeto BR (LGPD)
 
@@ -298,10 +354,10 @@ Documentação completa em [`MULTI-AI.md`](MULTI-AI.md).
 
 Resumão:
 
-1. Cole `SKILL.md` + `pipeline/00-baseline.md` no chat
-2. Peça: "Atue como agente Baseline do blindar. JSON do schema."
-3. Repita pra cada fase, **um agente por turno**, contexto isolado
-4. Em adversarial review (Fase 4), 4 turnos separados — 1 por lens
+1. Cole `SKILL.md` + `pipeline/00-launcher.md` no chat
+2. Responda as 4 perguntas + escolha módulos no menu (v0.8)
+3. Cole `pipeline/01-baseline.md` e siga, **um agente por turno**, contexto isolado
+4. Em adversarial review (Fase 5), 4 turnos separados — 1 por lens
 5. Você executa Bash/git/gh; AI escreve os comandos
 
 | AI | Velocidade relativa | Paralelo real? |

@@ -1,0 +1,9 @@
+node_modules/
+*.log
+.DS_Store
+test/
+tests/
+*.test.js
+.git/
+.github/
+coverage/

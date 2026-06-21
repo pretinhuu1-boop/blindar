@@ -1,4 +1,13 @@
-# agent: patch-management
+---
+name: patch-management
+category: security
+module: 5
+priority: P0
+description: |
+  CVE feed monitorado (NVD/OSV), Renovate/Dependabot configurado, SLA por severity (crit ≤ 24h, high ≤ 7d), OS/runtime atualizados. Cobre técnica #5.
+---
+
+# Agent: patch-management
 
 Atualização de OS, runtime, libs base. Cobre técnica #5 do baseline.
 
@@ -81,7 +90,7 @@ GitHub Actions agendado (diário) que:
 
 ### Integração com maintenance mode
 
-Fase 7 ([`pipeline/07-maintenance.md`](../pipeline/07-maintenance.md))
+Fase 8 ([`pipeline/08-maintenance.md`](../pipeline/08-maintenance.md))
 roda esse check periodicamente e abre rounds focados em CVEs novas.
 
 ### SLA por severity (reforço)

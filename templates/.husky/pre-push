@@ -1,0 +1,25 @@
+#!/usr/bin/env sh
+# blindar pre-push — checks completos antes de push
+# Copia esse arquivo pra .husky/pre-push no projeto-alvo
+
+# Lint completo
+if [ -f "package.json" ]; then
+  npm run lint --silent
+  npm run type-check --silent
+  npm run test -- --run --bail 2>/dev/null || npm test
+fi
+
+# Blindar full checks
+if [ -x "scripts/blindar/run-all.sh" ]; then
+  bash scripts/blindar/run-all.sh
+fi
+
+# Termination — só permite push se release-ready
+if [ -x "scripts/blindar/check-termination.sh" ]; then
+  bash scripts/blindar/check-termination.sh || {
+    echo ""
+    echo "Push BLOQUEADO: critérios de termination não atingidos."
+    echo "Use 'git push --no-verify' SÓ se sabe o que está fazendo."
+    exit 1
+  }
+fi

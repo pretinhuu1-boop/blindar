@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/pretinhuu1-boop/blindar/blob/main/schemas/run-report.schema.json",
+  "title": "blindar run-report (aggregate)",
+  "description": "Agregado gerado por blindar-run.sh em .blindar/run-report.json. Resume a execução de TODOS os agentes da suite.",
+  "type": "object",
+  "required": [
+    "schema",
+    "ran_at",
+    "duration_sec",
+    "total_agents",
+    "passed",
+    "failed",
+    "skipped",
+    "deferred",
+    "errored",
+    "coverage_pct",
+    "results"
+  ],
+  "properties": {
+    "schema": {
+      "type": "string",
+      "const": "blindar/run-report@v1"
+    },
+    "ran_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "duration_sec": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "modules_filter": {
+      "type": "string",
+      "description": "'all' OU lista CSV ex: '1,2,11'."
+    },
+    "strict_mode": {
+      "type": ["boolean", "integer"],
+      "description": "Aceita boolean ou 0/1 (compat com versões antigas)."
+    },
+    "parallel": { "type": "integer", "minimum": 1 },
+    "verbose": { "type": ["boolean", "integer"] },
+    "since": {
+      "type": "string",
+      "description": "Git ref usada em --since (opcional)."
+    },
+    "changed_files": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "total_agents": { "type": "integer", "minimum": 0 },
+    "passed":   { "type": "integer", "minimum": 0 },
+    "failed":   { "type": "integer", "minimum": 0 },
+    "skipped":  { "type": "integer", "minimum": 0 },
+    "deferred": { "type": "integer", "minimum": 0 },
+    "errored":  { "type": "integer", "minimum": 0 },
+    "coverage_pct": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "message": { "type": "string" },
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["module", "agent", "kind", "status", "findings"],
+        "properties": {
+          "module": { "type": "string" },
+          "agent":  { "type": "string" },
+          "kind": {
+            "type": "string",
+            "enum": ["deterministic", "api-wrapped", "playbook-only"]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["passed", "failed", "skipped", "deferred", "errored"]
+          },
+          "findings": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

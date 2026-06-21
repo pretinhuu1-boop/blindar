@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blindar — Relatório de Execução</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+  :root {
+    --bg: #fafafa; --fg: #1a1a1a; --muted: #666; --border: #e5e5e5;
+    --primary: #0066cc; --success: #0a7d3d; --warning: #b76e00;
+    --danger: #c92a2a; --info: #5c6bc0;
+    --card-bg: #ffffff; --code-bg: #f4f4f4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1a1a; --fg: #f0f0f0; --muted: #999; --border: #333;
+      --card-bg: #242424; --code-bg: #2a2a2a;
+      --primary: #4a9eff; --success: #4ade80; --warning: #fbbf24;
+      --danger: #f87171; --info: #818cf8;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--fg); line-height: 1.5;
+    max-width: 1200px; margin: 0 auto; padding: 24px;
+  }
+  header {
+    border-bottom: 2px solid var(--border); padding-bottom: 16px;
+    margin-bottom: 24px;
+    display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: start;
+  }
+  h1 { font-size: 1.75rem; margin-bottom: 8px; }
+  h2 { font-size: 1.25rem; margin: 24px 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 1rem; margin: 12px 0 6px; }
+  .meta { display: flex; gap: 16px; flex-wrap: wrap; color: var(--muted); font-size: 0.875rem; }
+  .meta b { color: var(--fg); }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  button {
+    background: var(--primary); color: white; border: 0; padding: 8px 14px;
+    border-radius: 6px; cursor: pointer; font-size: 0.875rem;
+    font-family: inherit; transition: opacity 0.15s;
+  }
+  button:hover { opacity: 0.9; }
+  button.secondary { background: transparent; border: 1px solid var(--border); color: var(--fg); }
+  .summary {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px; margin-bottom: 24px;
+  }
+  .stat {
+    background: var(--card-bg); padding: 16px; border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  .stat .label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat .value { font-size: 1.75rem; font-weight: 600; margin-top: 4px; }
+  .stat.success .value { color: var(--success); }
+  .stat.warning .value { color: var(--warning); }
+  .stat.danger .value { color: var(--danger); }
+  .filters {
+    display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;
+    background: var(--card-bg); padding: 12px; border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  input[type="search"], select {
+    background: var(--bg); color: var(--fg); border: 1px solid var(--border);
+    padding: 6px 10px; border-radius: 4px; font-family: inherit; font-size: 0.875rem;
+  }
+  input[type="search"] { flex: 1; min-width: 180px; }
+  details {
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 8px; margin-bottom: 8px;
+  }
+  summary {
+    padding: 12px 16px; cursor: pointer; font-weight: 500;
+    display: flex; gap: 12px; align-items: center;
+    list-style: none;
+  }
+  summary::-webkit-details-marker { display: none; }
+  summary::before {
+    content: "▸"; transition: transform 0.15s; color: var(--muted);
+    font-size: 0.875rem;
+  }
+  details[open] summary::before { transform: rotate(90deg); }
+  .badge {
+    font-size: 0.75rem; padding: 2px 8px; border-radius: 12px;
+    background: var(--border); color: var(--fg); font-weight: 500;
+  }
+  .badge.crit { background: var(--danger); color: white; }
+  .badge.high { background: var(--warning); color: white; }
+  .badge.med { background: var(--info); color: white; }
+  .badge.low { background: var(--muted); color: white; }
+  .badge.ok { background: var(--success); color: white; }
+  details > div { padding: 0 16px 16px; border-top: 1px solid var(--border); padding-top: 12px; }
+  .files { list-style: none; }
+  .files li {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.85rem; padding: 2px 0; color: var(--muted);
+  }
+  .files li::before { content: "▪ "; color: var(--primary); }
+  .ts { color: var(--muted); font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+  .agent-name {
+    font-family: ui-monospace, monospace; font-size: 0.875rem;
+    background: var(--code-bg); padding: 2px 6px; border-radius: 4px;
+  }
+  .empty {
+    text-align: center; padding: 48px; color: var(--muted);
+  }
+  .legend { display: flex; gap: 8px; flex-wrap: wrap; font-size: 0.8rem; color: var(--muted); margin-bottom: 12px; }
+  .legend .badge { font-size: 0.7rem; }
+  footer {
+    margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--border);
+    color: var(--muted); font-size: 0.8rem; text-align: center;
+  }
+  /* Print styles */
+  @media print {
+    body { max-width: 100%; padding: 0; background: white; color: black; }
+    .actions, .filters, button { display: none !important; }
+    details { break-inside: avoid; border: 1px solid #ccc; }
+    details:not([open]) summary { background: #f5f5f5; }
+    details > div { display: block !important; }
+    summary { font-weight: 600; background: #f9f9f9; }
+    .stat { border: 1px solid #ccc; break-inside: avoid; }
+    a { color: #000; text-decoration: underline; }
+    @page { margin: 1.5cm; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>📋 Relatório de Execução — blindar</h1>
+    <div class="meta">
+      <span><b>Projeto:</b> <span id="meta-project">—</span></span>
+      <span><b>Versão blindar:</b> <span id="meta-version">—</span></span>
+      <span><b>Última atualização:</b> <span id="meta-updated">—</span></span>
+      <span><b>Total de execuções:</b> <span id="meta-runs">0</span></span>
+    </div>
+  </div>
+  <div class="actions">
+    <button onclick="window.print()" title="Imprimir ou salvar como PDF">🖨️ Imprimir / PDF</button>
+    <button class="secondary" onclick="copyMarkdown()">📋 Copiar resumo</button>
+    <button class="secondary" onclick="downloadJSON()">💾 Baixar dados</button>
+    <button class="secondary" onclick="shareEmail()">✉️ Compartilhar</button>
+  </div>
+</header>
+
+<section class="summary">
+  <div class="stat success"><div class="label">Módulos executados</div><div class="value" id="stat-modules">0</div></div>
+  <div class="stat"><div class="label">Agentes ativos</div><div class="value" id="stat-agents">0</div></div>
+  <div class="stat"><div class="label">Rounds completados</div><div class="value" id="stat-rounds">0</div></div>
+  <div class="stat success"><div class="label">Findings resolvidos</div><div class="value" id="stat-resolved">0</div></div>
+  <div class="stat danger"><div class="label">Crits abertos</div><div class="value" id="stat-crit">0</div></div>
+  <div class="stat warning"><div class="label">Highs em accept-risk</div><div class="value" id="stat-high">0</div></div>
+</section>
+
+<div class="legend">
+  <span class="badge crit">CRIT</span> crítico bloqueante
+  <span class="badge high">HIGH</span> alta prioridade
+  <span class="badge med">MED</span> média
+  <span class="badge low">LOW</span> baixa
+  <span class="badge ok">RESOLVIDO</span>
+</div>
+
+<div class="filters" data-no-print>
+  <input type="search" id="filter-search" placeholder="Filtrar por agente, arquivo, descrição…" oninput="render()">
+  <select id="filter-module" onchange="render()">
+    <option value="">Todos os módulos</option>
+  </select>
+  <select id="filter-agent" onchange="render()">
+    <option value="">Todos os agentes</option>
+  </select>
+  <select id="filter-severity" onchange="render()">
+    <option value="">Todas severidades</option>
+    <option value="crit">Apenas CRIT</option>
+    <option value="high">Apenas HIGH</option>
+    <option value="med">Apenas MED</option>
+    <option value="low">Apenas LOW</option>
+    <option value="resolved">Apenas resolvidos</option>
+  </select>
+  <select id="filter-period" onchange="render()">
+    <option value="">Todo período</option>
+    <option value="24h">Últimas 24h</option>
+    <option value="7d">Últimos 7 dias</option>
+    <option value="30d">Últimos 30 dias</option>
+  </select>
+</div>
+
+<h2>Timeline (mais recente primeiro)</h2>
+<div id="timeline"></div>
+
+<h2>Por módulo</h2>
+<div id="by-module"></div>
+
+<h2>Por agente</h2>
+<div id="by-agent"></div>
+
+<footer>
+  Gerado pelo <a href="https://github.com/pretinhuu1-boop/blindar" target="_blank">blindar</a> —
+  arquivo self-contained, abre em qualquer browser, funciona offline.<br>
+  Dados embutidos abaixo. Ao rodar blindar de novo, o JSON é apendado (nunca substituído).
+</footer>
+
+<!-- ═════════════ DADOS EMBUTIDOS (atualizado pelo agente execution-report) ═════════════ -->
+<script id="blindar-data" type="application/json">
+{
+  "schema": "blindar/execution-report@v1",
+  "project": "PROJETO_AQUI",
+  "blindar_version": "0.15.0",
+  "first_run": "2026-06-14T18:00:00Z",
+  "last_updated": "2026-06-14T18:00:00Z",
+  "total_runs": 0,
+  "runs": []
+}
+</script>
+
+<script>
+/* ═════════════ RENDER ENGINE ═════════════ */
+const SEVERITY_ORDER = { crit: 4, high: 3, med: 2, low: 1, resolved: 0 };
+let DATA = JSON.parse(document.getElementById('blindar-data').textContent);
+
+function init() {
+  document.getElementById('meta-project').textContent = DATA.project || '—';
+  document.getElementById('meta-version').textContent = DATA.blindar_version || '—';
+  document.getElementById('meta-updated').textContent = formatTs(DATA.last_updated) || '—';
+  document.getElementById('meta-runs').textContent = DATA.total_runs || 0;
+
+  // Populate filters
+  const modules = new Set();
+  const agents = new Set();
+  flatActions().forEach(a => {
+    if (a.module) modules.add(a.module);
+    if (a.agent) agents.add(a.agent);
+  });
+  const modSel = document.getElementById('filter-module');
+  [...modules].sort((a,b) => Number(a) - Number(b)).forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m; opt.textContent = `Módulo ${m}`;
+    modSel.appendChild(opt);
+  });
+  const agSel = document.getElementById('filter-agent');
+  [...agents].sort().forEach(a => {
+    const opt = document.createElement('option');
+    opt.value = a; opt.textContent = a;
+    agSel.appendChild(opt);
+  });
+
+  render();
+}
+
+function flatActions() {
+  return (DATA.runs || []).flatMap(r =>
+    (r.actions || []).map(a => ({ ...a, run_id: r.id, run_started: r.started_at }))
+  );
+}
+
+function applyFilters(actions) {
+  const search = document.getElementById('filter-search').value.toLowerCase();
+  const mod = document.getElementById('filter-module').value;
+  const agent = document.getElementById('filter-agent').value;
+  const sev = document.getElementById('filter-severity').value;
+  const period = document.getElementById('filter-period').value;
+  const now = Date.parse(DATA.last_updated || new Date().toISOString());
+  const periodMs = { '24h': 86400e3, '7d': 7 * 86400e3, '30d': 30 * 86400e3 }[period];
+
+  return actions.filter(a => {
+    if (search && !JSON.stringify(a).toLowerCase().includes(search)) return false;
+    if (mod && a.module != mod) return false;
+    if (agent && a.agent !== agent) return false;
+    if (sev === 'resolved' && !a.resolved) return false;
+    if (sev && sev !== 'resolved' && a.severity !== sev) return false;
+    if (periodMs && (now - Date.parse(a.ts)) > periodMs) return false;
+    return true;
+  });
+}
+
+function render() {
+  const actions = applyFilters(flatActions());
+  renderStats(actions);
+  renderTimeline(actions);
+  renderByModule(actions);
+  renderByAgent(actions);
+}
+
+function renderStats(actions) {
+  const modules = new Set(actions.map(a => a.module).filter(Boolean));
+  const agents = new Set(actions.map(a => a.agent).filter(Boolean));
+  const rounds = new Set(actions.map(a => a.round).filter(Boolean));
+  document.getElementById('stat-modules').textContent = modules.size;
+  document.getElementById('stat-agents').textContent = agents.size;
+  document.getElementById('stat-rounds').textContent = rounds.size;
+  document.getElementById('stat-resolved').textContent = actions.filter(a => a.resolved).length;
+  document.getElementById('stat-crit').textContent = actions.filter(a => a.severity === 'crit' && !a.resolved).length;
+  document.getElementById('stat-high').textContent = actions.filter(a => a.severity === 'high' && a.in_accept_risk).length;
+}
+
+function renderTimeline(actions) {
+  const el = document.getElementById('timeline');
+  if (!actions.length) { el.innerHTML = '<div class="empty">Nenhuma ação registrada ainda. Rode <code>blindar</code> no projeto pra começar.</div>'; return; }
+  const sorted = [...actions].sort((a, b) => Date.parse(b.ts) - Date.parse(a.ts));
+  el.innerHTML = sorted.map(a => `
+    <details>
+      <summary>
+        <span class="ts">${formatTs(a.ts)}</span>
+        ${a.round ? `<span class="badge">round ${a.round}</span>` : ''}
+        ${a.module ? `<span class="badge">mód ${a.module}</span>` : ''}
+        <span class="agent-name">${esc(a.agent || '—')}</span>
+        ${a.severity ? `<span class="badge ${a.severity}">${a.severity.toUpperCase()}</span>` : ''}
+        ${a.resolved ? '<span class="badge ok">✓ RESOLVIDO</span>' : ''}
+        <span style="flex:1">${esc(a.title || a.description || '')}</span>
+      </summary>
+      <div>
+        ${a.description && a.description !== a.title ? `<p>${esc(a.description)}</p>` : ''}
+        ${a.files?.length ? `<h3>Arquivos</h3><ul class="files">${a.files.map(f => `<li>${esc(f)}</li>`).join('')}</ul>` : ''}
+        ${a.pr_url ? `<p><a href="${esc(a.pr_url)}" target="_blank">Ver PR</a></p>` : ''}
+        ${a.notes ? `<p><b>Notas:</b> ${esc(a.notes)}</p>` : ''}
+      </div>
+    </details>
+  `).join('');
+}
+
+function renderByModule(actions) {
+  const groups = {};
+  actions.forEach(a => {
+    if (!a.module) return;
+    (groups[a.module] = groups[a.module] || []).push(a);
+  });
+  const el = document.getElementById('by-module');
+  if (!Object.keys(groups).length) { el.innerHTML = '<div class="empty">—</div>'; return; }
+  el.innerHTML = Object.entries(groups).sort(([a],[b]) => Number(a)-Number(b)).map(([m, list]) => `
+    <details>
+      <summary>
+        <span class="badge">mód ${m}</span>
+        <span style="flex:1">${list.length} ações</span>
+        <span class="badge ok">✓ ${list.filter(a => a.resolved).length}</span>
+        <span class="badge crit">${list.filter(a => a.severity === 'crit' && !a.resolved).length}</span>
+      </summary>
+      <div>${list.map(a => `<div style="padding:6px 0;border-bottom:1px solid var(--border)">${esc(a.title || a.description)}</div>`).join('')}</div>
+    </details>
+  `).join('');
+}
+
+function renderByAgent(actions) {
+  const groups = {};
+  actions.forEach(a => {
+    if (!a.agent) return;
+    (groups[a.agent] = groups[a.agent] || []).push(a);
+  });
+  const el = document.getElementById('by-agent');
+  if (!Object.keys(groups).length) { el.innerHTML = '<div class="empty">—</div>'; return; }
+  el.innerHTML = Object.entries(groups).sort((a,b) => b[1].length - a[1].length).map(([ag, list]) => `
+    <details>
+      <summary>
+        <span class="agent-name">${esc(ag)}</span>
+        <span style="flex:1">${list.length} ações</span>
+        <span class="badge ok">✓ ${list.filter(a => a.resolved).length}</span>
+      </summary>
+      <div>${list.map(a => `<div style="padding:6px 0;border-bottom:1px solid var(--border)"><span class="ts">${formatTs(a.ts)}</span> · ${esc(a.title || a.description)}</div>`).join('')}</div>
+    </details>
+  `).join('');
+}
+
+function formatTs(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+}
+
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+}
+
+/* ═════════════ EXPORT ACTIONS ═════════════ */
+
+function copyMarkdown() {
+  const actions = applyFilters(flatActions());
+  const lines = [
+    `# Relatório blindar — ${DATA.project}`,
+    ``,
+    `**blindar:** v${DATA.blindar_version} · **Atualizado:** ${formatTs(DATA.last_updated)} · **Execuções:** ${DATA.total_runs}`,
+    ``,
+    `## Resumo`,
+    `- Módulos: ${new Set(actions.map(a=>a.module).filter(Boolean)).size}`,
+    `- Agentes: ${new Set(actions.map(a=>a.agent).filter(Boolean)).size}`,
+    `- Rounds: ${new Set(actions.map(a=>a.round).filter(Boolean)).size}`,
+    `- Resolvidos: ${actions.filter(a=>a.resolved).length}`,
+    `- Crits abertos: ${actions.filter(a=>a.severity==='crit'&&!a.resolved).length}`,
+    ``,
+    `## Timeline`,
+    ...actions.sort((a,b) => Date.parse(b.ts) - Date.parse(a.ts)).map(a => {
+      const tags = [a.round && `round ${a.round}`, a.module && `mód ${a.module}`, a.severity, a.resolved && '✓'].filter(Boolean).join(' · ');
+      return `- **${formatTs(a.ts)}** \`${a.agent}\` (${tags}) — ${a.title || a.description}`;
+    })
+  ];
+  const md = lines.join('\n');
+  navigator.clipboard.writeText(md).then(() => alert('Resumo copiado em Markdown!'));
+}
+
+function downloadJSON() {
+  const blob = new Blob([JSON.stringify(DATA, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `blindar-report-${(DATA.project || 'project').replace(/\W+/g,'_')}-${Date.now()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function shareEmail() {
+  const subject = encodeURIComponent(`Relatório blindar — ${DATA.project}`);
+  const body = encodeURIComponent(`Relatório de hardening do projeto ${DATA.project}.\n\nblindar v${DATA.blindar_version} · ${formatTs(DATA.last_updated)} · ${DATA.total_runs} execuções\n\n(Detalhes no HTML em anexo — abra no browser)`);
+  window.location.href = `mailto:?subject=${subject}&body=${body}`;
+}
+
+init();
+</script>
+
+</body>
+</html>

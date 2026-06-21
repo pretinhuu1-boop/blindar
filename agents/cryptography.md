@@ -1,4 +1,13 @@
-# agent: cryptography
+---
+name: cryptography
+category: security
+module: 2
+priority: P0
+description: |
+  Criptografia: TLS 1.3, at-rest AES-256, key management (KMS), secrets rotation, cipher suites permitidos, certificate pinning. Cobre técnica #2 do baseline.
+---
+
+# Agent: cryptography
 
 Criptografia em trânsito, em repouso, e gestão de segredos. Cobre técnica #2
 do baseline.

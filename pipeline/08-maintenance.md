@@ -1,4 +1,4 @@
-# Fase 7 — Maintenance mode (opcional, contínuo)
+# Fase 8 — Maintenance mode (opcional, contínuo)
 
 **Cadência sugerida**: trimestral (a cada 3 meses).
 **Trigger**: scheduled cron OU pre-release manual OU CVE crítica detectada.
@@ -99,7 +99,7 @@ Para quando:
 
 ## Ver também
 
-- [`pipeline/08-drift-detection.md`](08-drift-detection.md) — algoritmo
+- [`pipeline/09-drift-detection.md`](09-drift-detection.md) — algoritmo
   específico de drift
 - [`agents/patch-management.md`](../agents/patch-management.md) — CVE feed
 - [`docs/specs/reproducibility.md`](../docs/specs/reproducibility.md) —

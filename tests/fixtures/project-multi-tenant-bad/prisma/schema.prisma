@@ -1,0 +1,29 @@
+// FIXTURE — schema multi-tenant MAL feito.
+// Deve falhar check-prisma-schema (sem tenantId, sem audit, Decimal money)
+// e check-tenant-isolation (queries sem tenant_id).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ERRO: Int autoincrement em vez de UUID v7
+// ERRO: sem tenantId
+// ERRO: sem createdAt/updatedAt
+// ERRO: money em Decimal
+model Order {
+  id        Int     @id @default(autoincrement())
+  amount    Decimal
+  customer  String
+}
+
+// ERRO: também sem tenantId nem audit
+model Product {
+  id    Int     @id @default(autoincrement())
+  price Float   // ERRO: Float pra dinheiro
+  name  String
+}

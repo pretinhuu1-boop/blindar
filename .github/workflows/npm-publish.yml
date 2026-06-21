@@ -1,0 +1,44 @@
+# Auto-publish do CLI no npm quando criar tag vX.Y.Z
+name: npm publish
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write   # pra OIDC provenance (SLSA 3)
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install CLI deps
+        working-directory: cli
+        run: npm install --no-package-lock
+
+      - name: Sync version with skill
+        working-directory: cli
+        run: |
+          VERSION=$(cat ../VERSION)
+          node -e "const p=require('./package.json');p.version='$VERSION';require('fs').writeFileSync('./package.json',JSON.stringify(p,null,2)+'\n')"
+
+      - name: Publish to npm with provenance
+        working-directory: cli
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          body_path: CHANGELOG.md

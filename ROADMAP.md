@@ -52,10 +52,10 @@ v0.6.0.
 
 | # | Item | Status v0.6.0 | Onde |
 |---|---|---|---|
-| 19 | Modo manutenção (quarterly) | ✅ Done | [`pipeline/07-maintenance.md`](pipeline/07-maintenance.md) |
+| 19 | Modo manutenção (quarterly) | ✅ Done | [`pipeline/08-maintenance.md`](pipeline/08-maintenance.md) |
 | 20 | CVE feed subscription | 📝 Doc | [`agents/patch-management.md`](agents/patch-management.md) seção v0.6.0 |
-| 21 | Drift detection | ✅ Done | [`pipeline/08-drift-detection.md`](pipeline/08-drift-detection.md) |
-| 22 | Re-preflight antes de release | ✅ Done | [`scripts/preflight.ps1`](scripts/preflight.ps1) já funciona; doc em [`pipeline/07-maintenance.md`](pipeline/07-maintenance.md) |
+| 21 | Drift detection | ✅ Done | [`pipeline/09-drift-detection.md`](pipeline/09-drift-detection.md) |
+| 22 | Re-preflight antes de release | ✅ Done | [`scripts/preflight.ps1`](scripts/preflight.ps1) já funciona; doc em [`pipeline/08-maintenance.md`](pipeline/08-maintenance.md) |
 
 ## Tier 6 — DX/Adoção
 

@@ -92,6 +92,47 @@ skip_agents:
 adversarial_cadence: 15  # mais espaçado pra projetos com CI lenta
 ```
 
+Exemplo gerado pelo launcher v0.8:
+
+```yaml
+# .blindar/config.yml — gerado pela Fase 00 (launcher)
+schema: blindar/config@v0.8
+mode: auto                 # auto | supervised | chosen
+selected_modules:          # números do menu (1..15)
+  - 1
+  - 2
+  - 3
+  - 5
+  - 6
+  - 8
+  - 9
+  - 10
+  - 11
+  - 12
+  - 14
+  - 15
+project_type: saas         # saas|mvp|landing|ecom|api|mobile|cli|other
+data_sensitivity: high     # high|medium|low
+rigor: production          # production|compliance|mvp
+target_framework: null     # null se rigor != compliance
+ui_detected: true          # detectado em Fase 02, pode ajustar
+db_detected: true
+branch: main
+launcher_completed_at: "2026-06-14T18:00:00Z"
+```
+
+**Campos v0.8 (todos opcionais — pipeline tem fallback)**:
+
+| Campo | Quem preenche | Default | Efeito |
+|---|---|---|---|
+| `mode` | launcher | `auto` | Define se pausa entre rounds (supervised) ou só roda módulos escolhidos (chosen) |
+| `selected_modules` | launcher | (rodar todos os 15) | Filtra agentes na Fase 04 e gates na Fase 06 |
+| `project_type` | launcher | (sem default) | Influencia defaults de módulos no launcher |
+| `data_sensitivity` | launcher | `medium` | Força módulo 8 (LGPD) se `high`/`medium` |
+| `rigor` | launcher | `production` | `mvp` desliga módulo 13 por default |
+| `ui_detected` | discovery | (detecta) | Liga módulos 3 e 10 por default |
+| `db_detected` | discovery | (detecta) | Liga módulo 7 por default |
+
 ### `accept-risk.md`
 
 Template: [`templates/accept-risk.md`](templates/accept-risk.md).
@@ -146,6 +187,18 @@ mv accept-risk.md .blindar/  # se existia na raiz
 
 Skill detecta `accept-risk.md` na raiz e oferece migração automática
 (ou roda manualmente o comando acima).
+
+### Migração v0.7 → v0.8
+
+**Nada a fazer**. Configs antigos (sem `mode` e `selected_modules`) rodam
+como `mode: auto` + "todos os módulos" — preserva 100% do comportamento
+v0.7. Skill detecta `.blindar/config.yml` sem campos v0.8 e:
+
+- Se rodando interativo: chama launcher na próxima invocação pra atualizar
+- Se rodando `--headless`: usa defaults sem perguntar
+
+Pra forçar re-onboarding do launcher: `blindar --reset` (apaga `.blindar/`)
+ou apenas remova manualmente `config.yml`.
 
 ## Garantias
 

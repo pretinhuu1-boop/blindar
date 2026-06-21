@@ -1,4 +1,13 @@
-# agent: compliance-lgpd-br
+---
+name: compliance-lgpd-br
+category: compliance
+module: 8
+priority: P0
+description: |
+  LGPD/ANPD (Brasil). Consent gates, 6 endpoints Art. 18 (acesso/correção/exclusão/portabilidade/anonimização/oposição), runbook ANPD 72h, cookie banner real (opt-in), gate Art. 14 (menores), DPO designado.
+---
+
+# Agent: compliance-lgpd-br
 
 Estende [`compliance.md`](compliance.md) com obrigações específicas da LGPD
 e regulação da ANPD.

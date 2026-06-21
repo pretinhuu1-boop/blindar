@@ -1,0 +1,42 @@
+{
+  "name": "blindar",
+  "version": "0.24.0",
+  "description": "Audita, blinda e prepara projetos pra produção — CLI standalone",
+  "type": "module",
+  "bin": {
+    "blindar": "./bin/blindar.js"
+  },
+  "files": [
+    "bin/",
+    "commands/",
+    "lib/",
+    "../templates/",
+    "../scripts/install-deterministic-checks.sh"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "test": "node --test commands/*.test.js"
+  },
+  "keywords": [
+    "audit",
+    "security",
+    "lgpd",
+    "compliance",
+    "pre-commit",
+    "ci",
+    "code-quality",
+    "blindar"
+  ],
+  "author": "pretinhuu1-boop",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pretinhuu1-boop/blindar.git"
+  },
+  "dependencies": {
+    "kleur": "^4.1.5",
+    "mri": "^1.2.0"
+  }
+}

@@ -1,4 +1,13 @@
-# agent: access-control
+---
+name: access-control
+category: security
+module: 2
+priority: P0
+description: |
+  Autenticação, autorização (RBAC), sessão, MFA. Cobre técnica #1 do baseline de segurança de TI. Validation de role/scope em cada endpoint, audit de access denied, lockout após N falhas, password policy.
+---
+
+# Agent: access-control
 
 Autenticação, autorização, sessão. Cobre técnica #1 do baseline de segurança
 de TI (controle de acesso) e o controle "Acesso Lógico" da maioria dos

@@ -1,0 +1,157 @@
+# blindar MCP catalog (snapshot 2026-06)
+# Catálogo curado de MCPs que blindar pode recomendar.
+# Atualizado manualmente. Operador pode estender em .blindar/mcp-catalog.local.yml
+#
+# Schema:
+#   - name: human-readable
+#     official: bool (true = vendor oficial)
+#     vendor: string
+#     trigger.detect: list de checks pra detectar uso no projeto
+#     scopes: list de permissões pedidas
+#     safety: high | med | low
+#     install_url: docs/install
+#     blindar_compatible: bool
+#     notes: observações pro operador
+
+mcps:
+  - name: "Supabase MCP"
+    official: true
+    vendor: "Supabase Inc."
+    trigger:
+      detect:
+        - "@supabase/supabase-js in package.json"
+        - "DATABASE_URL contains supabase"
+        - ".env contains SUPABASE_"
+    scopes: ["read:database", "read:edge-functions", "read:logs", "write:branch"]
+    safety: high
+    install_url: "https://supabase.com/docs/guides/getting-started/mcp"
+    blindar_compatible: true
+    notes: "Read mostly. Write apenas em branch dev. OAuth via supabase.com."
+
+  - name: "GitHub MCP"
+    official: true
+    vendor: "Anthropic"
+    trigger:
+      detect:
+        - "git remote contains github.com"
+        - ".github/workflows/ exists"
+    scopes: ["read:repo", "read:issues", "read:pulls", "write:issue-comments", "write:pr-comments"]
+    safety: high
+    install_url: "https://github.com/anthropics/mcp-server-github"
+    blindar_compatible: true
+    notes: "Permite Claude ler/comentar issues, PRs, code search. Não mexe em branches sem confirmação."
+
+  - name: "Figma MCP"
+    official: true
+    vendor: "Figma"
+    trigger:
+      detect:
+        - "figma.com URL in code/docs"
+        - "@figma/* in package.json"
+        - "design-tokens directory exists"
+    scopes: ["read:design", "read:variables", "read:screenshots"]
+    safety: high
+    install_url: "https://www.figma.com/developers/mcp"
+    blindar_compatible: true
+    notes: "Read-only. Design-to-code workflow. Ideal pra design system."
+
+  - name: "Notion MCP"
+    official: true
+    vendor: "Notion Labs"
+    trigger:
+      detect:
+        - "NOTION_TOKEN in .env"
+        - "@notionhq/client in package.json"
+    scopes: ["read:pages", "write:pages", "read:databases"]
+    safety: high
+    install_url: "https://developers.notion.com/docs/mcp"
+    blindar_compatible: true
+    notes: "Workspace docs / runbooks / wikis. Write exige confirmação por operação."
+
+  - name: "Filesystem MCP"
+    official: true
+    vendor: "Anthropic"
+    trigger:
+      detect:
+        - "always available"
+    scopes: ["read:files", "write:files (com allowed_dirs)"]
+    safety: med
+    install_url: "https://github.com/anthropics/mcp-server-filesystem"
+    blindar_compatible: true
+    notes: "Pré-instalado em sessões Claude Code. Configurar allowed_dirs restrito."
+
+  - name: "Google Calendar + Gmail MCP"
+    official: true
+    vendor: "Google"
+    trigger:
+      detect:
+        - "google-workspace domain in user email"
+        - ".env contains GOOGLE_"
+    scopes: ["read:calendar", "write:events", "read:gmail", "write:drafts"]
+    safety: high
+    install_url: "https://github.com/google/mcp-google-workspace"
+    blindar_compatible: true
+    notes: "OAuth pessoal. Útil pra scheduling + email automation."
+
+  - name: "Hugging Face MCP"
+    official: true
+    vendor: "Hugging Face"
+    trigger:
+      detect:
+        - "@huggingface/* in package.json"
+        - "huggingface_hub in requirements.txt"
+        - "HF_TOKEN in .env"
+    scopes: ["read:models", "read:datasets", "read:papers"]
+    safety: high
+    install_url: "https://huggingface.co/docs/mcp"
+    blindar_compatible: true
+    notes: "Search + download de models/datasets. Read-only."
+
+  - name: "Cloudflare MCP"
+    official: true
+    vendor: "Cloudflare"
+    trigger:
+      detect:
+        - "wrangler.toml exists"
+        - "@cloudflare/* in package.json"
+    scopes: ["read:workers", "read:pages", "read:dns", "write:dns (confirma)", "deploy:workers"]
+    safety: med
+    install_url: "https://developers.cloudflare.com/mcp"
+    blindar_compatible: true
+    notes: "Write requer confirmação por ação. Deploy explícito."
+
+  - name: "MongoDB MCP"
+    official: true
+    vendor: "MongoDB"
+    trigger:
+      detect:
+        - "mongodb in package.json"
+        - "MONGO_URL in .env"
+    scopes: ["read:collections", "read:indexes", "write:documents (sandbox)"]
+    safety: med
+    install_url: "https://www.mongodb.com/docs/mcp"
+    blindar_compatible: true
+    notes: "Schema introspection + query execution em sandbox."
+
+  - name: "Linear MCP"
+    official: true
+    vendor: "Linear"
+    trigger:
+      detect:
+        - "LINEAR_API_KEY in .env"
+    scopes: ["read:issues", "write:comments", "write:issues (confirma)"]
+    safety: high
+    install_url: "https://developers.linear.app/docs/mcp"
+    blindar_compatible: true
+    notes: "Issue tracking. Write em issue exige confirmação."
+
+declined_by_default:
+  # MCPs NUNCA recomendados sem operador pedir explícito
+  - name: "Random shell-exec MCP"
+    reason: "Pode burlar hook pre-tool-no-rm-rf do blindar"
+  - name: "Code-audit MCPs community"
+    reason: "Duplicam funcionalidade do blindar"
+  - name: "Generic database admin MCPs"
+    reason: "Sem RBAC, podem dropar tabela"
+  - name: "MCPs sem update há > 6 meses"
+    reason: "Maintenance risk"

@@ -1,0 +1,214 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/pretinhuu1-boop/blindar/blob/main/schemas/intelligence.schema.json",
+  "title": "blindar intelligence (per project)",
+  "description": "Registry compartilhado de exceções/whitelist/overrides que TODOS os agentes consultam pra evitar falso positivo. Vive em .blindar/intelligence.yml no projeto-alvo. Tudo opcional. v0.20.0+.",
+  "type": "object",
+  "properties": {
+    "schema": { "type": "string", "const": "blindar/intelligence@v1" },
+    "version": { "type": "string", "description": "Versão do blindar que gerou" },
+
+    "mock-killer": {
+      "type": "object",
+      "properties": {
+        "ignore_paths": { "type": "array", "items": { "type": "string" }, "description": "Glob patterns de arquivos a ignorar" },
+        "keep_console_in": { "type": "array", "items": { "type": "string" }, "description": "Arquivos onde console.* é OK" },
+        "intentional_todo_pattern": { "type": "array", "items": { "type": "string" }, "description": "Regex de TODOs aceitos (com issue link, etc)" },
+        "allowed_lorem_in": { "type": "array", "items": { "type": "string" } },
+        "inline_override_marker": { "type": "string", "default": "// @blindar:keep" }
+      }
+    },
+
+    "config-externalization": {
+      "type": "object",
+      "properties": {
+        "whitelist_constants": { "type": "array", "description": "Magic numbers universais permitidos hardcoded" },
+        "whitelist_url_patterns": { "type": "array", "items": { "type": "string" } },
+        "whitelist_strings_short": { "type": "array", "items": { "type": "string" } },
+        "inline_override_marker": { "type": "string", "default": "// @blindar:hardcode-ok" }
+      }
+    },
+
+    "db-architect": {
+      "type": "object",
+      "properties": {
+        "global_tables": { "type": "array", "items": { "type": "string" }, "description": "Tabelas legitimamente sem tenant_id" },
+        "no_rls_required_tables": { "type": "array", "items": { "type": "string" } },
+        "skip_audit_columns_in": { "type": "array", "items": { "type": "string" } },
+        "schema_comment_marker": { "type": "string", "default": "@blindar:global" }
+      }
+    },
+
+    "tenant-isolation-tests": {
+      "type": "object",
+      "properties": {
+        "inherit_from": { "type": "string", "enum": ["db-architect"] },
+        "also_skip_tables": { "type": "array", "items": { "type": "string" } },
+        "skip_endpoints": { "type": "array", "items": { "type": "string" } },
+        "cross_tenant_intentional": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "role": { "type": "string" },
+              "endpoints": { "type": "array" },
+              "audit_required": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    },
+
+    "architect": {
+      "type": "object",
+      "properties": {
+        "router_mode": {
+          "type": "object",
+          "properties": {
+            "auto_detect": { "type": "boolean", "default": true },
+            "mode": { "type": "string", "enum": ["pages-router", "app-router", "both"] }
+          }
+        },
+        "structure_style": {
+          "type": "object",
+          "properties": {
+            "auto_detect": { "type": "boolean", "default": true },
+            "style": { "type": "string", "enum": ["feature-based", "layer-based", "hybrid"] }
+          }
+        },
+        "blueprint_overrides": { "type": "object" },
+        "custom_aliases": { "type": "object" },
+        "allowed_top_level_dirs": { "type": "array", "items": { "type": "string" } },
+        "ignore_size_limit_in": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+
+    "content-quality": {
+      "type": "object",
+      "description": "Já documentado em agents/content-quality.md — protected_terms, technical_terms, etc"
+    },
+
+    "responsive-a11y": {
+      "type": "object",
+      "properties": {
+        "respect_aria_hidden": { "type": "boolean", "default": true },
+        "respect_data_blindar_skip": { "type": "boolean", "default": true },
+        "desktop_only_routes": { "type": "array", "items": { "type": "string" } },
+        "mobile_only_routes": { "type": "array", "items": { "type": "string" } },
+        "touch_target_exempt_selectors": { "type": "array", "items": { "type": "string" } },
+        "lighthouse_thresholds_per_route": { "type": "object", "description": "Map de pattern → thresholds" },
+        "ignore_violations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "rule": { "type": "string", "description": "axe-core rule ID" },
+              "selector": { "type": "string" },
+              "reason": { "type": "string" },
+              "adr": { "type": "string", "description": "Path pra ADR documentando decisão" }
+            },
+            "required": ["rule", "reason"]
+          }
+        },
+        "strict_in_production_only": { "type": "array", "items": { "type": "string" } },
+        "always_strict": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+
+    "api-design": {
+      "type": "object",
+      "properties": {
+        "idempotent_by_design": { "type": "array", "items": { "type": "string" }, "description": "Endpoints onde idempotency é natural" },
+        "cursor_pagination_exempt": { "type": "array", "items": { "type": "string" } },
+        "versioning_exempt": { "type": "array", "items": { "type": "string" } },
+        "rfc7807_exempt": { "type": "array", "items": { "type": "string" } },
+        "rate_limit_exempt": { "type": "array", "items": { "type": "string" } },
+        "openapi_tags_to_ignore": { "type": "array", "items": { "type": "string" } },
+        "webhook_profiles": { "type": "object", "description": "Profile por gateway" },
+        "inline_override_markers": { "type": "object" }
+      }
+    },
+
+    "email-deliverability": {
+      "type": "object",
+      "properties": {
+        "environments": {
+          "type": "object",
+          "description": "Settings por ambiente (development/staging/production)",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "provider": { "type": "string" },
+              "skip_checks": { "type": "array", "items": { "type": "string" } },
+              "relaxed_thresholds": { "type": "object" },
+              "strict": { "type": "boolean" }
+            }
+          }
+        },
+        "ip_warmup_grace_period_days": { "type": "integer", "default": 30 },
+        "marketing_emails_separate_domain": { "type": "object" },
+        "transactional_exempt_from": { "type": "array", "items": { "type": "string" } },
+        "template_safe_list": { "type": "array", "items": { "type": "string" }, "description": "Templates transacionais que NÃO precisam unsubscribe" },
+        "inline_override_marker_html": { "type": "string", "default": "<!-- @blindar:transactional -->" }
+      }
+    },
+
+    "seo-marketing-meta": {
+      "type": "object",
+      "properties": {
+        "noindex_routes": { "type": "array", "items": { "type": "string" }, "description": "Rotas intencionalmente noindex" },
+        "public_routes": { "type": "array", "items": { "type": "string" } },
+        "hreflang_required": { "type": "array", "items": { "type": "string" } },
+        "json_ld_by_route_type": { "type": "object", "description": "Map pattern → Schema.org type" },
+        "llm_crawlers": {
+          "type": "object",
+          "properties": {
+            "allow": { "type": "array", "items": { "type": "string" } },
+            "deny": { "type": "array", "items": { "type": "string" } },
+            "require_decision": { "type": "boolean" }
+          }
+        },
+        "ignore_lighthouse_in": { "type": "array", "items": { "type": "string" } },
+        "site_type": { "type": "string", "enum": ["saas", "ecommerce", "content", "landing"] },
+        "sitemap": { "type": "object" },
+        "inline_override_marker": { "type": "string", "default": "// @blindar:noindex" }
+      }
+    },
+
+    "payments": {
+      "type": "object",
+      "properties": {
+        "active_gateways": { "type": "array", "items": { "type": "string", "enum": ["stripe", "mercadopago", "pagseguro", "pix_direct", "paypal", "adyen", "other"] } },
+        "gateway_profiles": {
+          "type": "object",
+          "description": "Profile por gateway — headers, signature lib, success status, retry, etc"
+        },
+        "required_pii_redaction": { "type": "array", "items": { "type": "string" } },
+        "exempt_from_idempotency": { "type": "array", "items": { "type": "string" } },
+        "reconciliation_skip_test_mode": { "type": "array", "items": { "type": "string" } },
+        "refund_audit_required": { "type": "boolean", "default": true }
+      }
+    },
+
+    "global": {
+      "type": "object",
+      "description": "Settings que valem pra TODOS os agentes",
+      "properties": {
+        "env_aware": {
+          "type": "object",
+          "description": "Regras aplicadas por ambiente",
+          "properties": {
+            "skip_in_dev": { "type": "array", "items": { "type": "string" }, "description": "Agentes desabilitados em dev" },
+            "skip_in_staging": { "type": "array", "items": { "type": "string" } },
+            "production_only_checks": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "learning_mode": {
+          "type": "boolean",
+          "default": false,
+          "description": "Se true, operador aprovar override interativamente E blindar grava em intelligence.yml"
+        }
+      }
+    }
+  }
+}
