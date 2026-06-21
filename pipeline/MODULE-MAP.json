@@ -1,6 +1,6 @@
 {
   "$schema": "https://github.com/pretinhuu1-boop/blindar/blob/main/schemas/module-map.schema.json",
-  "version": "0.39.0",
+  "version": "0.40.0",
   "description": "Mapa estruturado dos 15 módulos do launcher → agentes ativados → fases onde rodam. Consumido pelas Fases 02 (discovery), 04 (rounds-loop) e 06 (production-checklist) pra filtrar agentes pelo array config.selected_modules.",
   "modules": {
     "1": {
@@ -29,7 +29,9 @@
         "fine-tune-data-leak",
         "tenant-isolation-tests",
         "file-uploads",
-        "mlops"
+        "mlops",
+        "semgrep",
+        "gitleaks"
       ],
       "phases": ["04-rounds-loop", "05-adversarial-review"]
     },
@@ -51,7 +53,7 @@
       "name": "Supply chain & patch + SBOM/SLSA (compliance 2026)",
       "mandatory": false,
       "default_on_when": ["always"],
-      "agents": ["supply-chain", "patch-management", "sbom-slsa"],
+      "agents": ["supply-chain", "patch-management", "sbom-slsa", "osv-scanner", "trivy"],
       "phases": ["04-rounds-loop"]
     },
     "6": {
@@ -115,7 +117,7 @@
       "name": "DX + Flags + Backoffice + Email + Docs + Reports + Architect + Delivery + Project bootstrap (scaffold do zero)",
       "mandatory": false,
       "default_on_when": ["always"],
-      "agents": ["devops", "feature-flags", "backoffice-admin", "email-deliverability", "documentation-live", "execution-report", "architect", "delivery-bundle", "project-bootstrap", "mcp-recommender"],
+      "agents": ["devops", "feature-flags", "backoffice-admin", "email-deliverability", "documentation-live", "execution-report", "architect", "delivery-bundle", "project-bootstrap", "mcp-recommender", "blindar-fix"],
       "phases": ["03-bootstrap-sec-html", "04-rounds-loop", "06-production-checklist", "07-final-report"]
     },
     "15": {

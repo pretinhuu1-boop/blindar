@@ -409,6 +409,20 @@ log "Cobertura executável: $(( (PASSED + FAILED + SKIPPED) * 100 / (TOTAL > 0 ?
 log ""
 log "Report: $RUN_REPORT"
 
+# ─── Validação de schemas (opcional, NÃO falha o run) ───────────────────────
+# Se houver node + validate-schemas.js + schemas/, roda uma checagem leve.
+# Output: 1 linha resumo. Inválidos viram warning, não erro.
+VALIDATOR="$SKILL_DIR/scripts/validate-schemas.js"
+if command -v node >/dev/null 2>&1 && [ -f "$VALIDATOR" ] && [ -d "$SKILL_DIR/schemas" ]; then
+  VAL_OUT=$(node "$VALIDATOR" --input "$RESULTS_DIR" --quiet 2>&1 || true)
+  if echo "$VAL_OUT" | grep -q "^✓"; then
+    log "${G}✓ Schemas válidos${RST}"
+  elif echo "$VAL_OUT" | grep -q "^⚠"; then
+    BAD_COUNT=$(echo "$VAL_OUT" | grep -oE '^⚠ [0-9]+' | grep -oE '[0-9]+' | head -1)
+    log "${Y}⚠ ${BAD_COUNT:-?} arquivo(s) com schema inválido${RST} (rode: node \"$VALIDATOR\" --input \"$RESULTS_DIR\")"
+  fi
+fi
+
 # Captura exit code do hardening pra preservar
 if [ "$ERRORED" -gt 0 ]; then HARDENING_EXIT=4
 elif [ "$FAILED" -gt 0 ]; then HARDENING_EXIT=2

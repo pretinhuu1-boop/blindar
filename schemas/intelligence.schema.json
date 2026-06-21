@@ -1,5 +1,5 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/pretinhuu1-boop/blindar/blob/main/schemas/intelligence.schema.json",
   "title": "blindar intelligence (per project)",
   "description": "Registry compartilhado de exceções/whitelist/overrides que TODOS os agentes consultam pra evitar falso positivo. Vive em .blindar/intelligence.yml no projeto-alvo. Tudo opcional. v0.20.0+.",
