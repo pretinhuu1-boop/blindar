@@ -61,11 +61,18 @@ log_info "Métricas: passed=$PASSED failed=$FAILED skipped=$SKIPPED deferred=$DE
 BLOCK=0
 declare -a BLOCK_REASONS=()
 
-# 1. Errored = sempre bloqueia
-if [ "$ERRORED" -gt 0 ]; then
+# 1. Errored = sempre bloqueia (lê arquivos reais para evitar falso-positivo do run-report)
+REAL_ERRORED=0
+if [ -d "${BLINDAR_DIR:-.blindar}/results" ]; then
+  REAL_ERRORED=$(for f in "${BLINDAR_DIR:-.blindar}/results"/*.json; do
+    [ "$(basename "$f")" = "check-wave-guardian.json" ] && continue
+    grep -l '"status":"errored"' "$f" 2>/dev/null
+  done | wc -l | tr -d ' ')
+fi
+if [ "${REAL_ERRORED:-0}" -gt 0 ]; then
   BLOCK=1
-  BLOCK_REASONS+=("$ERRORED agente(s) com erro de execução (bug em script blindar)")
-  add_finding "crit" "$ERRORED agente(s) errored — fix scripts blindar antes de fechar onda" "" ""
+  BLOCK_REASONS+=("$REAL_ERRORED agente(s) com erro de execução (bug em script blindar)")
+  add_finding "crit" "$REAL_ERRORED agente(s) errored — fix scripts blindar antes de fechar onda" "" ""
 fi
 
 # 2. Failed com severidade crit
@@ -73,7 +80,11 @@ if [ "$FAILED" -gt 0 ]; then
   # Conta crits via grep nos result files
   CRITS=0
   if [ -d "${BLINDAR_DIR:-.blindar}/results" ]; then
-    CRITS=$(grep -h '"severity":"crit"' ${BLINDAR_DIR:-.blindar}/results/*.json 2>/dev/null | wc -l)
+    # Exclui o próprio arquivo do wave-guardian para evitar referência circular.
+    CRITS=$(for f in "${BLINDAR_DIR:-.blindar}/results"/*.json; do
+      [ "$(basename "$f")" = "check-wave-guardian.json" ] && continue
+      grep -h '"severity":"crit"' "$f" 2>/dev/null
+    done | wc -l)
   fi
   if [ "${CRITS:-0}" -gt 0 ]; then
     BLOCK=1

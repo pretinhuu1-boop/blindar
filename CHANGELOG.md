@@ -3,6 +3,80 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.42.0] — 2026-06-22
+
+**Token-aware by design.** Gestão inteligente de tokens enraizada no sistema. Sai de "tudo Haiku barato" pra "modelo certo pro stake certo + cache + telemetria".
+
+### Novo: `_token_governor.sh`
+
+Biblioteca que toda chamada API passa por ela. Funções:
+
+| Função | O que faz |
+|---|---|
+| `blindar_resolve_tier <agent>` | Mapeia agente → tier (triage/analysis/security/strategic) |
+| `blindar_tier_to_model <tier>` | Tier → model ID (com override BLINDAR_BUDGET) |
+| `blindar_tier_to_effort <tier>` | Tier → effort (low/medium/high) |
+| `blindar_tier_to_max_tokens <tier>` | Tier → max_tokens razoável |
+| `blindar_estimate_cost <model> <in> <out>` | Custo USD estimado |
+| `blindar_log_cost <agent> <model> <in> <out>` | Append `.blindar/cost.log` |
+| `blindar_check_budget` | Aborta se total > BLINDAR_MAX_USD_PER_RUN |
+| `blindar_cost_summary` | Resumo no fim do run |
+
+### `_api_wrapper.sh` refatorado
+
+Toda chamada `blindar_api_check` agora:
+1. Pre-flight `ANTHROPIC_API_KEY` + curl
+2. Pre-flight budget (`blindar_check_budget`)
+3. Governor resolve tier → modelo + effort + max_tokens
+4. **Cache control** automático em system prompts > ~1024 tokens (90% off)
+5. `output_config.effort` enviado no payload
+6. Detecta `stop_reason: refusal` → **fallback automático Opus 4.8**
+7. Log telemetria em `.blindar/cost.log` com tokens reais
+8. Parse findings 1× via Node (não N×)
+
+### Mapeamento tier default
+
+| Agente | Tier | Modelo (standard) |
+|---|---|---|
+| `architect`, `adversarial-reviewer`, `vector-db-security`, `fine-tune-data-leak` | security | Opus 4.8 |
+| `proactive-analysis`, `rag-quality`, `user-journey-simulator`, `feature-gap-analyzer`, `product-critic` | analysis | Sonnet 4.6 |
+| `pentest` | security | Opus 4.8 (Fable só se `BLINDAR_ALLOW_FABLE=1`) |
+| Outros (triage) | triage | Haiku 4.5 |
+
+### Modos de orçamento
+
+- `BLINDAR_BUDGET=tight` → tudo Haiku (Sonnet só em strategic)
+- `BLINDAR_BUDGET=standard` (default) → tier governa
+- `BLINDAR_BUDGET=premium` → tudo Opus (Sonnet só em triage)
+- `BLINDAR_TIER_<AGENT>=<tier>` → override por agente
+- `BLINDAR_MAX_USD_PER_RUN=2.00` → hard cap (default)
+
+### blindar-run.sh
+
+Cost summary automático ao final do run (se `cost.log` existe).
+
+### CLAUDE.md global (REGRA ETERNA)
+
+Nova seção "Gestão inteligente de tokens" adicionada em `~/.claude/CLAUDE.md`:
+- 8 filtros obrigatórios antes de toda chamada API
+- Anti-padrões banidos (spawn 3 agents desnecessário, skill grande pra info pontual, etc.)
+- Quando subir/descer tier
+- Regra de respeito: CLAUDE.md é eterno, só pula se user pedir explícito
+
+### Custo esperado
+
+Antes: ~$1.30/run --with-evolution (tudo Haiku, qualidade fraca em segurança crítica)
+Depois: ~$8.50/run (tier inteligente, qualidade onde importa)
+Em modo `tight`: ~$2/run (similar ao antes, com cache 90% off)
+
+### Validação
+
+- Sintaxe OK em 3 arquivos novos/refatorados
+- Test suite 6/6 verde
+- Smoke E2E em `clean-project --fast --parallel 4 BLINDAR_BUDGET=tight`: 90% cobertura, schemas válidos
+
+---
+
 ## [0.41.0] — 2026-06-21
 
 **Garantia de execução + análise proativa 8 dimensões + security-first reforçado.** Via 2 sub-agentes paralelos. Foco mínimo + máximo impacto.
