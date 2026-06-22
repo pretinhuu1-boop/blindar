@@ -428,6 +428,16 @@ log "Cobertura executável: $(( (PASSED + FAILED + SKIPPED) * 100 / (TOTAL > 0 ?
 log ""
 log "Report: $RUN_REPORT"
 
+# ─── Cost summary (token governor) ─────────────────────────────────────
+# Se _token_governor.sh foi usado por qualquer wrapper API, mostra total $.
+GOVERNOR="$CHECKS_DIR/_token_governor.sh"
+if [ -f "$GOVERNOR" ] && [ -f "${BLINDAR_DIR:-$PROJECT_DIR/.blindar}/cost.log" ]; then
+  source "$GOVERNOR" 2>/dev/null && {
+    SUMMARY=$(blindar_cost_summary 2>/dev/null)
+    [ -n "$SUMMARY" ] && log "$SUMMARY"
+  }
+fi
+
 # ─── Validação de schemas (opcional, NÃO falha o run) ───────────────────────
 # Se houver node + validate-schemas.js + schemas/, roda uma checagem leve.
 # Output: 1 linha resumo. Inválidos viram warning, não erro.
