@@ -48,28 +48,51 @@ blindar_resolve_tier() {
   esac
 }
 
+# ─── Rank de modelo (pra comparação de piso) ───
+blindar_model_rank() {
+  case "$1" in
+    *haiku*)  echo 0 ;;
+    *sonnet*) echo 1 ;;
+    *opus*)   echo 2 ;;
+    *fable*)  echo 3 ;;
+    *)        echo 0 ;;
+  esac
+}
+
 # ─── Mapeamento tier → model ID ───
 blindar_tier_to_model() {
   local tier="$1"
+  local model
   # Budget mode sobrescreve tudo (--budget=tight no launcher)
   case "${BLINDAR_BUDGET:-standard}" in
     tight)
       # Tudo Haiku, exceto strategic vira Sonnet
-      [ "$tier" = "strategic" ] && echo "claude-sonnet-4-6" || echo "claude-haiku-4-5-20251001"
-      return ;;
+      [ "$tier" = "strategic" ] && model="claude-sonnet-4-6" || model="claude-haiku-4-5-20251001" ;;
     premium)
       # Tudo Opus, exceto triage vira Sonnet (não desperdiça Opus em coisa simples)
-      [ "$tier" = "triage" ] && echo "claude-sonnet-4-6" || echo "claude-opus-4-8"
-      return ;;
+      [ "$tier" = "triage" ] && model="claude-sonnet-4-6" || model="claude-opus-4-8" ;;
+    *)
+      # Standard mode (default): tier governa
+      case "$tier" in
+        triage)     model="claude-haiku-4-5-20251001" ;;
+        analysis)   model="claude-sonnet-4-6" ;;
+        security)   model="claude-opus-4-8" ;;
+        strategic)  model="claude-opus-4-8" ;;  # Fable só se BLINDAR_ALLOW_FABLE=1
+        *)          model="claude-haiku-4-5-20251001" ;;
+      esac ;;
   esac
-  # Standard mode (default): tier governa
-  case "$tier" in
-    triage)     echo "claude-haiku-4-5-20251001" ;;
-    analysis)   echo "claude-sonnet-4-6" ;;
-    security)   echo "claude-opus-4-8" ;;
-    strategic)  echo "claude-opus-4-8" ;;  # Fable só se BLINDAR_ALLOW_FABLE=1
-    *)          echo "claude-haiku-4-5-20251001" ;;
-  esac
+  # ─── Piso de modelo (v0.43) ───
+  # BLINDAR_MIN_MODEL garante que NADA roda abaixo do piso — o "up" pra
+  # sessão em modelo menor: o raciocínio pesado é delegado a um modelo forte
+  # via sub-chamada governada, mesmo que o orquestrador esteja em Haiku.
+  # Ex: BLINDAR_MIN_MODEL=claude-opus-4-8 → toda análise sobe pra Opus.
+  if [ -n "${BLINDAR_MIN_MODEL:-}" ]; then
+    local floor_rank cur_rank
+    floor_rank="$(blindar_model_rank "$BLINDAR_MIN_MODEL")"
+    cur_rank="$(blindar_model_rank "$model")"
+    [ "$cur_rank" -lt "$floor_rank" ] && model="$BLINDAR_MIN_MODEL"
+  fi
+  echo "$model"
 }
 
 # ─── Mapeamento tier → effort ───

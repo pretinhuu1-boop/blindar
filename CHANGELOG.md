@@ -32,6 +32,17 @@ pra ✅ Done, com código Node zero-deps e testes.
   aprova reservation pattern) e `fuzzHttp` (contra app de pé, fetch nativo).
 - Vai além do adversarial review (que só analisa estaticamente).
 
+### Production safety + piso de modelo
+
+- `docs/PRODUCTION-SAFETY.md` — codifica 2 garantias: (1) não-quebrar
+  produção (blindar opera em código via PR, nunca toca banco/infra direto;
+  workflow dry-run → staging → backup) e (2) qualidade por modelo (camada
+  determinística é igual em todos; raciocínio não).
+- **Piso de modelo** `BLINDAR_MIN_MODEL` no `_token_governor.sh`: garante que
+  nenhuma análise rode abaixo de um modelo mínimo, mesmo em sessão Haiku ou
+  budget tight — o "up" pra modelo menor (delega raciocínio pesado a um modelo
+  forte via sub-chamada governada). Backward-compatible: sem a env, nada muda.
+
 ### Testes
 
 - `tests/specs.test.js` — 10 asserts (reproducibility + sbom + race-fuzz),
