@@ -71,6 +71,16 @@ blindar_tier_to_model() {
     premium)
       # Tudo Opus, exceto triage vira Sonnet (não desperdiça Opus em coisa simples)
       [ "$tier" = "triage" ] && model="claude-sonnet-4-6" || model="claude-opus-4-8" ;;
+    smart)
+      # Preset inteligente (v0.43): qualidade onde dói, barato onde não.
+      # Diferença vs standard: na DÚVIDA (tier desconhecido) sobe pra Sonnet,
+      # nunca Haiku — não economiza quando o stake é incerto. Crítico = Opus.
+      case "$tier" in
+        triage)             model="claude-haiku-4-5-20251001" ;;  # trivial: barato OK
+        analysis)           model="claude-sonnet-4-6" ;;
+        security|strategic) model="claude-opus-4-8" ;;            # falso-negativo caro
+        *)                  model="claude-sonnet-4-6" ;;          # incerto → seguro, não barato
+      esac ;;
     *)
       # Standard mode (default): tier governa
       case "$tier" in

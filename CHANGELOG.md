@@ -42,6 +42,9 @@ pra ✅ Done, com código Node zero-deps e testes.
   nenhuma análise rode abaixo de um modelo mínimo, mesmo em sessão Haiku ou
   budget tight — o "up" pra modelo menor (delega raciocínio pesado a um modelo
   forte via sub-chamada governada). Backward-compatible: sem a env, nada muda.
+- **Preset `BLINDAR_BUDGET=smart`** (recomendado): defaults inteligentes —
+  qualidade onde dói, barato onde não. Igual a `standard`, mas tier incerto
+  sobe pra Sonnet (seguro) em vez de Haiku (barato): não economiza na dúvida.
 
 ### Testes
 

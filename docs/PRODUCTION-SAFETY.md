@@ -69,9 +69,29 @@ firmes — eles não deixam passar lixo — mas a geração de fix degrada.
 
 | Cenário | Sessão Claude Code | `BLINDAR_BUDGET` | `BLINDAR_MIN_MODEL` |
 |---|---|---|---|
-| **Produção / compliance** | Opus | `standard` ou `premium` | `claude-opus-4-8` |
-| **Staging / interno** | Sonnet | `standard` | `claude-sonnet-4-6` |
+| **Produção / compliance** | Opus | `smart` ou `premium` | `claude-opus-4-8` |
+| **Staging / interno** | Sonnet | `smart` | `claude-sonnet-4-6` |
 | **Triagem / exploração** | Haiku/Sonnet | `tight` | (nenhum) |
+
+### Preset `smart` (recomendado) — v0.43
+
+`BLINDAR_BUDGET=smart` aplica os defaults inteligentes automaticamente:
+**qualidade onde dói, barato onde não.** Igual ao `standard`, mas com uma
+diferença-chave: quando o stake é **incerto** (tier desconhecido), sobe pra
+Sonnet em vez de Haiku — não economiza na dúvida.
+
+| Tier | `standard` | `smart` |
+|---|---|---|
+| triage | Haiku | Haiku |
+| analysis | Sonnet | Sonnet |
+| security / strategic | Opus | Opus |
+| **incerto/desconhecido** | **Haiku** (barato) | **Sonnet** (seguro) |
+
+```bash
+export BLINDAR_BUDGET=smart
+export BLINDAR_MIN_MODEL=claude-opus-4-8   # opcional: piso pra produção
+blindar
+```
 
 ### O mecanismo de "up": piso de modelo (`BLINDAR_MIN_MODEL`) — v0.43
 
