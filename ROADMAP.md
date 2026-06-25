@@ -17,7 +17,7 @@ v0.6.0.
 | 1 | Agente de lógica de negócio | ✅ Done | [`agents/business-logic.md`](agents/business-logic.md) |
 | 2 | Agente auth-edges expandido | ✅ Done | [`agents/access-control.md`](agents/access-control.md) seção v0.6.0 |
 | 3 | API contract enforcement | 🔜 Spec | [`docs/specs/api-contract.md`](docs/specs/api-contract.md) |
-| 4 | Race-fuzzing agent | 🔜 Spec | [`docs/specs/race-fuzzing.md`](docs/specs/race-fuzzing.md) |
+| 4 | Race-fuzzing agent | ✅ Done (v0.43) | [`agents/race-fuzzing.md`](agents/race-fuzzing.md) + [`scripts/race-fuzz.js`](scripts/race-fuzz.js) |
 | 5 | Hunting de secrets em runtime | ✅ Done | [`agents/runtime-secrets.md`](agents/runtime-secrets.md) |
 
 ## Tier 2 — Escala/Fluidez (impacto: % 70-80→85%)
@@ -44,8 +44,8 @@ v0.6.0.
 | # | Item | Status v0.6.0 | Onde |
 |---|---|---|---|
 | 15 | Evidence package assinado | 🔜 Spec | [`docs/specs/evidence-package.md`](docs/specs/evidence-package.md) |
-| 16 | Reproducibility check | 🔜 Spec | [`docs/specs/reproducibility.md`](docs/specs/reproducibility.md) |
-| 17 | SBOM de ATKs cobertos | 🔜 Spec | [`docs/specs/atk-sbom.md`](docs/specs/atk-sbom.md) |
+| 16 | Reproducibility check | ✅ Done (v0.43) | [`scripts/reproducibility.js`](scripts/reproducibility.js) (atkId + canonicalHash) |
+| 17 | SBOM de ATKs cobertos | ✅ Done (v0.43) | [`scripts/sbom-build.js`](scripts/sbom-build.js) + [`schemas/sbom.schema.json`](schemas/sbom.schema.json) |
 | 18 | Coverage multi-framework simultâneo | ✅ Done | [`schemas/config.schema.json`](schemas/config.schema.json) (array em `target_framework`) |
 
 ## Tier 5 — Proteção contínua

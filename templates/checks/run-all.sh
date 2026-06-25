@@ -65,6 +65,7 @@ FULL_CHECKS=(
   check-seo-marketing-meta.sh         # sitemap + JSON-LD + canonical
   check-backup-recovery.sh            # PITR + drill + encryption
   check-compliance-lgpd-br.sh         # ANPD + endpoints Art. 18 + DPO
+  check-pii-encryption.sh             # DEK/KEK envelope + HMAC search + migration
   check-cost-observability.sh         # LLM usage + S3 lifecycle + budget
 )
 

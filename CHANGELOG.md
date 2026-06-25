@@ -3,6 +3,40 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.43.0] — 2026-06-25
+
+**Implementa 3 specs pendentes do ROADMAP** (#4, #16, #17) — saem de 🔜 Spec
+pra ✅ Done, com código Node zero-deps e testes.
+
+### #16 Reproducibility check — `scripts/reproducibility.js`
+
+- `atkId(finding)` — ID determinístico `ATK-<sha256(cat|file|line|vector)[:8]>`;
+  mesmo bug detectado 2x recebe o mesmo ID.
+- `canonicalHash(obj)` — hash canônico que **ignora campos voláteis**
+  (timestamps, PR#, commit) e ordem de array. Dois runs do mesmo projeto
+  comparam por conteúdo real.
+- CLI: `--hash f.json` / `--check a.json b.json`.
+
+### #17 ATK SBOM — `scripts/sbom-build.js` + `schemas/sbom.schema.json`
+
+- `buildSbom(findings)` — Bill of Materials de defesas com proveniência
+  (PR/commit/agente/versão/round), ID determinístico, dedup, ordenação canônica.
+- `validateSbom(sbom)` — validação sem deps (id `^ATK-`, severity, dup).
+- CLI: `--build findings.json --out sbom.json` / `--validate sbom.json`.
+
+### #4 Race-fuzzing — `agents/race-fuzzing.md` + `scripts/race-fuzz.js`
+
+- Harness ativo de concorrência: dispara N requests ao mesmo recurso (N
+  escalonando 10→100→1000), verifica invariante por nível.
+- `fuzzInMemory` (determinístico, testa worker JS — detecta check-then-act,
+  aprova reservation pattern) e `fuzzHttp` (contra app de pé, fetch nativo).
+- Vai além do adversarial review (que só analisa estaticamente).
+
+### Testes
+
+- `tests/specs.test.js` — 10 asserts (reproducibility + sbom + race-fuzz),
+  plugado em `tests/run-tests.sh`. Verde.
+
 ## [0.42.0] — 2026-06-22
 
 **Token-aware by design.** Gestão inteligente de tokens enraizada no sistema. Sai de "tudo Haiku barato" pra "modelo certo pro stake certo + cache + telemetria".

@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/pretinhuu1-boop/blindar/blob/main/schemas/sbom.schema.json",
+  "title": "blindar SBOM",
+  "description": "Software Bill of Materials de defesas: qual ATK fechou em qual PR/versão/agente. Append-only, exportado no evidence-package. ROADMAP #17.",
+  "type": "object",
+  "required": ["version", "atks"],
+  "properties": {
+    "version": { "type": "number" },
+    "generated_at": { "type": "string" },
+    "blindar_version": { "type": "string" },
+    "atks": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/atk_entry" }
+    }
+  },
+  "definitions": {
+    "atk_entry": {
+      "type": "object",
+      "required": ["id", "category", "severity"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^ATK-" },
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "severity": { "enum": ["crit", "high", "med", "low"] },
+        "covered_at": { "type": "string" },
+        "covered_by": {
+          "type": "object",
+          "properties": {
+            "pr": { "type": ["number", "null"] },
+            "commit": { "type": ["string", "null"] },
+            "agent": { "type": "string" },
+            "blindar_version": { "type": "string" },
+            "round_n": { "type": ["number", "null"] }
+          }
+        },
+        "tests_added": { "type": "array", "items": { "type": "string" } },
+        "guards_added": { "type": "array", "items": { "type": "string" } },
+        "frameworks": { "type": "array", "items": { "type": "string" } },
+        "verified_by_adversarial": { "type": "boolean" },
+        "adversarial_round_n": { "type": ["number", "null"] },
+        "regressed_at": { "type": ["string", "null"] },
+        "accepted_risk": { "type": "boolean" }
+      }
+    }
+  }
+}

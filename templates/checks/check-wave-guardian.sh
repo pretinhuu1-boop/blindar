@@ -93,15 +93,26 @@ if [ "$FAILED" -gt 0 ]; then
   fi
 fi
 
-# 3. Deferred não-cobertos
+# 3. Deferred não-cobertos — conta agentes únicos para evitar duplicatas do run-report
 if [ "$DEFERRED" -gt 0 ]; then
-  # Verifica se há playbook execution markers (.blindar/playbook-executed/<agent>.json)
   COVERED=0
-  if [ -d "${BLINDAR_DIR:-.blindar}/playbook-executed" ]; then
-    COVERED=$(ls "${BLINDAR_DIR:-.blindar}/playbook-executed/" 2>/dev/null | wc -l)
+  UNIQUE_DEFERRED="$DEFERRED"
+  # Tenta extrair agentes únicos via python
+  PY=$(command -v python3 2>/dev/null || command -v python 2>/dev/null || echo "")
+  if [ -n "$PY" ] && [ -f "$RUN_REPORT" ]; then
+    UNIQUE_DEFERRED=$("$PY" -c "
+import json
+try:
+    r=json.load(open('$RUN_REPORT'))
+    print(len(set(x['agent'] for x in r.get('results',[]) if x.get('status')=='deferred')))
+except: print(0)
+" 2>/dev/null || echo "$DEFERRED")
   fi
-  UNCOVERED=$((DEFERRED - COVERED))
-  if [ "$UNCOVERED" -gt 0 ]; then
+  if [ -d "${BLINDAR_DIR:-.blindar}/playbook-executed" ]; then
+    COVERED=$(ls "${BLINDAR_DIR:-.blindar}/playbook-executed/" 2>/dev/null | sed 's/\.json$//' | sort -u | wc -l | tr -d ' \n')
+  fi
+  UNCOVERED=$(( UNIQUE_DEFERRED > COVERED ? UNIQUE_DEFERRED - COVERED : 0 ))
+  if [ "${UNCOVERED:-0}" -gt 0 ]; then
     BLOCK=1
     BLOCK_REASONS+=("$UNCOVERED agente(s) deferred sem playbook executado")
     add_finding "high" "$UNCOVERED playbook(s) pendente(s) — Claude precisa executar antes de fechar onda" "" ""
