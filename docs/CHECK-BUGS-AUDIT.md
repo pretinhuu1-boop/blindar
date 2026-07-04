@@ -119,3 +119,30 @@ Não fazer sed cego no núcleo de segurança. Por check crítico:
 
 Meta: nenhum check sem par de fixtures (vulnerável+limpa) provando que
 detecta o que promete. **Volume sem verificação = falso senso de segurança.**
+
+---
+
+## Notas da tentativa de fix (2026-07-04) — por que exige passe dedicado
+
+Aplicando os 3 fixes nos 5 checks críticos e verificando por fixture:
+
+- ✅ `check-audit-log` — passou a funcionar (falha no bad, passa no good).
+- ✅ `check-cors-csrf` — passou a **detectar** CORS `*` (antes não detectava).
+- ⚠️ Surpresas por check que impedem fix mecânico cego:
+  1. **Contaminação de fixture por comentário.** Checks keyword-based (`rg`)
+     casam palavras nos **comentários** da fixture (ex: `// rate-limit: ...`).
+     Fixtures precisam de comentários neutros.
+  2. **Estado oculto / não-determinismo.** `check-rate-limit` reportou
+     `HAS_RL=1` num fixture onde o comando `rg` idêntico rodado à mão retorna
+     `0`. Há estado residual (provável `.blindar/results/*` de runs anteriores
+     interferindo, ou ordem de execução) que precisa isolamento por check.
+  3. **Falso-positivo latente.** `check-cors-csrf` passou a falhar no fixture
+     **limpo** também — precisa ajuste fino do regex/fixture.
+
+**Conclusão:** o fix é real e direcionalmente correto, mas cada check tem
+comportamento próprio que exige depuração isolada + fixture higienizada +
+limpeza de estado entre runs. Não é sed cego. Estimativa realista: um passe
+metódico dedicado (não uma sessão junto de outras tarefas).
+
+Estado atual: checks mantidos em v0.44 (intactos). Bugs documentados e
+fixtures de prova commitados pra destravar o passe futuro.
