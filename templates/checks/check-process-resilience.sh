@@ -103,7 +103,9 @@ if [ -d "k8s" ] || [ -d ".k8s" ] || ls -1 *.yaml 2>/dev/null | grep -qE "deploym
   done
 fi
 
-if [ "$FAIL" -eq 1 ]; then
+CRITS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"crit"')
+HIGHS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"high"')
+if [ "$FAIL" -eq 1 ] || [ "$CRITS" -gt 0 ] || [ "$HIGHS" -gt 0 ]; then
   emit_result "$BLINDAR_AGENT" "failed" 1
   exit 1
 fi

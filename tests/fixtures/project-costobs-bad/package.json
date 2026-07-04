@@ -1,0 +1,6 @@
+{
+  "name": "costobs-bad",
+  "dependencies": {
+    "openai": "^4.52.0"
+  }
+}

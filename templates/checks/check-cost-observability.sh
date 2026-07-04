@@ -38,4 +38,10 @@ if [ "$HAS_LLM" = "yes" ] && [ -z "$HAS_FEATURE_COST" ]; then
   add_finding "low" "Sem per-feature cost attribution — não sabe qual feature pesa no orçamento" "" ""
 fi
 
+CRITS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"crit"')
+HIGHS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"high"')
+if [ "$CRITS" -gt 0 ] || [ "$HIGHS" -gt 0 ]; then
+  emit_result "$BLINDAR_AGENT" "failed" 1
+  exit 1
+fi
 emit_result "$BLINDAR_AGENT" "passed" 0

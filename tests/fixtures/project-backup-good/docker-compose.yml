@@ -1,0 +1,4 @@
+services:
+  db:
+    image: postgres:16
+    command: ["postgres", "-c", "wal_level=replica", "-c", "archive_mode=on"]

@@ -1,0 +1,6 @@
+{
+  "name": "payments-bad",
+  "dependencies": {
+    "stripe": "^16.2.0"
+  }
+}

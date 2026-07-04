@@ -44,4 +44,5 @@ rm -f "$TMP"
 PRELOAD_AUTO=$(rg -c "preload=['\"]auto" --type html "${IGNORE[@]}" 2>/dev/null | wc -l || echo 0)
 [ "$PRELOAD_AUTO" -gt 0 ] && add_finding "med" "$PRELOAD_AUTO <video preload=auto> — banda perdida" "" ""
 
+[ "${#FINDINGS[@]}" -gt 0 ] && { emit_result "$BLINDAR_AGENT" "failed" 1; exit 0; }
 emit_result "$BLINDAR_AGENT" "passed" 0
