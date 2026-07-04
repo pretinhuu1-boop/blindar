@@ -44,6 +44,36 @@ Sequência não-negociável em `AI-ENTRYPOINT.md`: analisar → implementar o qu
 falta → **provar que sobe (smoke)** → atacar → proteger → revisar. Segurança é
 gate em cada passo, não uma fase.
 
+### Rodada 2 — capacidades novas (Fases 2/4/5/6/7)
+
+**Fase 2 — 6 agentes de arquitetura** (4 determinísticos com par de fixture, 2 API):
+- `api-surface-isolation`: interna nunca aceita externa (serviço interno com
+  porta publicada / bind 0.0.0.0 = crit), externa protegida (validação, rate/WAF).
+- `queue-management`: trabalho pesado inline sem fila; fila sem retry/DLQ/idempotência.
+- `fallback-resilience`: chamada externa sem timeout/circuit/retry/health ("se caiu como volta").
+- `session-timeout-ux`: timeout de inatividade configurável + popup/blur + resume.
+- `solution-architect` (API): vê o grafo e entrega o que FALTA por área.
+- `regulatory-mapper` (API): normas/leis/NRs aplicáveis por projeto.
+
+**Fase 4 — 8 checks de infra/runtime** (do retrospecto, cada um de um bug real):
+deps-sync, worker-jobs, datetime-tz, entrypoint-cmd, alembic-health,
+notnull-no-default, ratelimit-response, infra-windows. Fix do fallback `rg -c`
+(descartava contagem 0 em arquivo único) + `-q` mapeado + exit real.
+
+**Fase 5 — ataque + escala:**
+- `pentest-active` (módulo 19): payloads reais contra alvo AUTORIZADO. Gate
+  `.accept-authorization` (recusa sem ele — zero requests), não-destrutivo, rate-limited.
+- `load-test`: escalabilidade como gate (erro% + p95 vs SLO).
+
+**Fase 6 — token/velocidade:** tiers no governor pros agentes novos +
+`docs/TOKEN-SPEED.md` (determinístico-primeiro, grafo reusado, módulos lazy).
+
+**Fase 7 — aprendizado:** `scripts/blindar-learn.sh` + `docs/INCIDENT-TO-CHECK.md`
+— todo incidente vira check + par de fixture + entrada no gate, em 1 comando.
+
+Cobertura do gate de self-test: 20/92 checks com par verificado (era 4).
+19 módulos no total.
+
 ## [0.44.0] — 2026-07-04
 
 ### Novo: **blindar ataque** — recon passivo externo via URL (módulo 17)

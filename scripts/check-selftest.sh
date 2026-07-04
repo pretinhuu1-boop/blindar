@@ -43,6 +43,7 @@ PAIRS=(
   "check-notnull-no-default.sh   | project-notnull-bad     | project-notnull-good"
   "check-ratelimit-response.sh   | project-ratelimit-bad   | project-ratelimit-good"
   "check-infra-windows.sh        | project-infra-win-bad   | project-infra-win-good"
+  # blindar-learn:insert (mantenha — scripts/blindar-learn.sh insere novos pares acima desta linha)
 )
 
 # Retorna o STATUS canônico do check (passed|failed|skipped), lendo o result JSON.
