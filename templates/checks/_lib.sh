@@ -171,8 +171,10 @@ if ! type -P rg >/dev/null 2>&1; then
     local base=(-r --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=dist --exclude-dir=.blindar)
     if [ "$fixed" -eq 1 ]; then base+=(-F); else base+=(-E); fi
     if [ "$want_count" -eq 1 ]; then
-      # rg -c: só arquivos COM match, formato path:count. grep -rc emite :0 → filtra.
-      grep "${base[@]}" -c "${grepflags[@]}" "${includes[@]}" "${excludes[@]}" -- "$pattern" "${paths[@]}" 2>/dev/null | grep -v ':0$'
+      # rg -c: só arquivos COM match. grep -rc emite contagem 0 (formato "path:0"
+      # em multi-arquivo, ou "0" puro em arquivo único) → awk descarta zeros nos
+      # dois formatos ($NF = a contagem, sempre o último campo após ':').
+      grep "${base[@]}" -c "${grepflags[@]}" "${includes[@]}" "${excludes[@]}" -- "$pattern" "${paths[@]}" 2>/dev/null | awk -F: '($NF+0)>0'
       return 0
     fi
     grep "${base[@]}" "${grepflags[@]}" "${includes[@]}" "${excludes[@]}" -- "$pattern" "${paths[@]}" 2>/dev/null

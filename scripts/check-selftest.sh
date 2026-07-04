@@ -35,6 +35,14 @@ PAIRS=(
   "check-queue-management.sh     | project-queue-bad       | project-queue-good"
   "check-fallback-resilience.sh  | project-resilience-bad  | project-resilience-good"
   "check-session-timeout-ux.sh   | project-timeout-bad     | project-timeout-good"
+  "check-deps-sync.sh            | project-deps-bad        | project-deps-good"
+  "check-worker-jobs.sh          | project-worker-bad      | project-worker-good"
+  "check-datetime-tz.sh          | project-tz-bad          | project-tz-good"
+  "check-entrypoint-cmd.sh       | project-entrypoint-bad  | project-entrypoint-good"
+  "check-alembic-health.sh       | project-alembic-bad     | project-alembic-good"
+  "check-notnull-no-default.sh   | project-notnull-bad     | project-notnull-good"
+  "check-ratelimit-response.sh   | project-ratelimit-bad   | project-ratelimit-good"
+  "check-infra-windows.sh        | project-infra-win-bad   | project-infra-win-good"
 )
 
 # Retorna o STATUS canônico do check (passed|failed|skipped), lendo o result JSON.

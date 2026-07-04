@@ -328,12 +328,20 @@
       "notes": "Modo PASSIVO puro (só GET/HEAD/OPTIONS, rate 1/3s, UA browser). Zero payload de ataque → não dispara WAF, seguro pra produção. Opt-in via roles:[attack-recon] ou --attack. Precisa da URL como arg."
     },
     "18": {
-      "name": "Smoke / Runtime Truth — prova que a app SOBE e responde (homolog, nunca dev)",
+      "name": "Smoke / Runtime Truth — prova que a app SOBE + checks de infra/runtime (homolog, nunca dev)",
       "mandatory": true,
       "skip_token": "always-on",
       "agents": [
         "smoke-runtime",
-        "homolog-only"
+        "homolog-only",
+        "deps-sync",
+        "worker-jobs",
+        "datetime-tz",
+        "entrypoint-cmd",
+        "alembic-health",
+        "notnull-no-default",
+        "ratelimit-response",
+        "infra-windows"
       ],
       "phases": [
         "04-rounds-loop",
