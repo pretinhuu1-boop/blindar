@@ -1,0 +1,6 @@
+{
+  "name": "redis-good",
+  "dependencies": {
+    "ioredis": "^5.4.1"
+  }
+}

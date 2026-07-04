@@ -1,0 +1,6 @@
+{
+  "name": "realtime-good",
+  "dependencies": {
+    "socket.io": "^4.7.5"
+  }
+}

@@ -61,6 +61,9 @@ PAIRS=(
   "check-i18n-tz.sh              | project-i18n-bad        | project-i18n-good"
   "check-observability.sh        | project-obs-bad         | project-obs-good"
   "check-feature-flags.sh        | project-flags-bad       | project-flags-good"
+  "check-sbom-slsa.sh            | project-sbom-bad        | project-sbom-good"
+  "check-redis-patterns.sh       | project-redis-bad       | project-redis-good"
+  "check-realtime.sh             | project-realtime-bad    | project-realtime-good"
   # blindar-learn:insert (mantenha — scripts/blindar-learn.sh insere novos pares acima desta linha)
 )
 
@@ -111,7 +114,7 @@ done
 # Exclui .api.sh (precisam de LLM) e wrappers de scanner externo (semgrep/trivy/
 # osv/gitleaks/etc.) — esses não têm par de fixture determinístico.
 TOTAL_CHECKS=$(find "$CHECKS_DIR" -maxdepth 1 -name 'check-*.sh' ! -name '*.api.sh' 2>/dev/null \
-  | grep -vE 'check-(semgrep|trivy|osv-scanner|gitleaks|secrets|lighthouse|strategic-scanner|wave-guardian|mcp-recommended|ai-powered-example|deps-audit)\.sh' \
+  | grep -vE 'check-(semgrep|trivy|osv-scanner|gitleaks|secrets|lighthouse|strategic-scanner|wave-guardian|mcp-recommended|ai-powered-example|deps-audit|content-quality|visual-regression|functional-e2e|bundle-size|pwa-installable)\.sh' \
   | wc -l | xargs)
 VERIFIED_N=${#VERIFIED[@]}
 PCT=0; [ "$TOTAL_CHECKS" -gt 0 ] && PCT=$(( VERIFIED_N * 100 / TOTAL_CHECKS ))

@@ -1,0 +1,6 @@
+{
+  "name": "realtime-bad",
+  "dependencies": {
+    "socket.io": "^4.7.5"
+  }
+}
