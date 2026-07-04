@@ -118,6 +118,20 @@ if command -v node >/dev/null 2>&1; then
     FAIL_LIST+=("tests/smoke.test.js")
   fi
   echo ""
+  echo "${BOLD}── pentest ATIVO (gate de autorização) ──${RESET}"
+  if node "$SCRIPT_DIR/pentest-active.test.js"; then
+    PASS_COUNT=$((PASS_COUNT+1))
+  else
+    FAIL_COUNT=$((FAIL_COUNT+1)); FAIL_LIST+=("tests/pentest-active.test.js")
+  fi
+  echo ""
+  echo "${BOLD}── load-test (escalabilidade / SLO) ──${RESET}"
+  if node "$SCRIPT_DIR/load-test.test.js"; then
+    PASS_COUNT=$((PASS_COUNT+1))
+  else
+    FAIL_COUNT=$((FAIL_COUNT+1)); FAIL_LIST+=("tests/load-test.test.js")
+  fi
+  echo ""
   echo "${BOLD}── módulo 17 (blindar ataque — recon passivo) ──${RESET}"
   if node "$SCRIPT_DIR/attack-recon.test.js"; then
     PASS_COUNT=$((PASS_COUNT+1))

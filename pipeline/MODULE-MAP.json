@@ -349,6 +349,20 @@
       ],
       "entrypoint": "scripts/smoke-run.sh",
       "notes": "Sobe o stack em homolog (mock direto no banco, espelho de produção), espera /health, roda 1 fluxo crítico, flag boot-quebrado e 500 de runtime. self-skips se não há Dockerfile/compose nem --url. Roda DEPOIS de implementar e ANTES do ataque (módulo 15) — provar que sobe é pré-requisito. check-homolog-only proíbe config de dev no artefato."
+    },
+    "19": {
+      "name": "Pentest ATIVO (autorizado) — payloads reais contra alvo autorizado",
+      "mandatory": false,
+      "default_on_when": [],
+      "skip_token": "pentest-active-only",
+      "agents": [
+        "pentest-active"
+      ],
+      "phases": [
+        "05-adversarial-review"
+      ],
+      "entrypoint": "scripts/pentest-active.sh",
+      "notes": "OPT-IN e GATED: exige .accept-authorization (escopo + 'authorized: yes'). Sem isso RECUSA (zero payloads). Não-destrutivo, rate-limited, escopo-limitado. Uso legítimo: seus produtos ou com autorização. Roda no passo 'atacar' da ordem security-first, depois do smoke."
     }
   },
   "resolution_rules": {

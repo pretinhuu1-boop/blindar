@@ -13,6 +13,19 @@ Sistema continua respondendo sob **crescimento de carga** (10x usuários,
 10x dados, 10x fan-out). Complementa [`resilience.md`](resilience.md):
 resilience = sobreviver a falha. Scalability = sobreviver a sucesso.
 
+## Gate de escala (load-test.sh)
+
+Escala vira NÚMERO, não achismo. Contra o alvo em homolog:
+
+```bash
+bash ~/.claude/skills/blindar/scripts/load-test.sh --url https://homolog.meuapp.com \
+  --requests 200 --concurrency 20 --slo-error-pct 1 --slo-p95-ms 800
+```
+
+Dispara N requests com C concorrência e **falha** se erro% ou p95 estourarem o
+SLO — prova "muitos usuários chamando sem travar, fluido ponta-a-ponta". Rode
+depois do smoke (app de pé) e antes do release. É o gate objetivo de escala.
+
 ## Quando ativar
 
 Discovery sinalizou pelo menos um dos sinais:
