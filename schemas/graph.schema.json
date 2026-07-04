@@ -1,0 +1,65 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/pretinhuu1-boop/blindar/blob/main/schemas/graph.schema.json",
+  "title": "blindar knowledge graph",
+  "description": "Grafo de conhecimento multi-modal do codebase, gerado por scripts/graph-build.js e reusado pelos agentes.",
+  "type": "object",
+  "required": ["schema", "built_at", "stats", "nodes", "edges", "surface"],
+  "properties": {
+    "schema": { "const": "blindar/graph@v1" },
+    "built_at": { "type": "string" },
+    "root": { "type": "string" },
+    "stats": {
+      "type": "object",
+      "required": ["files", "endpoints", "edges", "external_surface", "internal_surface"],
+      "properties": {
+        "files": { "type": "integer" },
+        "packages": { "type": "integer" },
+        "endpoints": { "type": "integer" },
+        "services": { "type": "integer" },
+        "workers": { "type": "integer" },
+        "models": { "type": "integer" },
+        "env_keys": { "type": "integer" },
+        "edges": { "type": "integer" },
+        "external_surface": { "type": "integer" },
+        "internal_surface": { "type": "integer" }
+      }
+    },
+    "surface": {
+      "type": "object",
+      "required": ["external", "internal"],
+      "properties": {
+        "external": { "type": "array", "items": { "type": "string" } },
+        "internal": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "type"],
+        "properties": {
+          "id": { "type": "string" },
+          "type": { "enum": ["file", "package", "endpoint", "service", "env", "model", "worker"] },
+          "path": { "type": "string" },
+          "name": { "type": "string" },
+          "method": { "type": "string" },
+          "internal": { "type": "boolean" },
+          "exposed": { "type": "boolean" }
+        }
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["from", "to", "type"],
+        "properties": {
+          "from": { "type": "string" },
+          "to": { "type": "string" },
+          "type": { "enum": ["imports", "exposes", "depends_on", "uses_env"] }
+        }
+      }
+    }
+  }
+}

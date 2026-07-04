@@ -7,12 +7,31 @@
 Mapear superfície de ataque, catalogar ameaças aplicáveis, classificar a
 arquitetura. Tudo paralelo.
 
+## Passo 0 — Grafo de conhecimento (determinístico, roda ANTES dos agentes)
+
+Antes de gastar tokens com LLM, construa o grafo multi-modal do codebase UMA
+vez. Ele é reusado por TODOS os agentes desta fase e das seguintes → mais
+cobertura (call graph, data-flow, fronteira interno×externo) e menos tokens
+(ninguém re-varre o repo).
+
+```bash
+node ~/.claude/skills/blindar/scripts/graph-build.js --dir .
+# → .blindar/graph.json  (nós: file/package/endpoint/service/env/model/worker;
+#   arestas: imports/exposes/depends_on/uses_env; surface.external × surface.internal)
+```
+
+Os agentes de discovery abaixo recebem `.blindar/graph.json` como contexto —
+não devem re-descobrir endpoints/serviços do zero, só interpretar e enriquecer.
+`surface.external` (aceita chamada externa) vs `surface.internal` (só interno)
+alimenta o agente `api-surface-isolation` (módulo 4) diretamente.
+
 ## Execução
 
-Spawn via Workflow:
+Spawn via Workflow (todos recebem o grafo como evidência inicial):
 
 ```javascript
 phase('Discovery')
+const graph = JSON.parse(readFileSync('.blindar/graph.json','utf8'))
 const [inventory, threats, arch] = await parallel([
   () => agent(
     'Map attack surface: HTTP endpoints (path+method+auth), CLI, external API ' +

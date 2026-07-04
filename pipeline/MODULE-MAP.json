@@ -8,6 +8,7 @@
       "mandatory": true,
       "skip_token": "always-on",
       "agents": [
+        "graph-builder",
         "strategic-scanner"
       ],
       "phases": [
