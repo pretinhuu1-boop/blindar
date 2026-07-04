@@ -1,0 +1,7 @@
+{
+  "name": "aisafety-good",
+  "dependencies": {
+    "openai": "^4.52.0",
+    "express-rate-limit": "^7.3.1"
+  }
+}

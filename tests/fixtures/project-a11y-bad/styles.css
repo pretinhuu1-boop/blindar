@@ -1,0 +1,4 @@
+/* FIXTURE VULNERAVEL — remove foco visivel. */
+button:focus {
+  outline: none;
+}

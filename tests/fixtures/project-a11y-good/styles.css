@@ -1,0 +1,4 @@
+/* FIXTURE SEGURA — foco visivel preservado. */
+button:focus-visible {
+  outline: 2px solid #0055ff;
+}

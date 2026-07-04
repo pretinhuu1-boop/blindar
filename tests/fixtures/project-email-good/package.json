@@ -1,0 +1,6 @@
+{
+  "name": "email-good",
+  "dependencies": {
+    "resend": "^3.4.0"
+  }
+}

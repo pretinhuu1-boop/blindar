@@ -56,4 +56,10 @@ rm -f "$TMP"
 HAS_JSONLD=$(rg -l "application/ld\+json" --type ts --type html "${IGNORE[@]}" 2>/dev/null | head -1)
 [ -z "$HAS_JSONLD" ] && add_finding "low" "Sem JSON-LD structured data — perde rich snippets" "" ""
 
+CRITS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"crit"')
+HIGHS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"high"')
+if [ "$CRITS" -gt 0 ] || [ "$HIGHS" -gt 0 ]; then
+  emit_result "$BLINDAR_AGENT" "failed" 1
+  exit 1
+fi
 emit_result "$BLINDAR_AGENT" "passed" 0

@@ -1,0 +1,6 @@
+{
+  "name": "email-bad",
+  "dependencies": {
+    "resend": "^3.4.0"
+  }
+}

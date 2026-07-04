@@ -70,6 +70,13 @@ PAIRS=(
   "check-backup-recovery.sh      | project-backup-bad      | project-backup-good"
   "check-cdn-strategy.sh         | project-cdn-bad         | project-cdn-good"
   "check-cost-observability.sh   | project-costobs-bad     | project-costobs-good"
+  "check-email-deliverability.sh | project-email-bad       | project-email-good"
+  "check-seo-marketing-meta.sh   | project-seo-bad         | project-seo-good"
+  "check-responsive-a11y.sh      | project-a11y-bad        | project-a11y-good"
+  "check-frontend.sh             | project-frontend-bad    | project-frontend-good"
+  "check-frontend-performance.sh | project-fperf-bad       | project-fperf-good"
+  "check-ai-llm-safety.sh        | project-aisafety-bad    | project-aisafety-good"
+  "check-tenant-isolation-tests.sh | project-tenant-bad    | project-tenant-good"
   # blindar-learn:insert (mantenha — scripts/blindar-learn.sh insere novos pares acima desta linha)
 )
 
@@ -120,7 +127,7 @@ done
 # Exclui .api.sh (precisam de LLM) e wrappers de scanner externo (semgrep/trivy/
 # osv/gitleaks/etc.) — esses não têm par de fixture determinístico.
 TOTAL_CHECKS=$(find "$CHECKS_DIR" -maxdepth 1 -name 'check-*.sh' ! -name '*.api.sh' 2>/dev/null \
-  | grep -vE 'check-(semgrep|trivy|osv-scanner|gitleaks|secrets|lighthouse|strategic-scanner|wave-guardian|mcp-recommended|ai-powered-example|deps-audit|content-quality|visual-regression|functional-e2e|bundle-size|pwa-installable|termination)\.sh' \
+  | grep -vE 'check-(semgrep|trivy|osv-scanner|gitleaks|secrets|lighthouse|strategic-scanner|wave-guardian|mcp-recommended|ai-powered-example|deps-audit|content-quality|visual-regression|functional-e2e|bundle-size|pwa-installable|termination|mcp-security)\.sh' \
   | wc -l | xargs)
 VERIFIED_N=${#VERIFIED[@]}
 PCT=0; [ "$TOTAL_CHECKS" -gt 0 ] && PCT=$(( VERIFIED_N * 100 / TOTAL_CHECKS ))
