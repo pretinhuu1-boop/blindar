@@ -1,0 +1,6 @@
+{
+  "name": "ecom-good",
+  "dependencies": {
+    "stripe": "^16.2.0"
+  }
+}

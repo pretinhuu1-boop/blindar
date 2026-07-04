@@ -47,4 +47,10 @@ fi
 HAS_ANON=$(rg -l "(anonymize|anonimiz|md5.*email|hash.*email).*lgpd" --type ts 2>/dev/null | head -1)
 [ -z "$HAS_ANON" ] && add_finding "low" "Sem função de anonimização irreversível — direito ao esquecimento limitado" "" ""
 
+CRITS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"crit"')
+HIGHS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"high"')
+if [ "$CRITS" -gt 0 ] || [ "$HIGHS" -gt 0 ]; then
+  emit_result "$BLINDAR_AGENT" "failed" 1
+  exit 1
+fi
 emit_result "$BLINDAR_AGENT" "passed" 0

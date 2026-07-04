@@ -1,0 +1,6 @@
+{
+  "name": "fintech-good",
+  "dependencies": {
+    "pix-utils": "^1.6.0"
+  }
+}

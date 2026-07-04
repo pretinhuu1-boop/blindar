@@ -1,0 +1,6 @@
+{
+  "name": "ecom-bad",
+  "dependencies": {
+    "stripe": "^16.2.0"
+  }
+}

@@ -77,6 +77,12 @@ PAIRS=(
   "check-frontend-performance.sh | project-fperf-bad       | project-fperf-good"
   "check-ai-llm-safety.sh        | project-aisafety-bad    | project-aisafety-good"
   "check-tenant-isolation-tests.sh | project-tenant-bad    | project-tenant-good"
+  "check-compliance-lgpd-br.sh   | project-lgpd-bad        | project-lgpd-good"
+  "check-govtech-acessibilidade.sh | project-govtech-bad   | project-govtech-good"
+  "check-ecom-checkout-conversion.sh | project-ecom-bad    | project-ecom-good"
+  "check-fintech-banking-br.sh   | project-fintech-bad     | project-fintech-good"
+  "check-healthtech-fhir.sh      | project-healthtech-bad  | project-healthtech-good"
+  "check-pii-encryption.sh       | project-pii-bad         | project-pii-good"
   # blindar-learn:insert (mantenha — scripts/blindar-learn.sh insere novos pares acima desta linha)
 )
 

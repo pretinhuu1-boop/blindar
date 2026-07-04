@@ -32,6 +32,15 @@ RG_IGNORE=(
 
 FAIL=0
 
+# 0. RE-SCOPING (v0.45): só faz sentido exigir DEK/KEK se o projeto lida com PII/
+# pacientes. Sem sinais, skip gracioso (antes disparava crit em TODO projeto).
+PII_SIGNAL=$(rg -l "(patient|paciente|prontuario|\bpii\b|\bphi\b|cpf|cns|dek_ciphertext)" --type ts --type sql "${RG_IGNORE[@]}" 2>/dev/null | head -1)
+if [ -z "$PII_SIGNAL" ]; then
+  log_info "Sem sinais de PII/paciente — envelope encryption não se aplica — skip"
+  emit_result "$BLINDAR_AGENT" "skipped" 0
+  exit 0
+fi
+
 # 1. Existe módulo de crypto com envelope (generateDek + encryptField + unwrapDek)
 HAS_GENERATE_DEK=$(rg -l "generateDek|generate_dek" --type ts "${RG_IGNORE[@]}" 2>/dev/null | wc -l)
 HAS_ENCRYPT_FIELD=$(rg -l "encryptField|encrypt_field|encryptPii" --type ts "${RG_IGNORE[@]}" 2>/dev/null | wc -l)

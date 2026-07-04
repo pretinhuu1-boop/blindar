@@ -58,7 +58,7 @@ FAIL=0
 log_info "Buscando chave PIX hardcoded..."
 TMP=$(mktemp)
 # CPF formato 11 dígitos, CNPJ 14 dígitos, email/phone como string longa
-rg -n "(pix.?key|chave.?pix|chavePix|pixKey)\s*[:=]\s*['\"][0-9a-zA-Z@.\-+]{8,}['\"]" \
+rg -n "(pix.?key|chave.?pix|chavePix|pixKey)\s*[:=]\s*['\"][0-9a-zA-Z@.+-]{8,}['\"]" \
   --type ts --type js --type py "${IGNORE[@]}" > "$TMP" 2>/dev/null || true
 HARDCODED=$(wc -l < "$TMP" | tr -d ' ')
 if [ "${HARDCODED:-0}" -gt 0 ]; then

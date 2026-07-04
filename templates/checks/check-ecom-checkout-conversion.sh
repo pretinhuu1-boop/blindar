@@ -199,7 +199,9 @@ if [ -n "$HAS_CEP_INPUT" ] && [ -z "$HAS_VIACEP" ]; then
   log_warn "CEP sem autocomplete — LOW"
 fi
 
-if [ "$FAIL" -eq 1 ]; then
+CRITS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"crit"')
+HIGHS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"high"')
+if [ "$FAIL" -eq 1 ] || [ "$CRITS" -gt 0 ] || [ "$HIGHS" -gt 0 ]; then
   emit_result "$BLINDAR_AGENT" "failed" 1
   exit 1
 fi

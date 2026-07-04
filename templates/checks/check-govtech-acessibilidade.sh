@@ -116,8 +116,8 @@ if [ "$VLIBRAS_EMBED" -eq 0 ]; then
 fi
 
 # ─── Resultado ───
-CRIT_COUNT=$(printf '%s\n' "${FINDINGS[@]:-}" | rg -c '"severity":"critical"' 2>/dev/null || echo 0)
-HIGH_COUNT=$(printf '%s\n' "${FINDINGS[@]:-}" | rg -c '"severity":"high"' 2>/dev/null || echo 0)
+CRIT_COUNT=$(printf '%s\n' "${FINDINGS[@]:-}" | grep -c '"severity":"critical"' 2>/dev/null || echo 0)
+HIGH_COUNT=$(printf '%s\n' "${FINDINGS[@]:-}" | grep -c '"severity":"high"' 2>/dev/null || echo 0)
 
 if [ "${#FINDINGS[@]}" -eq 0 ]; then
   emit_result "$BLINDAR_AGENT" "passed" 0

@@ -116,9 +116,12 @@ if ! type -P rg >/dev/null 2>&1; then
             css)  includes+=(--include='*.css' --include='*.scss') ;;
             sh)   includes+=(--include='*.sh' --include='*.bash') ;;
             dockerfile) includes+=(--include='Dockerfile*') ;;
+            prisma) includes+=(--include='*.prisma') ;;
+            sql)  includes+=(--include='*.sql') ;;
+            tf)   includes+=(--include='*.tf') ;;
           esac
           shift 2 ;;
-        -g)
+        -g|--glob)
           # -g '!glob' → exclude ; -g 'glob' → include
           local g="$2"
           if [[ "$g" == '!'* ]]; then
@@ -167,20 +170,32 @@ if ! type -P rg >/dev/null 2>&1; then
       esac
     done
     [ -z "$pattern" ] && return 0
-    [ ${#paths[@]} -eq 0 ] && paths=(".")
-    local base=(-r --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=dist --exclude-dir=.blindar)
+    # STDIN piped (`… | rg pat`) → grep lê stdin (igual ripgrep). Detecta por `-p`
+    # (pipe/FIFO); NÃO dispara em `X=$(rg …)` cujo stdin é /dev/null/tty. Sem path
+    # e sem pipe → busca o diretório atual (".").
+    local read_stdin=0
+    if [ ${#paths[@]} -eq 0 ]; then
+      if [ -p /dev/stdin ]; then read_stdin=1; else paths=("."); fi
+    fi
+    local base
+    if [ "$read_stdin" -eq 1 ]; then base=(); else base=(-r --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=dist --exclude-dir=.blindar); fi
     if [ "$fixed" -eq 1 ]; then base+=(-F); else base+=(-E); fi
     if [ "$want_count" -eq 1 ]; then
       # rg -c: só arquivos COM match. grep -rc emite contagem 0 (formato "path:0"
-      # em multi-arquivo, ou "0" puro em arquivo único) → awk descarta zeros nos
-      # dois formatos ($NF = a contagem, sempre o último campo após ':').
-      grep "${base[@]}" -c "${grepflags[@]}" "${includes[@]}" "${excludes[@]}" -- "$pattern" "${paths[@]}" 2>/dev/null | awk -F: '($NF+0)>0'
+      # em multi-arquivo, ou "0" puro em arquivo único) → awk descarta zeros.
+      if [ "$read_stdin" -eq 1 ]; then
+        grep "${base[@]}" -c "${grepflags[@]}" -- "$pattern" 2>/dev/null | awk -F: '($NF+0)>0'
+      else
+        grep "${base[@]}" -c "${grepflags[@]}" "${includes[@]}" "${excludes[@]}" -- "$pattern" "${paths[@]}" 2>/dev/null | awk -F: '($NF+0)>0'
+      fi
       return 0
     fi
-    grep "${base[@]}" "${grepflags[@]}" "${includes[@]}" "${excludes[@]}" -- "$pattern" "${paths[@]}" 2>/dev/null
+    if [ "$read_stdin" -eq 1 ]; then
+      grep "${base[@]}" "${grepflags[@]}" -- "$pattern" 2>/dev/null
+    else
+      grep "${base[@]}" "${grepflags[@]}" "${includes[@]}" "${excludes[@]}" -- "$pattern" "${paths[@]}" 2>/dev/null
+    fi
     # Retorna o exit REAL do grep (0=match, 1=sem match, 2=erro) — igual ripgrep.
-    # Boolean `rg -q PAT` e `if rg PAT` funcionam. errexit está off (set +e), então
-    # sem-match (1) não aborta captura `X=$(rg ...)`.
     return $?
   }
   export -f rg
