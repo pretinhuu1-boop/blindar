@@ -1,0 +1,6 @@
+{
+  "name": "supplychain-bad",
+  "dependencies": {
+    "express": "*"
+  }
+}

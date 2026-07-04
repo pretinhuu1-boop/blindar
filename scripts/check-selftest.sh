@@ -53,6 +53,10 @@ PAIRS=(
   "check-runtime-secrets.sh      | project-runsecrets-bad  | project-runsecrets-good"
   "check-secrets-rotation.sh     | project-secretrot-bad   | project-secretrot-good"
   "check-tenant-isolation.sh     | project-tenant-bad      | project-tenant-good"
+  "check-pagination.sh           | project-pagination-bad  | project-pagination-good"
+  "check-supply-chain.sh         | project-supplychain-bad | project-supplychain-good"
+  "check-file-uploads.sh         | project-fileupload-bad  | project-fileupload-good"
+  "check-api-design.sh           | project-apidesign-bad   | project-apidesign-good"
   # blindar-learn:insert (mantenha — scripts/blindar-learn.sh insere novos pares acima desta linha)
 )
 

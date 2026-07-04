@@ -25,4 +25,5 @@ rm -f "$TMP"
 
 [ "$NO_TAKE" -gt 5 ] && log_warn "$NO_TAKE findMany sem paginação detectados"
 
+[ "${#FINDINGS[@]}" -gt 0 ] && { emit_result "$BLINDAR_AGENT" "failed" 1; exit 0; }
 emit_result "$BLINDAR_AGENT" "passed" 0
