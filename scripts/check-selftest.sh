@@ -43,6 +43,13 @@ PAIRS=(
   "check-notnull-no-default.sh   | project-notnull-bad     | project-notnull-good"
   "check-ratelimit-response.sh   | project-ratelimit-bad   | project-ratelimit-good"
   "check-infra-windows.sh        | project-infra-win-bad   | project-infra-win-good"
+  "check-cryptography.sh         | project-crypto-bad      | project-crypto-good"
+  "check-prompt-injection-defense.sh | project-injection-bad | project-injection-good"
+  "check-network-security.sh     | project-insecure-api    | project-secure-api"
+  "check-security.sh             | project-security-bad    | project-security-good"
+  "check-business-logic.sh       | project-bizlogic-bad    | project-bizlogic-good"
+  "check-soft-delete.sh          | project-db-bad          | project-prisma-good"
+  "check-audit-log.sh            | project-db-bad          | project-prisma-good"
   # blindar-learn:insert (mantenha — scripts/blindar-learn.sh insere novos pares acima desta linha)
 )
 
@@ -89,8 +96,12 @@ for row in "${PAIRS[@]}"; do
   fi
 done
 
-# ─── Cobertura honesta ───
-TOTAL_CHECKS=$(find "$CHECKS_DIR" -maxdepth 1 -name 'check-*.sh' | wc -l | xargs)
+# ─── Cobertura honesta (só checks GATE-ÁVEIS) ───
+# Exclui .api.sh (precisam de LLM) e wrappers de scanner externo (semgrep/trivy/
+# osv/gitleaks/etc.) — esses não têm par de fixture determinístico.
+TOTAL_CHECKS=$(find "$CHECKS_DIR" -maxdepth 1 -name 'check-*.sh' ! -name '*.api.sh' 2>/dev/null \
+  | grep -vE 'check-(semgrep|trivy|osv-scanner|gitleaks|secrets|lighthouse|strategic-scanner|wave-guardian|mcp-recommended|ai-powered-example|deps-audit)\.sh' \
+  | wc -l | xargs)
 VERIFIED_N=${#VERIFIED[@]}
 PCT=0; [ "$TOTAL_CHECKS" -gt 0 ] && PCT=$(( VERIFIED_N * 100 / TOTAL_CHECKS ))
 

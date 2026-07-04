@@ -29,7 +29,8 @@ if [ "${#MISSING[@]}" -gt 0 ]; then
 fi
 
 # Hard delete crus em código
-RAW_DELETE=$(rg -c "prisma\.\w+\.delete\(|prisma\.\w+\.deleteMany\(" --type ts '!node_modules' '!**/*.test.*' 2>/dev/null | wc -l || echo 0)
+RAW_DELETE=$(rg -c "prisma\.\w+\.delete\(|prisma\.\w+\.deleteMany\(" --type ts -g '!node_modules' -g '!**/*.test.*' 2>/dev/null | wc -l || echo 0)
 [ "$RAW_DELETE" -gt 0 ] && add_finding "med" "$RAW_DELETE chamadas prisma.delete() — preferir update deletedAt" "" ""
 
+[ "${#FINDINGS[@]}" -gt 0 ] && { emit_result "$BLINDAR_AGENT" "failed" 1; exit 0; }
 emit_result "$BLINDAR_AGENT" "passed" 0
