@@ -1,0 +1,31 @@
+# Normalização de fim de linha — evita que scripts quebrem em Linux/CI.
+# Sem isto, core.autocrlf=true converte .sh pra CRLF no checkout e o bash falha
+# com "\r: command not found".
+* text=auto
+
+# Shell/POSIX: SEMPRE LF (rodam em Linux/macOS/CI e no Git Bash).
+*.sh   text eol=lf
+*.bash text eol=lf
+*.mako text eol=lf
+
+# Node/JS/JSON/MD/YAML: LF.
+*.js   text eol=lf
+*.mjs  text eol=lf
+*.cjs  text eol=lf
+*.ts   text eol=lf
+*.json text eol=lf
+*.md   text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+
+# Windows: CRLF (cmd exige).
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binários.
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary
+*.pdf binary
