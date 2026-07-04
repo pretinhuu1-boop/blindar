@@ -6,7 +6,7 @@ log_section "Check: tenant-isolation-tests"
 
 is_prisma || { emit_result "$BLINDAR_AGENT" "skipped" 0; exit 0; }
 
-MT=$(grep -cE "tenantId|tenant_id|organizationId" prisma/schema.prisma 2>/dev/null || echo 0)
+MT=$(grep -cE "tenantId|tenant_id|organizationId" prisma/schema.prisma 2>/dev/null)
 [ "${MT:-0}" -eq 0 ] && { emit_result "$BLINDAR_AGENT" "skipped" 0; exit 0; }
 
 # Conta findings de testes

@@ -122,7 +122,7 @@ except Exception as e:
   rm -f "$OUT_JSON.parsed"
 else
   # Fallback grosso sem python — conta linhas com "RuleID"
-  TOTAL=$(grep -c '"RuleID"' "$OUT_JSON" 2>/dev/null || echo 0)
+  TOTAL=$(grep -c '"RuleID"' "$OUT_JSON" 2>/dev/null)
   add_finding "crit" "[gitleaks] $TOTAL secret(s) detectado(s) — instale python pra parse detalhado" "$OUT_JSON" ""
 fi
 

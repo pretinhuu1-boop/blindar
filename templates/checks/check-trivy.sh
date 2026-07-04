@@ -124,7 +124,7 @@ process_parsed "$FS_PARSED" "fs"
 process_parsed "$CONFIG_PARSED" "config"
 
 # 5. Gate: SÓ crit bloqueia (high de Trivy costuma ter ruído de scan profundo)
-CRITS=$(printf '%s\n' "${FINDINGS[@]:-}" | grep -c '"severity":"crit"' 2>/dev/null || echo 0)
+CRITS=$(printf '%s\n' "${FINDINGS[@]:-}" | grep -c '"severity":"crit"' 2>/dev/null)
 if [ "${CRITS:-0}" -gt 0 ]; then
   emit_result "$BLINDAR_AGENT" "failed" 1
   exit 1

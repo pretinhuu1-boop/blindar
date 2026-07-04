@@ -21,7 +21,7 @@ if [ "$HAS_UI" -eq 0 ]; then
   exit 0
 fi
 
-IGNORE=('!node_modules' '!dist' '!build' '!**/*.test.*')
+IGNORE=(-g '!node_modules' -g '!dist' -g '!build' -g '!**/*.test.*')
 FAIL=0
 
 # 1. <img> sem alt (CRIT a11y)
@@ -100,8 +100,8 @@ rg -n "text-overflow\s*:\s*ellipsis" --type css "${IGNORE[@]}" > "$TMP" 2>/dev/n
 ELLIPSIS=$(wc -l < "$TMP" || echo 0)
 # (suppress, é só sinal)
 
-CRITS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"crit"' || echo 0)
-HIGHS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"high"' || echo 0)
+CRITS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"crit"')
+HIGHS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"high"')
 if [ "$CRITS" -gt 0 ] || [ "$HIGHS" -gt 0 ]; then
   emit_result "$BLINDAR_AGENT" "failed" 1
   exit 1

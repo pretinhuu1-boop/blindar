@@ -10,11 +10,11 @@ EVIDENCE=""
 [ -f "README.md" ] && EVIDENCE+="=== README ===\n$(head -c 3000 README.md)\n\n"
 
 # Roles/permissions
-ROLES=$(rg -nE "(@Roles|UserType|enum Role|role:)" --type ts '!node_modules' 2>/dev/null | head -30)
+ROLES=$(rg -n "(@Roles|UserType|enum Role|role:)" --type ts '!node_modules' 2>/dev/null | head -30)
 [ -n "$ROLES" ] && EVIDENCE+="=== roles/permissions ===\n$ROLES\n\n"
 
 # Rotas
-ROUTES=$(rg -nE "(<Route|router\.get|@Get\(|path:)" --type ts --type tsx '!node_modules' 2>/dev/null | head -40)
+ROUTES=$(rg -n "(<Route|router\.get|@Get\(|path:)" --type ts --type tsx '!node_modules' 2>/dev/null | head -40)
 [ -n "$ROUTES" ] && EVIDENCE+="=== rotas (sample) ===\n$ROUTES\n\n"
 
 if [ -z "$EVIDENCE" ]; then

@@ -44,8 +44,8 @@ STACK_EXPOSED=$(_grep_src 'res\.(send|json)\(.*err\.(stack|message)' --type ts -
 URL_SECRET=$(_grep_src '(url|href|fetch)\(.*\?.*\b(token|secret|api_key|password)=' --type ts --type js 2>/dev/null | wc -l)
 [ "$URL_SECRET" -gt 0 ] && add_finding "crit" "$URL_SECRET secret em query string — usar header Authorization" "" ""
 
-CRITS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"crit"' 2>/dev/null || echo 0)
-HIGHS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"high"' 2>/dev/null || echo 0)
+CRITS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"crit"' 2>/dev/null)
+HIGHS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"high"' 2>/dev/null)
 if [ "$CRITS" -gt 0 ] || [ "$HIGHS" -gt 0 ]; then
   emit_result "$BLINDAR_AGENT" "failed" 1
   exit 1

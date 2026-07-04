@@ -27,7 +27,7 @@ if [ "$AUTH_DETECTED" -eq 0 ]; then
 fi
 
 FAIL=0
-IGNORE=('!node_modules' '!dist' '!build' '!**/*.test.*' '!**/*.spec.*')
+IGNORE=(-g '!node_modules' -g '!dist' -g '!build' -g '!**/*.test.*' -g '!**/*.spec.*')
 
 # 1. bcrypt em projeto novo (use Argon2id)
 log_info "Buscando bcrypt..."
@@ -68,8 +68,8 @@ rm -f "$TMP"
 
 # 4. Refresh token sem rotation
 log_info "Verificando refresh token rotation..."
-if rg -lE "refreshToken|refresh_token" --type ts "${IGNORE[@]}" 2>/dev/null | head -1 | grep -q .; then
-  if ! rg -lE "(rotation|rotate|used_at|family_id)" --type ts "${IGNORE[@]}" 2>/dev/null | head -1 | grep -q .; then
+if rg -l "refreshToken|refresh_token" --type ts "${IGNORE[@]}" 2>/dev/null | head -1 | grep -q .; then
+  if ! rg -l "(rotation|rotate|used_at|family_id)" --type ts "${IGNORE[@]}" 2>/dev/null | head -1 | grep -q .; then
     add_finding "high" "Refresh token sem rotation detectado (sem rotation = token roubado vira eterno)" "" ""
     log_warn "Sem indicador de refresh rotation"
   fi

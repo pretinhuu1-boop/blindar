@@ -30,15 +30,15 @@ if [ -f "package-lock.json" ] && command -v npm >/dev/null 2>&1; then
 fi
 
 # 3. Deps em git URL (não pinned)
-GIT_DEPS=$(grep -cE "\"[^\"]+\":\s*\"(git\+|github:|gitlab:)" package.json 2>/dev/null || echo 0)
+GIT_DEPS=$(grep -cE "\"[^\"]+\":\s*\"(git\+|github:|gitlab:)" package.json 2>/dev/null)
 [ "$GIT_DEPS" -gt 0 ] && add_finding "med" "$GIT_DEPS dep em git URL — pin SHA ou publicar npm" "" ""
 
 # 4. Wildcard versions
-WILDCARD=$(grep -cE "\"[^\"]+\":\s*\"\*\"" package.json 2>/dev/null || echo 0)
+WILDCARD=$(grep -cE "\"[^\"]+\":\s*\"\*\"" package.json 2>/dev/null)
 [ "$WILDCARD" -gt 0 ] && add_finding "high" "$WILDCARD dep com versão '*' — pin range específico" "" ""
 
-CRITS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"crit"' 2>/dev/null || echo 0)
-HIGHS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"high"' 2>/dev/null || echo 0)
+CRITS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"crit"' 2>/dev/null)
+HIGHS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"high"' 2>/dev/null)
 if [ "$CRITS" -gt 0 ] || [ "$HIGHS" -gt 0 ]; then
   emit_result "$BLINDAR_AGENT" "failed" 1
   exit 1

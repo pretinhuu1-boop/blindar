@@ -26,7 +26,7 @@ if [ "$IS_MULTITENANT" -eq 0 ]; then
   exit 0
 fi
 
-IGNORE=('!node_modules' '!dist' '!build' '!**/*.test.*' '!**/*.spec.*')
+IGNORE=(-g '!node_modules' -g '!dist' -g '!build' -g '!**/*.test.*' -g '!**/*.spec.*')
 
 # 1. findMany/findFirst/findUnique sem where tenantId
 log_info "Buscando queries sem tenant_id..."
@@ -78,8 +78,8 @@ if has_file "prisma/schema.prisma"; then
 fi
 
 TOTAL=${#FINDINGS[@]}
-CRITS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"crit"' || echo 0)
-HIGHS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"high"' || echo 0)
+CRITS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"crit"')
+HIGHS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"high"')
 if [ "$CRITS" -gt 0 ] || [ "$HIGHS" -gt 0 ]; then
   emit_result "$BLINDAR_AGENT" "failed" 1
   exit 1

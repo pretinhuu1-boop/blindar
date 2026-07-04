@@ -6,7 +6,7 @@ log_section "Check: Govtech & Acessibilidade BR (eMAG/gov.br/LAI)"
 
 if ! command -v rg >/dev/null 2>&1; then emit_result "$BLINDAR_AGENT" "skipped" 0; exit 0; fi
 
-IGNORE=('!node_modules' '!dist' '!build' '!.next' '!coverage' '!**/*.test.*' '!**/*.spec.*')
+IGNORE=(-g '!node_modules' -g '!dist' -g '!build' -g '!.next' -g '!coverage' -g '!**/*.test.*' -g '!**/*.spec.*')
 
 # ─── Gate: só roda se detectar indícios de gov BR ───
 GOV_HITS=0

@@ -18,7 +18,7 @@ for m in $MODELS; do
     Session|Token|RefreshToken|VerificationToken|AuditLog|RateLimit|*Log) continue ;;
   esac
   # Extrai bloco do model
-  HAS=$(awk -v m="$m" '$1=="model" && $2==m {flag=1; next} flag && /^}/ {flag=0} flag' "$SCHEMA" | grep -cE "(deletedAt|deleted_at)" || echo 0)
+  HAS=$(awk -v m="$m" '$1=="model" && $2==m {flag=1; next} flag && /^}/ {flag=0} flag' "$SCHEMA" | grep -cE "(deletedAt|deleted_at)")
   [ "$HAS" -eq 0 ] && MISSING+=("$m")
 done
 
@@ -29,7 +29,7 @@ if [ "${#MISSING[@]}" -gt 0 ]; then
 fi
 
 # Hard delete crus em código
-RAW_DELETE=$(rg -cE "prisma\.\w+\.delete\(|prisma\.\w+\.deleteMany\(" --type ts '!node_modules' '!**/*.test.*' 2>/dev/null | wc -l || echo 0)
+RAW_DELETE=$(rg -c "prisma\.\w+\.delete\(|prisma\.\w+\.deleteMany\(" --type ts '!node_modules' '!**/*.test.*' 2>/dev/null | wc -l || echo 0)
 [ "$RAW_DELETE" -gt 0 ] && add_finding "med" "$RAW_DELETE chamadas prisma.delete() — preferir update deletedAt" "" ""
 
 emit_result "$BLINDAR_AGENT" "passed" 0

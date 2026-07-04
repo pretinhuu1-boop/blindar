@@ -6,13 +6,13 @@ log_section "Check: api-frontend-coverage (APIs órfãs)"
 
 # Coleta endpoints
 ENDPOINTS=""
-ENDPOINTS+=$(rg -nE "(app|router)\.(get|post|put|delete|patch)\(['\"]" --type ts --type js '!node_modules' '!dist' 2>/dev/null | head -50)
-ENDPOINTS+=$'\n'$(rg -nE "@(Get|Post|Put|Delete|Patch)\(" --type ts '!node_modules' 2>/dev/null | head -30)
+ENDPOINTS+=$(rg -n "(app|router)\.(get|post|put|delete|patch)\(['\"]" --type ts --type js '!node_modules' '!dist' 2>/dev/null | head -50)
+ENDPOINTS+=$'\n'$(rg -n "@(Get|Post|Put|Delete|Patch)\(" --type ts '!node_modules' 2>/dev/null | head -30)
 ENDPOINTS+=$'\n'$(find app/api pages/api -name "route.ts" -o -name "*.ts" 2>/dev/null | head -30)
 
 # Coleta chamadas client
 CLIENT=""
-CLIENT+=$(rg -nE "(fetch|axios\.|useQuery|useMutation|trpc\.)" --type ts --type tsx '!node_modules' 2>/dev/null | head -50)
+CLIENT+=$(rg -n "(fetch|axios\.|useQuery|useMutation|trpc\.)" --type ts --type tsx '!node_modules' 2>/dev/null | head -50)
 
 if [ -z "$ENDPOINTS$CLIENT" ]; then
   log_warn "Sem código TS/JS pra analisar"

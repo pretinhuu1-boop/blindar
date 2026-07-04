@@ -14,7 +14,7 @@ if ! command -v rg >/dev/null 2>&1 && ! type rg >/dev/null 2>&1; then
   exit 0
 fi
 
-IGNORE=('!node_modules' '!dist' '!build' '!.next' '!.blindar' '!**/*.test.*' '!**/*.spec.*' '!**/__mocks__/**' '!**/__tests__/**')
+IGNORE=(-g '!node_modules' -g '!dist' -g '!build' -g '!.next' -g '!.blindar' -g '!**/*.test.*' -g '!**/*.spec.*' -g '!**/__mocks__/**' -g '!**/__tests__/**')
 
 # ─── Detecção: roda só se houver sinal de e-commerce ───
 ECOM_DETECTED=0
@@ -77,7 +77,7 @@ rm -f "$TMP"
 # ─── 2. MED: Form de cartão sem autocomplete cc-* ───
 log_info "Verificando autocomplete cc-* em form de cartão..."
 TMP=$(mktemp)
-rg -nE "<input[^>]*name=['\"]?(card|cc|cardnumber|card_number|cardNumber)" \
+rg -n "<input[^>]*name=['\"]?(card|cc|cardnumber|card_number|cardNumber)" \
   --type tsx --type jsx --type html "${IGNORE[@]}" > "$TMP" 2>/dev/null || true
 CC_INPUTS=$(wc -l < "$TMP" | tr -d ' ')
 NO_AUTOCOMPLETE=0
@@ -100,7 +100,7 @@ log_info "Verificando 3DS2 configurado..."
 TMP=$(mktemp)
 rg -l "(paymentIntents|payment_intents|stripe\.confirm|payment_method_types)" --type ts --type tsx --type js "${IGNORE[@]}" 2>/dev/null > "$TMP" || true
 HAS_PAYMENT=$(wc -l < "$TMP" | tr -d ' ')
-HAS_3DS=$(rg -lE "(three_d_secure|3ds|3DSecure|handleCardAction|request_three_d_secure)" --type ts --type tsx --type js "${IGNORE[@]}" 2>/dev/null | head -1)
+HAS_3DS=$(rg -l "(three_d_secure|3ds|3DSecure|handleCardAction|request_three_d_secure)" --type ts --type tsx --type js "${IGNORE[@]}" 2>/dev/null | head -1)
 if [ "${HAS_PAYMENT:-0}" -gt 0 ] && [ -z "$HAS_3DS" ]; then
   add_finding "high" "Pagamento sem suporte a 3DS2 (risco fraude + BCB 3978 exige > R$ 500)" "código" ""
   log_warn "Sem suporte a 3DS2 detectado — HIGH"
@@ -109,8 +109,8 @@ rm -f "$TMP"
 
 # ─── 4. MED: Apple Pay / Google Pay ausentes ───
 log_info "Verificando Apple Pay / Google Pay..."
-HAS_APPLEPAY=$(rg -lE "(PaymentRequestButton|applepay|apple-pay|ApplePay)" --type ts --type tsx --type js --type jsx "${IGNORE[@]}" 2>/dev/null | head -1)
-HAS_GPAY=$(rg -lE "(googlepay|google-pay|GooglePay|google\.payments)" --type ts --type tsx --type js --type jsx "${IGNORE[@]}" 2>/dev/null | head -1)
+HAS_APPLEPAY=$(rg -l "(PaymentRequestButton|applepay|apple-pay|ApplePay)" --type ts --type tsx --type js --type jsx "${IGNORE[@]}" 2>/dev/null | head -1)
+HAS_GPAY=$(rg -l "(googlepay|google-pay|GooglePay|google\.payments)" --type ts --type tsx --type js --type jsx "${IGNORE[@]}" 2>/dev/null | head -1)
 if [ -z "$HAS_APPLEPAY" ] && [ -z "$HAS_GPAY" ]; then
   add_finding "medium" "Sem Apple Pay nem Google Pay configurado (conversão mobile cai ~50%)" "código" ""
   log_warn "Wallets mobile ausentes — MED"
@@ -183,8 +183,8 @@ rm -f "$TMP"
 
 # ─── 8. HIGH: Frete não calculado pré-checkout ───
 log_info "Verificando cálculo de frete na sacola..."
-HAS_SHIPPING=$(rg -lE "(calcFrete|calcularFrete|calculate.?shipping|shippingCost|viaCorreios|melhorEnvio|frenet)" --type ts --type tsx "${IGNORE[@]}" 2>/dev/null | head -1)
-HAS_CART=$(rg -lE "(cart|carrinho|sacola)" --type ts --type tsx "${IGNORE[@]}" 2>/dev/null | head -1)
+HAS_SHIPPING=$(rg -l "(calcFrete|calcularFrete|calculate.?shipping|shippingCost|viaCorreios|melhorEnvio|frenet)" --type ts --type tsx "${IGNORE[@]}" 2>/dev/null | head -1)
+HAS_CART=$(rg -l "(cart|carrinho|sacola)" --type ts --type tsx "${IGNORE[@]}" 2>/dev/null | head -1)
 if [ -n "$HAS_CART" ] && [ -z "$HAS_SHIPPING" ]; then
   add_finding "high" "Sem cálculo de frete detectado (deveria estar na sacola/produto, não no fim do checkout)" "código" ""
   log_warn "Frete não calculado pré-checkout — HIGH"
@@ -192,8 +192,8 @@ fi
 
 # ─── 9. LOW: CEP sem ViaCEP/BrasilAPI fallback ───
 log_info "Verificando autocomplete de CEP..."
-HAS_CEP_INPUT=$(rg -lE "(<input[^>]*cep|name=['\"]?cep)" --type tsx --type jsx --type html "${IGNORE[@]}" 2>/dev/null | head -1)
-HAS_VIACEP=$(rg -lE "(viacep\.com\.br|brasilapi\.com\.br|cep.*correios)" --type ts --type tsx --type js "${IGNORE[@]}" 2>/dev/null | head -1)
+HAS_CEP_INPUT=$(rg -l "(<input[^>]*cep|name=['\"]?cep)" --type tsx --type jsx --type html "${IGNORE[@]}" 2>/dev/null | head -1)
+HAS_VIACEP=$(rg -l "(viacep\.com\.br|brasilapi\.com\.br|cep.*correios)" --type ts --type tsx --type js "${IGNORE[@]}" 2>/dev/null | head -1)
 if [ -n "$HAS_CEP_INPUT" ] && [ -z "$HAS_VIACEP" ]; then
   add_finding "low" "Campo de CEP sem ViaCEP/BrasilAPI autocomplete (UX de form longa)" "código" ""
   log_warn "CEP sem autocomplete — LOW"

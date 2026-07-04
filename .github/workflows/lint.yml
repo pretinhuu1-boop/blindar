@@ -66,6 +66,29 @@ jobs:
           done
           exit $fail
 
+  check-selftest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax-check all deterministic checks
+        run: |
+          fail=0
+          for f in templates/checks/check-*.sh; do
+            bash -n "$f" || { echo "SYNTAX ERROR: $f"; fail=1; }
+          done
+          exit $fail
+      - name: Self-test with real ripgrep
+        run: |
+          sudo apt-get update && sudo apt-get install -y ripgrep
+          rg --version
+          bash scripts/check-selftest.sh
+      - name: Self-test with grep fallback (no ripgrep)
+        run: |
+          # Exercita o fallback grep de _lib.sh — deve dar o MESMO veredito
+          sudo rm -f "$(command -v rg)" || true
+          ! command -v rg >/dev/null 2>&1 && echo "ripgrep removido — fallback ativo"
+          bash scripts/check-selftest.sh
+
   powershell-syntax:
     runs-on: windows-latest
     steps:

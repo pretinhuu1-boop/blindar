@@ -54,7 +54,7 @@ if has_file ".env.example"; then
   log_pass ".env.example existe"
   # Verifica process.env.X que não estão no .env.example
   TMP=$(mktemp)
-  rg -hoE "process\.env\.[A-Z_]+" --type ts --type js src/ apps/ 2>/dev/null | sort -u > "$TMP"
+  rg -ho "process\.env\.[A-Z_]+" --type ts --type js src/ apps/ 2>/dev/null | sort -u > "$TMP"
   USED=$(wc -l < "$TMP" || echo 0)
   if [ "$USED" -gt 0 ]; then
     MISSING_KEYS=$(while read -r usage; do
@@ -94,8 +94,8 @@ rm -f "$TMP"
 TOTAL=${#FINDINGS[@]}
 if [ "$TOTAL" -gt 0 ]; then
   # Crits e highs falham; meds e lows passam com warn
-  CRITS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"crit"' || echo 0)
-  HIGHS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"high"' || echo 0)
+  CRITS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"crit"')
+  HIGHS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"high"')
   if [ "$CRITS" -gt 0 ] || [ "$HIGHS" -gt 0 ]; then
     emit_result "$BLINDAR_AGENT" "failed" 1
     exit 1

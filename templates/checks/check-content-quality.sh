@@ -12,13 +12,13 @@ if ! command -v rg >/dev/null 2>&1; then
   exit 0
 fi
 
-IGNORE=('!node_modules' '!dist' '!build' '!**/*.test.*')
+IGNORE=(-g '!node_modules' -g '!dist' -g '!build' -g '!**/*.test.*')
 FAIL=0
 
 # 1. Erro técnico vazando pra UI
 log_info "Buscando erro técnico em texto de UI..."
 TMP=$(mktemp)
-rg -nE "(throw new \w*Error|return.*['\"])(undefined|null|NaN|TypeError|ReferenceError|Cannot read|stack)" \
+rg -n "(throw new \w*Error|return.*['\"])(undefined|null|NaN|TypeError|ReferenceError|Cannot read|stack)" \
      "${IGNORE[@]}" > "$TMP" 2>/dev/null || true
 TECH_LEAK=$(wc -l < "$TMP" || echo 0)
 if [ "$TECH_LEAK" -gt 0 ]; then
@@ -60,7 +60,7 @@ rm -f "$TMP"
 # 5. Termos discriminatórios (alex.js style básico)
 log_info "Buscando termos discriminatórios..."
 TMP=$(mktemp)
-rg -niE "\b(blacklist|whitelist|master\/slave|slave|grandfather(ed)?|sanity check)\b" \
+rg -ni "\b(blacklist|whitelist|master\/slave|slave|grandfather(ed)?|sanity check)\b" \
  --type ts --type md "${IGNORE[@]}" > "$TMP" 2>/dev/null || true
 DISCRIMINATORY=$(wc -l < "$TMP" || echo 0)
 if [ "$DISCRIMINATORY" -gt 0 ]; then

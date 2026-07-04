@@ -6,7 +6,7 @@ log_section "Check: HTTP security headers"
 
 if ! command -v rg >/dev/null 2>&1; then emit_result "$BLINDAR_AGENT" "skipped" 0; exit 0; fi
 
-IGNORE=('!node_modules' '!dist' '!**/*.test.*')
+IGNORE=(-g '!node_modules' -g '!dist' -g '!**/*.test.*')
 MISSING=()
 
 # Detecta uso de helmet ou config manual

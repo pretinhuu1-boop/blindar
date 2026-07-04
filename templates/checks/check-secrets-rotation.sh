@@ -6,7 +6,7 @@ log_section "Check: secrets rotation"
 
 # 1. Hardcoded secrets (grosseiro)
 TMP=$(mktemp)
-rg -nE "(sk_live_|pk_live_|ghp_|xox[baprs]-|AIza[0-9A-Za-z\-_]{35}|AKIA[0-9A-Z]{16})" \
+rg -n "(sk_live_|pk_live_|ghp_|xox[baprs]-|AIza[0-9A-Za-z\-_]{35}|AKIA[0-9A-Z]{16})" \
   --type ts --type js --type yml --type yaml --type env \
   '!node_modules' '!.git' '!dist' 2>/dev/null > "$TMP" || true
 

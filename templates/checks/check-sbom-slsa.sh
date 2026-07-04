@@ -22,13 +22,13 @@ fi
 # 2. Base image SHA-pinned (Dockerfile)
 if [ -f "Dockerfile" ]; then
   log_info "Verificando FROM com SHA pin..."
-  UNPIN=$(grep -cE "^FROM [^@]+:[^@]+$" Dockerfile 2>/dev/null || echo 0)
+  UNPIN=$(grep -cE "^FROM [^@]+:[^@]+$" Dockerfile 2>/dev/null)
   if [ "$UNPIN" -gt 0 ]; then
     add_finding "high" "$UNPIN FROM em Dockerfile sem @sha256: (não-reprodutível, vulnerável)" "Dockerfile" ""
   fi
 
   # FROM :latest é CRIT
-  LATEST=$(grep -c ":latest$" Dockerfile 2>/dev/null || echo 0)
+  LATEST=$(grep -c ":latest$" Dockerfile 2>/dev/null)
   if [ "$LATEST" -gt 0 ]; then
     add_finding "crit" "FROM com :latest em Dockerfile — vulnerabilidade garantida com tempo" "Dockerfile" ""
     FAIL=1
@@ -39,7 +39,7 @@ fi
 if [ -d ".github/workflows" ]; then
   log_info "Verificando uses: SHA-pinned..."
   TMP=$(mktemp)
-  rg -nE "uses: [^@]+@v?\d+" .github/workflows/ 2>/dev/null > "$TMP" || true
+  rg -n "uses: [^@]+@v?\d+" .github/workflows/ 2>/dev/null > "$TMP" || true
   ACTION_UNPIN=$(wc -l < "$TMP" || echo 0)
   if [ "$ACTION_UNPIN" -gt 0 ]; then
     add_finding "high" "$ACTION_UNPIN GitHub Action(s) usando tag em vez de SHA — supply chain risk" ".github/workflows/" ""
@@ -69,7 +69,7 @@ fi
 
 # 7. Build com Date.now() / Math.random() (não-reprodutível)
 log_info "Verificando reproducibilidade do build..."
-NON_REPRO=$(rg -lE "(Date\.now\(\)|Math\.random\(\))" --type ts scripts/build* 2>/dev/null | head -1)
+NON_REPRO=$(rg -l "(Date\.now\(\)|Math\.random\(\))" --type ts scripts/build* 2>/dev/null | head -1)
 if [ -n "$NON_REPRO" ]; then
   add_finding "low" "Build script usa Date.now/Math.random — não-reprodutível" "$NON_REPRO" ""
 fi

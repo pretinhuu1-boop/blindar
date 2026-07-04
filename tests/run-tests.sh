@@ -81,6 +81,16 @@ for tc in "${TEST_CASES[@]}"; do
   fi
 done
 
+# ── Gate de auto-teste dos checks (pares vuln/limpo verificados) ───────────
+echo ""
+echo "${BOLD}── check self-test (fixture pairs + cobertura) ──${RESET}"
+if bash "$SKILL_DIR/scripts/check-selftest.sh"; then
+  PASS_COUNT=$((PASS_COUNT+1))
+else
+  FAIL_COUNT=$((FAIL_COUNT+1))
+  FAIL_LIST+=("scripts/check-selftest.sh (regressão em par verificado)")
+fi
+
 # ── Testes de spec (Node, v0.43 — ROADMAP #4/#16/#17) ──────────────────────
 if command -v node >/dev/null 2>&1; then
   echo ""

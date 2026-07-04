@@ -24,20 +24,20 @@ if [ "$BACKEND" -eq 0 ]; then
   exit 0
 fi
 
-IGNORE=('!node_modules' '!dist' '!build' '!**/*.test.*')
+IGNORE=(-g '!node_modules' -g '!dist' -g '!build' -g '!**/*.test.*')
 FAIL=0
 
 # 1. SIGTERM handler (graceful shutdown)
 log_info "Verificando SIGTERM handler..."
-HAS_SIGTERM=$(rg -lE "process\.on\(['\"]SIGTERM" --type ts --type js "${IGNORE[@]}" 2>/dev/null | head -1)
+HAS_SIGTERM=$(rg -l "process\.on\(['\"]SIGTERM" --type ts --type js "${IGNORE[@]}" 2>/dev/null | head -1)
 if [ -z "$HAS_SIGTERM" ]; then
   add_finding "high" "Sem handler SIGTERM — K8s SIGKILL após 30s, perde requests em vôo" "" ""
   log_fail "Sem graceful shutdown"
 fi
 
 # 2. Health checks distintos (live vs ready)
-HAS_LIVE=$(rg -lE "(/health/live|/healthz/live)" --type ts --type js "${IGNORE[@]}" 2>/dev/null | head -1)
-HAS_READY=$(rg -lE "(/health/ready|/readyz)" --type ts --type js "${IGNORE[@]}" 2>/dev/null | head -1)
+HAS_LIVE=$(rg -l "(/health/live|/healthz/live)" --type ts --type js "${IGNORE[@]}" 2>/dev/null | head -1)
+HAS_READY=$(rg -l "(/health/ready|/readyz)" --type ts --type js "${IGNORE[@]}" 2>/dev/null | head -1)
 if [ -z "$HAS_LIVE" ] && [ -z "$HAS_READY" ]; then
   add_finding "high" "Sem /health/live nem /health/ready distintos" "" ""
 elif [ -z "$HAS_LIVE" ]; then
@@ -68,14 +68,14 @@ rm -f "$TMP"
 # 5. Deadlock retry handler (Postgres 40001 / 40P01)
 log_info "Verificando deadlock retry..."
 if is_prisma; then
-  HAS_RETRY=$(rg -lE "(40001|40P01|deadlock.*retry|withDeadlockRetry)" --type ts "${IGNORE[@]}" 2>/dev/null | head -1)
+  HAS_RETRY=$(rg -l "(40001|40P01|deadlock.*retry|withDeadlockRetry)" --type ts "${IGNORE[@]}" 2>/dev/null | head -1)
   if [ -z "$HAS_RETRY" ]; then
     add_finding "low" "Sem deadlock retry detectado (Postgres 40001/40P01) — erros 500 desnecessários" "" ""
   fi
 fi
 
 # 6. Event loop lag monitor
-HAS_EVENT_LAG=$(rg -lE "monitorEventLoopDelay|perf_hooks" --type ts --type js "${IGNORE[@]}" 2>/dev/null | head -1)
+HAS_EVENT_LAG=$(rg -l "monitorEventLoopDelay|perf_hooks" --type ts --type js "${IGNORE[@]}" 2>/dev/null | head -1)
 if [ -z "$HAS_EVENT_LAG" ]; then
   add_finding "low" "Sem monitor de event loop lag — backpressure invisível" "" ""
 fi

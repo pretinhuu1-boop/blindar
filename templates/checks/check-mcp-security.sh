@@ -108,8 +108,8 @@ for cfg in "${MCP_CONFIGS[@]}"; do
 
   # 6. LOW — falta de campo version/vendor
   # Heurística: se config menciona MCPs custom (não npx/uvx oficial) sem "version" no bloco
-  has_npx_official=$(grep -cE "\"command\"[[:space:]]*:[[:space:]]*\"(npx|uvx|deno|bunx)\"" "$cfg" 2>/dev/null || echo 0)
-  has_version=$(grep -cE "\"version\"[[:space:]]*:" "$cfg" 2>/dev/null || echo 0)
+  has_npx_official=$(grep -cE "\"command\"[[:space:]]*:[[:space:]]*\"(npx|uvx|deno|bunx)\"" "$cfg" 2>/dev/null)
+  has_version=$(grep -cE "\"version\"[[:space:]]*:" "$cfg" 2>/dev/null)
   if [ "${has_npx_official:-0}" -eq 0 ] && [ "${has_version:-0}" -eq 0 ] && [ "$TOTAL_MCPS" -gt 0 ]; then
     MISSING_VENDOR=$((MISSING_VENDOR+1))
   fi
@@ -122,8 +122,8 @@ log_info "Inventário: $TOTAL_MCPS MCPs ativos | $NOT_WHITELISTED fora whitelist
 [ "$FAIL" -eq 1 ] && { emit_result "$BLINDAR_AGENT" "failed" 1; exit 1; }
 
 # Findings high/crit failam
-CRITS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"crit"' 2>/dev/null || echo 0)
-HIGHS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"high"' 2>/dev/null || echo 0)
+CRITS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"crit"' 2>/dev/null)
+HIGHS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"high"' 2>/dev/null)
 [ "$CRITS" -gt 0 ] && { emit_result "$BLINDAR_AGENT" "failed" 1; exit 1; }
 [ "$HIGHS" -gt 0 ] && { emit_result "$BLINDAR_AGENT" "failed" 1; exit 1; }
 emit_result "$BLINDAR_AGENT" "passed" 0

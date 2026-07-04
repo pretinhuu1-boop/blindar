@@ -6,12 +6,12 @@ log_section "Check: cost-observability (LLM + DB + storage cost)"
 
 if ! command -v rg >/dev/null 2>&1; then emit_result "$BLINDAR_AGENT" "skipped" 0; exit 0; fi
 
-IGNORE=('!node_modules' '!dist' '!**/*.test.*')
+IGNORE=(-g '!node_modules' -g '!dist' -g '!**/*.test.*')
 
 # 1. LLM call sem tabela de tracking
 HAS_LLM=$(grep -qE "\"(openai|anthropic|@google/genai)\":" package.json 2>/dev/null && echo "yes")
 if [ "$HAS_LLM" = "yes" ]; then
-  HAS_TRACK=$(rg -lE "(llm_usage|llmUsage|tokens_used|costUsd)" --type ts --type prisma 2>/dev/null | head -1)
+  HAS_TRACK=$(rg -l "(llm_usage|llmUsage|tokens_used|costUsd)" --type ts --type prisma 2>/dev/null | head -1)
   [ -z "$HAS_TRACK" ] && add_finding "high" "LLM usado mas sem tabela llm_usage — custo invisível" "" ""
 fi
 
@@ -28,12 +28,12 @@ HAS_BUDGET=$(grep -rlE "(aws-budgets|cost-anomaly|billing-alert)" .github/workfl
 
 # 4. Cron de slow query alert
 if is_prisma; then
-  HAS_SLOW_QUERY=$(rg -lE "(pg_stat_statements|slow_query|query_duration_alert)" --type ts --type sql 2>/dev/null | head -1)
+  HAS_SLOW_QUERY=$(rg -l "(pg_stat_statements|slow_query|query_duration_alert)" --type ts --type sql 2>/dev/null | head -1)
   [ -z "$HAS_SLOW_QUERY" ] && add_finding "low" "Sem monitoramento de slow query — DB cresce CPU silencioso" "" ""
 fi
 
 # 5. Per-feature cost attribution
-HAS_FEATURE_COST=$(rg -lE "(feature_costs|feature.*cost)" --type ts --type prisma 2>/dev/null | head -1)
+HAS_FEATURE_COST=$(rg -l "(feature_costs|feature.*cost)" --type ts --type prisma 2>/dev/null | head -1)
 if [ "$HAS_LLM" = "yes" ] && [ -z "$HAS_FEATURE_COST" ]; then
   add_finding "low" "Sem per-feature cost attribution — não sabe qual feature pesa no orçamento" "" ""
 fi

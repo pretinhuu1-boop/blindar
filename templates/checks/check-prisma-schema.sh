@@ -18,7 +18,7 @@ FAIL=0
 
 # 1. UUID v7 em PKs
 log_info "Verificando UUID v7 em PKs..."
-NON_UUID=$(grep -c "^\s*id\s\+Int\s\+@id" "$SCHEMA" 2>/dev/null || echo 0)
+NON_UUID=$(grep -c "^\s*id\s\+Int\s\+@id" "$SCHEMA" 2>/dev/null)
 if [ "$NON_UUID" -gt 0 ]; then
   add_finding "high" "$NON_UUID model(s) usando Int autoincrement — usar UUID v7" "$SCHEMA" ""
   log_fail "$NON_UUID PKs com Int autoincrement"
@@ -75,7 +75,7 @@ rm -f "$TMP"
 
 # 4. DateTime sem timezone (Prisma DateTime é tz-aware no Postgres, OK; só alerta se @db.Time sem tz)
 log_info "Verificando timezones..."
-NON_TZ=$(grep -c "@db\.Time\b" "$SCHEMA" 2>/dev/null || echo 0)
+NON_TZ=$(grep -c "@db\.Time\b" "$SCHEMA" 2>/dev/null)
 if [ "$NON_TZ" -gt 0 ]; then
   add_finding "med" "Use @db.Timestamptz em vez de @db.Time" "$SCHEMA" ""
   log_warn "$NON_TZ campo(s) com @db.Time (sem timezone)"

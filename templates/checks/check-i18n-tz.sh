@@ -7,7 +7,7 @@ source "$(dirname "$0")/_lib.sh"
 
 log_section "Check: i18n-tz (TIMESTAMPTZ, BigInt cents, locales sync, IANA tz)"
 
-IGNORE=('!node_modules' '!dist' '!build' '!**/*.test.*')
+IGNORE=(-g '!node_modules' -g '!dist' -g '!build' -g '!**/*.test.*')
 FAIL=0
 
 # 1. Prisma com DateTime sem timezone awareness
@@ -22,7 +22,7 @@ fi
 # 2. Currency em Float/Number
 if has_file "prisma/schema.prisma"; then
   log_info "Verificando currency em BigInt cents..."
-  MONEY_FLOAT=$(grep -cE "(price|amount|salary|cost|fee|total|value)\s+(Float|Decimal)" prisma/schema.prisma 2>/dev/null || echo 0)
+  MONEY_FLOAT=$(grep -cE "(price|amount|salary|cost|fee|total|value)\s+(Float|Decimal)" prisma/schema.prisma 2>/dev/null)
   if [ "$MONEY_FLOAT" -gt 0 ]; then
     add_finding "high" "$MONEY_FLOAT campo(s) de dinheiro em Float/Decimal — usar BigInt cents" "prisma/schema.prisma" ""
     log_fail "$MONEY_FLOAT campos de money em Float/Decimal"
@@ -34,7 +34,7 @@ fi
 if has_file "package.json"; then
   log_info "Verificando lib i18n..."
   if grep -lE "(react|vue|svelte|next)" package.json 2>/dev/null | head -1 | grep -q .; then
-    HAS_I18N=$(grep -cE "\"(next-intl|@formatjs|vue-i18n|i18next|svelte-i18n)\":" package.json 2>/dev/null || echo 0)
+    HAS_I18N=$(grep -cE "\"(next-intl|@formatjs|vue-i18n|i18next|svelte-i18n)\":" package.json 2>/dev/null)
     if [ "$HAS_I18N" -eq 0 ]; then
       add_finding "med" "Projeto com UI mas sem lib i18n — limita expansão internacional" "package.json" ""
     fi

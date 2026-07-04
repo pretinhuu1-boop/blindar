@@ -11,6 +11,7 @@ model Order {
   deletedAt DateTime?
 }
 model AuditLog {
+  /// @blindar:global
   id        String   @id @default(uuid())
   action    String
   createdAt DateTime @default(now())

@@ -14,7 +14,7 @@ if ! command -v rg >/dev/null 2>&1 && ! type rg >/dev/null 2>&1; then
   exit 0
 fi
 
-IGNORE=('!node_modules' '!dist' '!build' '!.next' '!.blindar' '!**/*.test.*' '!**/*.spec.*' '!**/__mocks__/**' '!**/__tests__/**')
+IGNORE=(-g '!node_modules' -g '!dist' -g '!build' -g '!.next' -g '!.blindar' -g '!**/*.test.*' -g '!**/*.spec.*' -g '!**/__mocks__/**' -g '!**/__tests__/**')
 
 # ─── Detecção: roda só se houver sinal de integração financeira BR ───
 FINTECH_DETECTED=0
@@ -58,7 +58,7 @@ FAIL=0
 log_info "Buscando chave PIX hardcoded..."
 TMP=$(mktemp)
 # CPF formato 11 dígitos, CNPJ 14 dígitos, email/phone como string longa
-rg -nE "(pix.?key|chave.?pix|chavePix|pixKey)\s*[:=]\s*['\"][0-9a-zA-Z@.\-+]{8,}['\"]" \
+rg -n "(pix.?key|chave.?pix|chavePix|pixKey)\s*[:=]\s*['\"][0-9a-zA-Z@.\-+]{8,}['\"]" \
   --type ts --type js --type py "${IGNORE[@]}" > "$TMP" 2>/dev/null || true
 HARDCODED=$(wc -l < "$TMP" | tr -d ' ')
 if [ "${HARDCODED:-0}" -gt 0 ]; then
@@ -74,7 +74,7 @@ rm -f "$TMP"
 # ─── 2. CRIT: Webhook financeiro/PIX sem signature verify ───
 log_info "Buscando webhook PIX/financeiro sem verify..."
 TMP=$(mktemp)
-rg -nE "(webhook|notificacao|callback).*(pix|bancario|financeiro|openbanking)" \
+rg -n "(webhook|notificacao|callback).*(pix|bancario|financeiro|openbanking)" \
   --type ts --type js --type py "${IGNORE[@]}" -A 10 2>/dev/null | \
   grep -B 10 -E "(req\.body|@Body|request\.json)" | \
   grep -v -E "(verifySignature|constructEvent|hmac|verifyHmac|x-signature|verify_signature)" | \
@@ -112,7 +112,7 @@ rm -f "$TMP"
 # ─── 4. HIGH: PIX sem idempotência (sem X-Idempotency-Key, sem txid imutável) ───
 log_info "Buscando POST PIX/cob sem idempotência..."
 TMP=$(mktemp)
-rg -nE "(\.post|@Post|@POST|app\.post|router\.post).*(/cob|/cobv|/pix/devolucao|/transferencia)" \
+rg -n "(\.post|@Post|@POST|app\.post|router\.post).*(/cob|/cobv|/pix/devolucao|/transferencia)" \
   --type ts --type js --type py "${IGNORE[@]}" -A 15 2>/dev/null | \
   grep -B 15 -E "(@Body|req\.body|request\.json)" | \
   grep -v -E "(idempoten|endToEndId|end_to_end_id|txid|X-Idempotency)" | \
@@ -147,7 +147,7 @@ rm -f "$TMP"
 # ─── 6. HIGH: JWT com algoritmo fraco em Open Finance ───
 log_info "Buscando JWT com alg fraco (HS256/RS256/none) em contexto Open Finance..."
 TMP=$(mktemp)
-rg -nE "algorithm[s]?\s*[:=]\s*\[?\s*['\"](HS256|RS256|none|HS384|HS512)['\"]" \
+rg -n "algorithm[s]?\s*[:=]\s*\[?\s*['\"](HS256|RS256|none|HS384|HS512)['\"]" \
   --type ts --type js --type py "${IGNORE[@]}" > "$TMP" 2>/dev/null || true
 WEAK_JWT=$(wc -l < "$TMP" | tr -d ' ')
 if [ "${WEAK_JWT:-0}" -gt 0 ]; then
@@ -165,7 +165,7 @@ rm -f "$TMP"
 # ─── 7. HIGH: Valor monetário em float (perde precisão) ───
 log_info "Buscando valor monetário em Float..."
 TMP=$(mktemp)
-rg -nE "(valor|amount|montante|saldo|preco|price|fee|tarifa)\s*:\s*(Float|number|float|double)" \
+rg -n "(valor|amount|montante|saldo|preco|price|fee|tarifa)\s*:\s*(Float|number|float|double)" \
   --type ts --type prisma --type py "${IGNORE[@]}" > "$TMP" 2>/dev/null || true
 FLOAT_COUNT=$(wc -l < "$TMP" | tr -d ' ')
 if [ "${FLOAT_COUNT:-0}" -gt 0 ]; then
@@ -214,7 +214,7 @@ rm -f "$TMP"
 # ─── 10. LOW: Currency hardcoded sem suporte multi-currency ───
 log_info "Buscando currency hardcoded..."
 TMP=$(mktemp)
-rg -nE "currency\s*[:=]\s*['\"]BRL['\"]" --type ts --type js --type py "${IGNORE[@]}" > "$TMP" 2>/dev/null || true
+rg -n "currency\s*[:=]\s*['\"]BRL['\"]" --type ts --type js --type py "${IGNORE[@]}" > "$TMP" 2>/dev/null || true
 HARD_CURRENCY=$(wc -l < "$TMP" | tr -d ' ')
 if [ "${HARD_CURRENCY:-0}" -gt 3 ]; then
   add_finding "low" "$HARD_CURRENCY ocorrência(s) de BRL hardcoded (considere config se multi-currency)" "código" ""

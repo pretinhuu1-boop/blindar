@@ -28,7 +28,7 @@ if [ "$GATEWAY_DETECTED" -eq 0 ]; then
 fi
 
 FAIL=0
-IGNORE=('!node_modules' '!dist' '!build' '!**/*.test.*' '!**/*.spec.*' '!**/__mocks__/**')
+IGNORE=(-g '!node_modules' -g '!dist' -g '!build' -g '!**/*.test.*' -g '!**/*.spec.*' -g '!**/__mocks__/**')
 
 # 1. CVV armazenado (CRIT — PCI violation)
 log_info "Buscando CVV/CVC/security_code armazenado..."
@@ -96,7 +96,7 @@ rg -n "@Post.*payment" --type ts "${IGNORE[@]}" -A 10 2>/dev/null | \
   grep -B 10 "@Body" | \
   grep -v -E "(Idempotency-Key|idempotency)" > "$TMP" || true
 # Heurística: se aparecer "@Post...payment" mas nenhum "Idempotency-Key" nas próximas 10 linhas
-PAYMENT_NO_IDEM=$(grep -c "@Post" "$TMP" 2>/dev/null || echo 0)
+PAYMENT_NO_IDEM=$(grep -c "@Post" "$TMP" 2>/dev/null)
 if [ "$PAYMENT_NO_IDEM" -gt 0 ]; then
   add_finding "high" "$PAYMENT_NO_IDEM endpoint payment sem Idempotency-Key header" "código" ""
   log_warn "$PAYMENT_NO_IDEM endpoint(s) payment sem idempotency"

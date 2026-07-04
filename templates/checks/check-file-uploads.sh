@@ -27,7 +27,7 @@ if [ "$UPLOAD_DETECTED" -eq 0 ]; then
 fi
 
 FAIL=0
-IGNORE=('!node_modules' '!dist' '!build' '!**/*.test.*' '!**/*.spec.*')
+IGNORE=(-g '!node_modules' -g '!dist' -g '!build' -g '!**/*.test.*' -g '!**/*.spec.*')
 
 # 1. Multer/busboy em rota produção (deveria ser presigned)
 log_info "Buscando upload via backend (deveria ser presigned)..."
@@ -75,7 +75,7 @@ log_info "Buscando presigned sem ContentLength..."
 TMP=$(mktemp)
 rg -n "getSignedUrl.*putObject" --type ts --type js "${IGNORE[@]}" -A 10 2>/dev/null | \
   grep -v "ContentLength" > "$TMP" || true
-NO_SIZE=$(grep -c "getSignedUrl" "$TMP" 2>/dev/null || echo 0)
+NO_SIZE=$(grep -c "getSignedUrl" "$TMP" 2>/dev/null)
 if [ "$NO_SIZE" -gt 0 ]; then
   add_finding "med" "presigned URL sem ContentLength cap (atacante manda GB)" "" ""
 fi

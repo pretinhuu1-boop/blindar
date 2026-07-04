@@ -12,7 +12,7 @@ if ! command -v rg >/dev/null 2>&1; then
   exit 0
 fi
 
-IGNORE=('!node_modules' '!dist' '!build' '!**/*.test.*')
+IGNORE=(-g '!node_modules' -g '!dist' -g '!build' -g '!**/*.test.*')
 
 # 1. Headers HTTP de segurança obrigatórios
 log_info "Verificando headers de segurança em código..."
@@ -56,14 +56,14 @@ rm -f "$TMP"
 
 # 3. Rate limit em endpoints sensíveis
 log_info "Verificando rate limit em /auth/*..."
-HAS_RATELIMIT=$(rg -lE "(rateLimit|@Throttle|express-rate-limit|@upstash/ratelimit|@fastify/rate-limit)" --type ts --type js "${IGNORE[@]}" 2>/dev/null | head -1)
+HAS_RATELIMIT=$(rg -l "(rateLimit|@Throttle|express-rate-limit|@upstash/ratelimit|@fastify/rate-limit)" --type ts --type js "${IGNORE[@]}" 2>/dev/null | head -1)
 if [ -z "$HAS_RATELIMIT" ]; then
   add_finding "high" "Rate limit não detectado — endpoints /auth/* vulneráveis a brute force" "" ""
   log_fail "Sem rate limit detectado"
 fi
 
 # 4. HSTS preload em produção
-HSTS_PRELOAD=$(rg -lE "Strict-Transport-Security.*preload" "${IGNORE[@]}" 2>/dev/null | head -1)
+HSTS_PRELOAD=$(rg -l "Strict-Transport-Security.*preload" "${IGNORE[@]}" 2>/dev/null | head -1)
 if [ -n "$HSTS_PRELOAD" ]; then
   log_pass "HSTS com preload detectado"
 fi
@@ -82,8 +82,8 @@ if [ "$UNSAFE_COUNT" -gt 0 ]; then
 fi
 rm -f "$TMP"
 
-CRITS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"crit"' || echo 0)
-HIGHS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"high"' || echo 0)
+CRITS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"crit"')
+HIGHS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"high"')
 if [ "$CRITS" -gt 0 ] || [ "$HIGHS" -gt 0 ]; then
   emit_result "$BLINDAR_AGENT" "failed" 1
   exit 1

@@ -101,8 +101,8 @@ if [ -n "$PARSED" ]; then
 fi
 
 # 5. Gate: crit + high bloqueiam
-CRITS=$(printf '%s\n' "${FINDINGS[@]:-}" | grep -c '"severity":"crit"' 2>/dev/null || echo 0)
-HIGHS=$(printf '%s\n' "${FINDINGS[@]:-}" | grep -c '"severity":"high"' 2>/dev/null || echo 0)
+CRITS=$(printf '%s\n' "${FINDINGS[@]:-}" | grep -c '"severity":"crit"' 2>/dev/null)
+HIGHS=$(printf '%s\n' "${FINDINGS[@]:-}" | grep -c '"severity":"high"' 2>/dev/null)
 if [ "${CRITS:-0}" -gt 0 ] || [ "${HIGHS:-0}" -gt 0 ]; then
   emit_result "$BLINDAR_AGENT" "failed" 1
   exit 1

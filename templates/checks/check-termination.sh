@@ -40,7 +40,7 @@ LOWS=$(jq '.findings_by_severity.low // 0' "$AGGREGATE")
 # Conta highs em accept-risk
 HIGH_ACCEPTED=0
 if [ -f "$ACCEPT_RISK" ]; then
-  HIGH_ACCEPTED=$(grep -c "^- \[x\].*high" "$ACCEPT_RISK" 2>/dev/null || echo 0)
+  HIGH_ACCEPTED=$(grep -c "^- \[x\].*high" "$ACCEPT_RISK" 2>/dev/null)
 fi
 HIGH_UNACCEPTED=$((HIGHS - HIGH_ACCEPTED))
 

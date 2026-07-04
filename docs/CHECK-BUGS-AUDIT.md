@@ -6,9 +6,36 @@
 > negativo silencioso) — o pior tipo de falha num scanner de segurança:
 > ele diz "verde" quando devia gritar.
 >
-> Status: **confirmado com evidência, NÃO corrigido** (fix exige passe
-> dedicado e verificado por check — ver "Plano" no fim). Os checks foram
-> mantidos no estado v0.44 pra não introduzir fix não-verificado no núcleo.
+> Status: **CORRIGIDO no motor (v0.45.0)** — ver "Resolução" abaixo. O
+> fallback `rg` de `_lib.sh` foi reescrito com fidelidade ao ripgrep, um
+> transform seguro (`scripts/fix-check-syntax.js`) corrigiu 55/77 checks pra
+> ambientes com ripgrep real, e um gate (`scripts/check-selftest.sh`) prova
+> por par de fixture que o check dispara-no-vulnerável e cala-no-limpo.
+
+## Resolução (v0.45.0 — 2026-07-04)
+
+1. **`_lib.sh` — fallback `rg` reescrito.** Flags agrupados (`-cE`, `-nE`,
+   `-lE`, `-niE`, `-hoE`) agora normalizados char-a-char (`E` é no-op); `-c`
+   filtra `:0` (conta só arquivos com match, igual `rg -c`, não `grep -rc`);
+   `-n` preservado (antes era descartado → quebrava `IFS=: read file line`);
+   excludes default (node_modules/.git/dist/.blindar). Fim do falso-negativo
+   silencioso no ambiente atual (Windows/Git Bash, onde `rg` não é binário).
+2. **`scripts/fix-check-syntax.js` — transform SEGURO** (tokeniza flags, nunca
+   toca dentro de strings de padrão; NÃO é sed cego). Aplicado a 55/77 checks:
+   `rg -E`→`rg`, `IGNORE=('!x')`→`IGNORE=(-g '!x')`, `grep -c … || echo 0`→
+   `grep -c …`. Corrige o caminho com ripgrep real (CI/macOS/Linux).
+3. **`scripts/check-selftest.sh` — gate meta.** Pares vuln/limpo verificados;
+   cobertura honesta reportada (7/77 no commit inicial). Já pegou 1
+   falso-positivo real (`check-prisma-schema` na fixture boa → faltava
+   `/// @blindar:global` no `AuditLog`).
+4. **CI (`lint.yml`)** roda o self-test com ripgrep real E com fallback grep —
+   os dois DEVEM dar o mesmo veredito.
+5. **Fixtures higienizadas**: `project-insecure-api` ganhou rota IDOR
+   (`req.params.id` sem ownership); `project-prisma-good` anota `AuditLog`.
+
+**Restam ~70 checks sem par de fixture** (cobertura 9%). O motor está são; o
+que falta é o trabalho incremental de escrever um par por check — agora
+destravado e forçado pelo gate. Todo check novo entra em `PAIRS` antes de mergear.
 
 ---
 

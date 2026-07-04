@@ -9,7 +9,7 @@ EVIDENCE=""
 [ -f "package.json" ] && EVIDENCE+="=== package.json ===\n$(head -c 2000 package.json)\n\n"
 
 # Endpoints
-ENDP=$(rg -nE "(@(Get|Post|Put|Delete|Patch)|router\.(get|post)|app\.(get|post))" --type ts '!node_modules' 2>/dev/null | head -40)
+ENDP=$(rg -n "(@(Get|Post|Put|Delete|Patch)|router\.(get|post)|app\.(get|post))" --type ts '!node_modules' 2>/dev/null | head -40)
 [ -n "$ENDP" ] && EVIDENCE+="=== endpoints ===\n$ENDP\n\n"
 
 # Components
@@ -21,7 +21,7 @@ TESTS=$(find tests __tests__ e2e -name "*.test.*" -o -name "*.spec.*" 2>/dev/nul
 EVIDENCE+="=== tests count ===\n$(echo "$TESTS" | wc -l)\n\n"
 
 # Feature flags
-FLAGS=$(rg -nE "(feature_flag|flagsmith|growthbook|process\.env\.FEATURE)" --type ts '!node_modules' 2>/dev/null | head -10)
+FLAGS=$(rg -n "(feature_flag|flagsmith|growthbook|process\.env\.FEATURE)" --type ts '!node_modules' 2>/dev/null | head -10)
 [ -n "$FLAGS" ] && EVIDENCE+="=== flags ===\n$FLAGS\n\n"
 
 if [ -z "$EVIDENCE" ]; then

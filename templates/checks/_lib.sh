@@ -81,29 +81,24 @@ EOF
   esac
 }
 
-# ─── rg fallback (grep -rE) quando binário ausente ───
-# Detecta se rg está como BINÁRIO real (não função do shell). type -P só pega arquivos.
+# ─── rg fallback (grep) quando ripgrep não está instalado como BINÁRIO ───
+# Detecta rg BINÁRIO real (type -P ignora função/alias do shell — command -v não basta).
+# Emula ripgrep sobre grep com FIDELIDADE aos flags usados pelos checks. Bugs
+# históricos corrigidos aqui (ver docs/CHECK-BUGS-AUDIT.md):
+#   • flags agrupados (-cE, -nE, -lE, -niE, -hoE, -ciE...) eram descartados no
+#     catch-all → check passava sem detectar. Agora normalizados char-a-char.
+#   • `-c` mapeava pra `grep -rc` que lista arquivos com contagem :0 → `| wc -l`
+#     contava TODOS os arquivos, não os com match. Agora filtra `:0` (igual rg -c).
+#   • `-n` era descartado → checks que fazem `IFS=: read file line content`
+#     recebiam content na var line → parsing quebrado. Agora `-n` vira grep -n.
 if ! type -P rg >/dev/null 2>&1; then
-  # Define função `rg` que traduz flags comuns pra grep -rE.
-  # Suporta: -n, -c, -i, -E, -A N, -B N, --type ts/tsx/js/jsx/json/yml/html/md/env,
-  # padrões !path como excludes, e pattern posicional.
   rg() {
-    # Isola erros do grep — pipefail/errexit do caller não devem matar o wrapper
+    # Isola erros do grep — pipefail/errexit do caller não devem matar o wrapper.
     set +eo pipefail
-    local includes=() excludes=() flags=("-rE") pattern="" path="." after=0 before=0 count_only=0
+    local includes=() excludes=() grepflags=() paths=() pattern=""
+    local want_count=0 fixed=0
     while [ $# -gt 0 ]; do
       case "$1" in
-        -n|-E) shift ;;
-        -i) flags+=("-i"); shift ;;
-        -c) flags+=("-c"); count_only=1; shift ;;
-        -nE|-En) shift ;;
-        -ni|-in|-niE|-inE|-nEi|-Eni|-iEn|-Ein) flags+=("-i"); shift ;;
-        -nc|-cn) flags+=("-c"); count_only=1; shift ;;
-        -A) flags+=("-A" "$2"); shift 2 ;;
-        -B) flags+=("-B" "$2"); shift 2 ;;
-        -nA) flags+=("-A" "$2"); shift 2 ;;
-        -nB) flags+=("-B" "$2"); shift 2 ;;
-        -l|-nl|-ln) flags+=("-l"); shift ;;
         --type)
           case "$2" in
             ts)   includes+=(--include='*.ts' --include='*.tsx' --include='*.cts' --include='*.mts') ;;
@@ -112,41 +107,76 @@ if ! type -P rg >/dev/null 2>&1; then
             jsx)  includes+=(--include='*.jsx') ;;
             json) includes+=(--include='*.json') ;;
             yml|yaml) includes+=(--include='*.yml' --include='*.yaml') ;;
-            html) includes+=(--include='*.html') ;;
+            html) includes+=(--include='*.html' --include='*.htm') ;;
             md)   includes+=(--include='*.md') ;;
             env)  includes+=(--include='.env*') ;;
+            py)   includes+=(--include='*.py') ;;
+            go)   includes+=(--include='*.go') ;;
+            rust|rs) includes+=(--include='*.rs') ;;
+            css)  includes+=(--include='*.css' --include='*.scss') ;;
+            sh)   includes+=(--include='*.sh' --include='*.bash') ;;
+            dockerfile) includes+=(--include='Dockerfile*') ;;
           esac
           shift 2 ;;
-        '!'*)
-          local p="${1#!}"
-          # Estratégia: pra **/X/** ou X/** → exclude-dir X
-          #             pra **/*.ext → exclude *.ext
-          #             pra simples sem * → exclude-dir
-          # Tira leading **/
-          [[ "$p" == \*\*/* ]] && p="${p#\*\*/}"
-          # Tira trailing /**
-          [[ "$p" == */\*\* ]] && p="${p%/\*\*}"
-          # Se sobra * no path → é glob arquivo (--exclude)
-          # Se não tem * → é dir (--exclude-dir)
-          if [[ "$p" == *\** ]]; then
-            # Pega só o basename
-            excludes+=(--exclude="${p##*/}")
+        -g)
+          # -g '!glob' → exclude ; -g 'glob' → include
+          local g="$2"
+          if [[ "$g" == '!'* ]]; then
+            g="${g#!}"; g="${g#\*\*/}"; g="${g%/\*\*}"
+            if [[ "$g" == *\** ]]; then excludes+=(--exclude="${g##*/}")
+            else excludes+=(--exclude-dir="$g"); fi
           else
-            excludes+=(--exclude-dir="$p")
+            includes+=(--include="${g##*/}")
           fi
+          shift 2 ;;
+        -A) grepflags+=(-A "$2"); shift 2 ;;
+        -B) grepflags+=(-B "$2"); shift 2 ;;
+        -C) grepflags+=(-C "$2"); shift 2 ;;
+        '!'*)
+          # Forma antiga (IGNORE posicional). Suportada por compat.
+          local p="${1#!}"; p="${p#\*\*/}"; p="${p%/\*\*}"
+          if [[ "$p" == *\** ]]; then excludes+=(--exclude="${p##*/}")
+          else excludes+=(--exclude-dir="$p"); fi
           shift ;;
         --) shift ;;
-        -*) shift ;;
+        -[a-zA-Z]*)
+          # Bundle de short flags — processa char a char. 'E' é no-op (grep já -E).
+          local bundle="${1#-}" ch i=0
+          while [ "$i" -lt "${#bundle}" ]; do
+            ch="${bundle:$i:1}"
+            case "$ch" in
+              c) want_count=1 ;;
+              l) grepflags+=(-l) ;;
+              n) grepflags+=(-n) ;;
+              o) grepflags+=(-o) ;;
+              i) grepflags+=(-i) ;;
+              w) grepflags+=(-w) ;;
+              v) grepflags+=(-v) ;;
+              h) grepflags+=(-h) ;;
+              F) fixed=1 ;;
+              E) : ;;
+              *) : ;;
+            esac
+            i=$((i+1))
+          done
+          shift ;;
         *)
-          if [ -z "$pattern" ]; then pattern="$1"
-          else path="$1"; fi
+          if [ -z "$pattern" ]; then pattern="$1"; else paths+=("$1"); fi
           shift ;;
       esac
     done
     [ -z "$pattern" ] && return 0
-    grep "${flags[@]}" "${includes[@]}" "${excludes[@]}" -- "$pattern" "$path" 2>/dev/null
+    [ ${#paths[@]} -eq 0 ] && paths=(".")
+    local base=(-r --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=dist --exclude-dir=.blindar)
+    if [ "$fixed" -eq 1 ]; then base+=(-F); else base+=(-E); fi
+    if [ "$want_count" -eq 1 ]; then
+      # rg -c: só arquivos COM match, formato path:count. grep -rc emite :0 → filtra.
+      grep "${base[@]}" -c "${grepflags[@]}" "${includes[@]}" "${excludes[@]}" -- "$pattern" "${paths[@]}" 2>/dev/null | grep -v ':0$'
+      return 0
+    fi
+    grep "${base[@]}" "${grepflags[@]}" "${includes[@]}" "${excludes[@]}" -- "$pattern" "${paths[@]}" 2>/dev/null
     local rc=$?
-    # grep retorna 1 quando não acha match — não é erro. retorna 2 em erro real.
+    # grep sai 1 quando não acha match — não é erro. Sai 2 em erro real.
     [ $rc -eq 1 ] && return 0
     return $rc
   }

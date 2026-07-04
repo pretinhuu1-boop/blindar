@@ -21,7 +21,7 @@ if [ "$HAS_UI" -eq 0 ]; then
   exit 0
 fi
 
-IGNORE=('!node_modules' '!dist' '!build' '!.next' '!**/*.test.*')
+IGNORE=(-g '!node_modules' -g '!dist' -g '!build' -g '!.next' -g '!**/*.test.*')
 FAIL=0
 
 # 1. size-limit configurado
@@ -46,7 +46,7 @@ fi
 if is_nextjs && has_dir "app"; then
   log_info "Buscando 'use client' desnecessário..."
   TMP=$(mktemp)
-  for f in $(rg -lE "^'use client'"   app/ 2>/dev/null); do
+  for f in $(rg -l "^'use client'"   app/ 2>/dev/null); do
     if ! grep -qE "useState|useEffect|useRef|useReducer|onClick|onChange|onSubmit" "$f" 2>/dev/null; then
       echo "$f" >> "$TMP"
     fi
@@ -101,8 +101,8 @@ if [ "${#HEAVY[@]}" -gt 0 ]; then
   done
 fi
 
-CRITS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"crit"' || echo 0)
-HIGHS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"high"' || echo 0)
+CRITS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"crit"')
+HIGHS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"high"')
 if [ "$CRITS" -gt 0 ] || [ "$HIGHS" -gt 0 ]; then
   emit_result "$BLINDAR_AGENT" "failed" 1
   exit 1
