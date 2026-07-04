@@ -31,14 +31,23 @@ PAIRS=(
   "check-config-externalization.sh | project-with-secrets | clean-project"
   "check-prisma-schema.sh        | project-multi-tenant-bad| project-prisma-good"
   "check-homolog-only.sh         | project-dev-leak        | project-homolog"
+  "check-api-surface-isolation.sh| project-api-isolation-bad | project-api-isolation-good"
+  "check-queue-management.sh     | project-queue-bad       | project-queue-good"
+  "check-fallback-resilience.sh  | project-resilience-bad  | project-resilience-good"
+  "check-session-timeout-ux.sh   | project-timeout-bad     | project-timeout-good"
 )
 
-run_check() { # dir check → echo exit code
+# Retorna o STATUS canônico do check (passed|failed|skipped), lendo o result JSON.
+# blindar agrega por status, não por exit code (checks só-med emitem failed+exit0).
+run_status() { # dir check → echo status
   local dir="$1" ck="$2"
   rm -rf "$dir/.blindar"
   ( cd "$dir" && bash "$CHECKS_DIR/$ck" >/dev/null 2>&1 ); local rc=$?
+  local rf="$dir/.blindar/results/${ck%.sh}.json" st=""
+  [ -f "$rf" ] && st=$(grep -oE '"status"[[:space:]]*:[[:space:]]*"[a-z]+"' "$rf" | head -1 | sed -E 's/.*"([a-z]+)".*/\1/')
+  [ -z "$st" ] && { if [ "$rc" -ne 0 ]; then st="failed"; else st="passed"; fi; }
   rm -rf "$dir/.blindar"
-  echo "$rc"
+  echo "$st"
 }
 
 echo "${B}═══ blindar check self-test ═══${RST}"
@@ -51,15 +60,15 @@ for row in "${PAIRS[@]}"; do
   [ ! -f "$CHECKS_DIR/$ck" ] && { echo "${Y}SKIP${RST} $ck (check ausente)"; continue; }
 
   local_ok=1
-  # 1) dispara no vulnerável
+  # 1) dispara no vulnerável → status DEVE ser failed
   if [ -d "$FIXTURES_DIR/$vuln" ]; then
-    rc=$(run_check "$FIXTURES_DIR/$vuln" "$ck")
-    if [ "$rc" -eq 0 ]; then local_ok=0; reason="não disparou no vulnerável ($vuln)"; fi
+    st=$(run_status "$FIXTURES_DIR/$vuln" "$ck")
+    if [ "$st" != "failed" ]; then local_ok=0; reason="não disparou no vulnerável ($vuln, status=$st)"; fi
   else echo "${Y}SKIP${RST} $ck (fixture $vuln ausente)"; continue; fi
-  # 2) cala no limpo
+  # 2) cala no limpo → status NÃO pode ser failed (passed/skipped ok)
   if [ -d "$FIXTURES_DIR/$clean" ]; then
-    rc=$(run_check "$FIXTURES_DIR/$clean" "$ck")
-    if [ "$rc" -ne 0 ]; then local_ok=0; reason="falso-positivo no limpo ($clean, exit=$rc)"; fi
+    st=$(run_status "$FIXTURES_DIR/$clean" "$ck")
+    if [ "$st" = "failed" ]; then local_ok=0; reason="falso-positivo no limpo ($clean, status=$st)"; fi
   else echo "${Y}SKIP${RST} $ck (fixture $clean ausente)"; continue; fi
 
   if [ "$local_ok" -eq 1 ]; then

@@ -73,7 +73,8 @@
         "realtime",
         "api-gateway",
         "graphql",
-        "grpc-internal"
+        "grpc-internal",
+        "api-surface-isolation"
       ],
       "phases": [
         "04-rounds-loop"
@@ -145,7 +146,8 @@
         "compliance-pci-deep",
         "fintech-banking-br",
         "healthtech-fhir",
-        "ecom-checkout-conversion"
+        "ecom-checkout-conversion",
+        "regulatory-mapper"
       ],
       "phases": [
         "04-rounds-loop",
@@ -191,7 +193,8 @@
         "mobile-native",
         "embedded-analytics",
         "audio-voice",
-        "video-streaming"
+        "video-streaming",
+        "session-timeout-ux"
       ],
       "phases": [
         "04-rounds-loop",
@@ -242,7 +245,9 @@
         "process-resilience",
         "scheduled-jobs",
         "chaos-engineering",
-        "event-driven"
+        "event-driven",
+        "queue-management",
+        "fallback-resilience"
       ],
       "phases": [
         "04-rounds-loop"
@@ -265,7 +270,8 @@
         "delivery-bundle",
         "project-bootstrap",
         "mcp-recommender",
-        "blindar-fix"
+        "blindar-fix",
+        "solution-architect"
       ],
       "phases": [
         "03-bootstrap-sec-html",

@@ -1,0 +1,7 @@
+{
+  "name": "timeout-good",
+  "dependencies": {
+    "react": "^18.3.0",
+    "react-idle-timer": "^5.7.2"
+  }
+}

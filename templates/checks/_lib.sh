@@ -153,6 +153,7 @@ if ! type -P rg >/dev/null 2>&1; then
               w) grepflags+=(-w) ;;
               v) grepflags+=(-v) ;;
               h) grepflags+=(-h) ;;
+              q) grepflags+=(-q) ;;
               F) fixed=1 ;;
               E) : ;;
               *) : ;;
@@ -175,10 +176,10 @@ if ! type -P rg >/dev/null 2>&1; then
       return 0
     fi
     grep "${base[@]}" "${grepflags[@]}" "${includes[@]}" "${excludes[@]}" -- "$pattern" "${paths[@]}" 2>/dev/null
-    local rc=$?
-    # grep sai 1 quando não acha match — não é erro. Sai 2 em erro real.
-    [ $rc -eq 1 ] && return 0
-    return $rc
+    # Retorna o exit REAL do grep (0=match, 1=sem match, 2=erro) — igual ripgrep.
+    # Boolean `rg -q PAT` e `if rg PAT` funcionam. errexit está off (set +e), então
+    # sem-match (1) não aborta captura `X=$(rg ...)`.
+    return $?
   }
   export -f rg
 fi
