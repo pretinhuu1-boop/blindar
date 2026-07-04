@@ -1,0 +1,9 @@
+// FIXTURE SEGURA — multi-tenant com RLS.
+// ROW LEVEL SECURITY habilitado via migration.
+generator client { provider = "prisma-client-js" }
+datasource db { provider = "postgresql"; url = env("DATABASE_URL") }
+
+model Order {
+  id       String @id @default(uuid())
+  tenantId String
+}

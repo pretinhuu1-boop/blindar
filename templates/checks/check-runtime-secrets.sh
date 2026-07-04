@@ -10,14 +10,10 @@ if ! command -v rg >/dev/null 2>&1 && ! command -v grep >/dev/null 2>&1; then em
 # Fallback: grep -rP (POSIX extended + Perl compat).
 _grep_src() {
   local pattern="$1"; shift
-  # Tenta rg com --pcre2 (mais rápido); se não tiver, usa grep -rP
-  if command -v rg >/dev/null 2>&1 && rg --pcre2 --version >/dev/null 2>&1; then
-    rg -n --pcre2 "$pattern" --glob '!node_modules/**' --glob '!dist/**' --glob '!.blindar/**' --glob '!.git/**' --glob '!**/*.test.*' "$@" 2>/dev/null
-  else
-    grep -rP --include='*.ts' --include='*.tsx' --include='*.js' \
-      --exclude-dir=node_modules --exclude-dir=dist --exclude-dir=.blindar --exclude-dir=.git \
-      "$pattern" . "$@" 2>/dev/null
-  fi
+  # Usa `rg` (binário real OU fallback grep -E de _lib.sh). Os padrões deste check
+  # só usam \b e alternância (ERE) — não precisam de PCRE. Evita `grep -P`, que
+  # falha em locale não-UTF-8 no Git Bash ("-P supports only unibyte...").
+  rg -n "$pattern" -g '!node_modules' -g '!dist' -g '!.blindar' -g '!.git' -g '!**/*.test.*' "$@" 2>/dev/null
 }
 
 # 1. process.env.X exposto pra client (NEXT_PUBLIC_ / VITE_ são OK; resto não)

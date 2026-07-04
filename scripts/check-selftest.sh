@@ -50,6 +50,9 @@ PAIRS=(
   "check-business-logic.sh       | project-bizlogic-bad    | project-bizlogic-good"
   "check-soft-delete.sh          | project-db-bad          | project-prisma-good"
   "check-audit-log.sh            | project-db-bad          | project-prisma-good"
+  "check-runtime-secrets.sh      | project-runsecrets-bad  | project-runsecrets-good"
+  "check-secrets-rotation.sh     | project-secretrot-bad   | project-secretrot-good"
+  "check-tenant-isolation.sh     | project-tenant-bad      | project-tenant-good"
   # blindar-learn:insert (mantenha — scripts/blindar-learn.sh insere novos pares acima desta linha)
 )
 
