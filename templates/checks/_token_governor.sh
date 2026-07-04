@@ -42,6 +42,12 @@ blindar_resolve_tier() {
       echo "${BLINDAR_TIER_ANALYSIS:-analysis}" ;;
     check-proactive-analysis|check-rag-quality|check-user-journey-simulator|check-feature-gap-analyzer|check-product-critic)
       echo "${BLINDAR_TIER_ANALYSIS:-analysis}" ;;
+    # solution-architect — consultivo/arquitetura → Sonnet
+    solution-architect|check-solution-architect)
+      echo "${BLINDAR_TIER_ANALYSIS:-analysis}" ;;
+    # regulatory-mapper — compliance/regulatório → security (falso-negativo = multa)
+    regulatory-mapper|check-regulatory-mapper)
+      echo "${BLINDAR_TIER_SECURITY:-security}" ;;
     # TRIAGE — Haiku default (rápido, exploratório, humano filtra)
     *)
       echo "${BLINDAR_TIER_TRIAGE:-triage}" ;;
