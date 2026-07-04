@@ -71,8 +71,13 @@ notnull-no-default, ratelimit-response, infra-windows. Fix do fallback `rg -c`
 **Fase 7 — aprendizado:** `scripts/blindar-learn.sh` + `docs/INCIDENT-TO-CHECK.md`
 — todo incidente vira check + par de fixture + entrada no gate, em 1 comando.
 
-Cobertura do gate de self-test: 20/92 checks com par verificado (era 4).
-19 módulos no total.
+Cobertura do gate de self-test: **60/60 (100%)** dos checks gate-áveis com par de
+fixture verificado (dispara-no-vulnerável + cala-no-limpo), era 4. Não gate-áveis
+(scanners externos, .api.sh, runtime, advisory, termination, mcp-security)
+documentados na exclusão do denominador. 19 módulos no total.
+
+O próprio gate pegou ~15 bugs de check no caminho (checks que nunca emitiam
+`failed`, fallback rg sem stdin/-q/locale) — todos corrigidos.
 
 ## [0.44.0] — 2026-07-04
 
