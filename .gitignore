@@ -22,3 +22,4 @@ desktop.ini
 # Outputs transientes do blindar (gerados em fixtures durante testes)
 .blindar/
 tests/fixtures/**/.blindar/
+tests/tmp-attack*.json

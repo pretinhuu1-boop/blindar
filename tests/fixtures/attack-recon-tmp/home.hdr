@@ -1,0 +1,8 @@
+HTTP/2 200
+server: nginx/1.14.0
+x-powered-by: Express
+content-type: text/html
+set-cookie: session=abc; Path=/
+access-control-allow-origin: *
+access-control-allow-credentials: true
+

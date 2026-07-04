@@ -91,6 +91,14 @@ if command -v node >/dev/null 2>&1; then
     FAIL_COUNT=$((FAIL_COUNT+1))
     FAIL_LIST+=("tests/specs.test.js")
   fi
+  echo ""
+  echo "${BOLD}── módulo 17 (blindar ataque — recon passivo) ──${RESET}"
+  if node "$SCRIPT_DIR/attack-recon.test.js"; then
+    PASS_COUNT=$((PASS_COUNT+1))
+  else
+    FAIL_COUNT=$((FAIL_COUNT+1))
+    FAIL_LIST+=("tests/attack-recon.test.js")
+  fi
 else
   echo "${YELLOW}SKIP:${RESET} node ausente — specs.test.js não rodado"
 fi

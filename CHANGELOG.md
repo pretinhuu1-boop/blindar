@@ -3,6 +3,30 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.44.0] — 2026-07-04
+
+### Novo: **blindar ataque** — recon passivo externo via URL (módulo 17)
+
+Sub-modo do blindar pra descobrir vulnerabilidades **observando** um site em
+produção — sem enviar payload de ataque, sem disparar WAF, sem risco de ban.
+
+- `agents/attack-recon.md` — agente com as 6 regras de ouro pra passar
+  despercebido (UA browser, rate 1/3s, só GET/HEAD/OPTIONS, IP residencial,
+  fora de pico, sem tags fuzz/dos/intrusive).
+- `scripts/attack-recon.sh` — runner: headers, TLS/cert, cookies, CORS,
+  arquivos esquecidos (`.env`, `.git/config`, `backup.zip`…), endpoints de
+  debug (`/actuator`, `/api-docs`…), Certificate Transparency (subdomínios).
+- `scripts/attack-recon-report.js` — normaliza saída pra `findings.schema.json`
+  (mesmo esquema do resto do blindar).
+- Registrado em `pipeline/MODULE-MAP.json` como módulo 17 (opt-in).
+- `tests/attack-recon.test.js` — 11 asserts verdes (parseHeaders, detecção
+  de .env crit, headers ausentes, cookies inseguros, CORS misconfig, info
+  leak, endpoint de debug, aderência ao schema).
+
+Diferente de `pentest` (analisa código) e `dast-hacker` (ataca app de pé com
+autorização): este mora **fora do sistema** e só descobre o que qualquer
+atacante já veria — modo seguro pra produção real.
+
 ## [0.43.0] — 2026-06-25
 
 **Implementa 3 specs pendentes do ROADMAP** (#4, #16, #17) — saem de 🔜 Spec

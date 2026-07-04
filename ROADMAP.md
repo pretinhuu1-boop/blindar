@@ -19,6 +19,7 @@ v0.6.0.
 | 3 | API contract enforcement | 🔜 Spec | [`docs/specs/api-contract.md`](docs/specs/api-contract.md) |
 | 4 | Race-fuzzing agent | ✅ Done (v0.43) | [`agents/race-fuzzing.md`](agents/race-fuzzing.md) + [`scripts/race-fuzz.js`](scripts/race-fuzz.js) |
 | 5 | Hunting de secrets em runtime | ✅ Done | [`agents/runtime-secrets.md`](agents/runtime-secrets.md) |
+| 5b | **blindar ataque** (recon passivo externo via URL) | ✅ Done (v0.44) | [`agents/attack-recon.md`](agents/attack-recon.md) + [`scripts/attack-recon.sh`](scripts/attack-recon.sh) — módulo 17 |
 
 ## Tier 2 — Escala/Fluidez (impacto: % 70-80→85%)
 
