@@ -7,6 +7,22 @@
 
 ---
 
+## Ordem security-first (não-negociável, v0.45+)
+
+Segurança não é uma fase — é gate em CADA passo. A sequência é:
+
+1. **Analisar** — grafo de conhecimento (`graph-build.js`) + discovery. Entender
+   superfície externa × interna antes de qualquer coisa.
+2. **Implementar o que falta** — o que o projeto não tem, blindar cria
+   (com segurança embutida, nunca mock em produção).
+3. **Provar que sobe (smoke)** — `smoke-run.sh` em homolog. Boot + health +
+   fluxo. Não adianta atacar o que não sobe.
+4. **Atacar** — pentest + adversarial (módulo 15) + recon (17).
+5. **Proteger** — corrigir o que o ataque achou.
+6. **Revisar** — adversarial review final, production checklist.
+
+Nunca pule o smoke antes do ataque. Nunca marque "verde" sem o app de pé.
+
 ## Algoritmo de execução (siga em ordem)
 
 ### Passo 0 — Identifique o MODO de execução (v0.6.0+)

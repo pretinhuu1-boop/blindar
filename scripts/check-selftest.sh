@@ -30,6 +30,7 @@ PAIRS=(
   "check-mock-killer.sh          | project-with-mocks      | clean-project"
   "check-config-externalization.sh | project-with-secrets | clean-project"
   "check-prisma-schema.sh        | project-multi-tenant-bad| project-prisma-good"
+  "check-homolog-only.sh         | project-dev-leak        | project-homolog"
 )
 
 run_check() { # dir check → echo exit code

@@ -1,7 +1,7 @@
 {
   "$schema": "https://github.com/pretinhuu1-boop/blindar/blob/main/schemas/module-map.schema.json",
-  "version": "0.41.0",
-  "description": "Mapa estruturado dos 15 módulos do launcher → agentes ativados → fases onde rodam. Consumido pelas Fases 02 (discovery), 04 (rounds-loop) e 06 (production-checklist) pra filtrar agentes pelo array config.selected_modules.",
+  "version": "0.45.0",
+  "description": "Mapa estruturado dos 18 módulos do launcher → agentes ativados → fases onde rodam. Consumido pelas Fases 02 (discovery), 04 (rounds-loop) e 06 (production-checklist) pra filtrar agentes pelo array config.selected_modules. v0.45: +graph-builder (m1), +módulo 18 (smoke/runtime truth + homolog-only).",
   "modules": {
     "1": {
       "name": "Baseline & Discovery",
@@ -320,6 +320,21 @@
       ],
       "entrypoint": "scripts/attack-recon.sh",
       "notes": "Modo PASSIVO puro (só GET/HEAD/OPTIONS, rate 1/3s, UA browser). Zero payload de ataque → não dispara WAF, seguro pra produção. Opt-in via roles:[attack-recon] ou --attack. Precisa da URL como arg."
+    },
+    "18": {
+      "name": "Smoke / Runtime Truth — prova que a app SOBE e responde (homolog, nunca dev)",
+      "mandatory": true,
+      "skip_token": "always-on",
+      "agents": [
+        "smoke-runtime",
+        "homolog-only"
+      ],
+      "phases": [
+        "04-rounds-loop",
+        "06-production-checklist"
+      ],
+      "entrypoint": "scripts/smoke-run.sh",
+      "notes": "Sobe o stack em homolog (mock direto no banco, espelho de produção), espera /health, roda 1 fluxo crítico, flag boot-quebrado e 500 de runtime. self-skips se não há Dockerfile/compose nem --url. Roda DEPOIS de implementar e ANTES do ataque (módulo 15) — provar que sobe é pré-requisito. check-homolog-only proíbe config de dev no artefato."
     }
   },
   "resolution_rules": {

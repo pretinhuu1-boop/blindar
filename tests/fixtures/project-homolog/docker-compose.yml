@@ -1,0 +1,13 @@
+services:
+  api:
+    build: .
+    environment:
+      - NODE_ENV=production
+      - BLINDAR_ENV=homolog
+    command: node dist/server.js
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+  db:
+    image: postgres:16

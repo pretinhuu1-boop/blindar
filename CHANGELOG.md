@@ -3,6 +3,47 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.45.0] — 2026-07-04
+
+Rodada "Fundação primeiro": consertar o motor determinístico, dar ao blindar um
+grafo de conhecimento reusável e — o maior furo histórico — provar que a app SOBE.
+
+### Fase 0 — Motor determinístico consertado (era falso-negativo silencioso)
+
+- `templates/checks/_lib.sh`: fallback `rg` reescrito com fidelidade ao ripgrep
+  (flags agrupados `-cE/-nE/-lE/-niE/-hoE` normalizados; `-c` conta só arquivos
+  com match; `-n` preservado; excludes default). Fim do "verde mentiroso".
+- `scripts/fix-check-syntax.js`: transform seguro (tokeniza flags, não toca
+  padrões) aplicado a 55/77 checks — corrige o caminho com ripgrep real.
+- `scripts/check-selftest.sh`: gate que prova por par de fixture que cada check
+  dispara-no-vulnerável e cala-no-limpo. Cobertura honesta (8/78). Já pegou 1
+  falso-positivo real. CI roda com ripgrep E com fallback grep.
+- Detalhes em `docs/CHECK-BUGS-AUDIT.md` (seção Resolução).
+
+### Fase 1 — Graphify nativo (grafo de conhecimento multi-modal)
+
+- `scripts/graph-build.js` (zero-dep) + `schemas/graph.schema.json` +
+  `agents/graph-builder.md`. Constrói `.blindar/graph.json` uma vez na discovery;
+  reusado por todos os agentes (mais cobertura, menos tokens). Classifica
+  superfície externa × interna — base pra `api-surface-isolation`.
+
+### Fase 3 — Smoke / Runtime Truth (módulo 18) + homolog-only
+
+- `scripts/smoke-run.sh` + `agents/smoke-runtime.md`: sobe o stack em homolog
+  (mock direto no banco, espelho de produção — nunca dev), espera `/health`,
+  roda 1 fluxo crítico e flag boot-quebrado + 500 de runtime (o que grep nunca
+  pega). Reusa o grafo pra saber o que bater. self-skips sem docker/URL.
+- `templates/checks/check-homolog-only.sh`: proíbe config de dev no artefato
+  deployável (NODE_ENV=development, dev server, DEBUG=true, DB de dev).
+- `pipeline/02-discovery.md`: grafo é o Passo 0 determinístico.
+- Testes novos: `tests/graph.test.js` (10), `tests/smoke.test.js` (3) — suite verde.
+
+### Ordem security-first codificada
+
+Sequência não-negociável em `AI-ENTRYPOINT.md`: analisar → implementar o que
+falta → **provar que sobe (smoke)** → atacar → proteger → revisar. Segurança é
+gate em cada passo, não uma fase.
+
 ## [0.44.0] — 2026-07-04
 
 ### Novo: **blindar ataque** — recon passivo externo via URL (módulo 17)
