@@ -1,0 +1,8 @@
+// FIXTURE VULNERAVEL — dinheiro em Float.
+generator client { provider = "prisma-client-js" }
+datasource db { provider = "postgresql"; url = env("DATABASE_URL") }
+
+model Product {
+  id    String @id @default(uuid())
+  price Float
+}

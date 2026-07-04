@@ -57,6 +57,10 @@ PAIRS=(
   "check-supply-chain.sh         | project-supplychain-bad | project-supplychain-good"
   "check-file-uploads.sh         | project-fileupload-bad  | project-fileupload-good"
   "check-api-design.sh           | project-apidesign-bad   | project-apidesign-good"
+  "check-auth-premium.sh         | project-authprem-bad    | project-authprem-good"
+  "check-i18n-tz.sh              | project-i18n-bad        | project-i18n-good"
+  "check-observability.sh        | project-obs-bad         | project-obs-good"
+  "check-feature-flags.sh        | project-flags-bad       | project-flags-good"
   # blindar-learn:insert (mantenha — scripts/blindar-learn.sh insere novos pares acima desta linha)
 )
 

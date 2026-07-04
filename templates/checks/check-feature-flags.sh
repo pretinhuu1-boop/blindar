@@ -35,4 +35,5 @@ if [ "$INLINE_FLAGS" -gt 0 ] && is_prisma; then
   fi
 fi
 
+[ "${#FINDINGS[@]}" -gt 0 ] && { emit_result "$BLINDAR_AGENT" "failed" 1; exit 0; }
 emit_result "$BLINDAR_AGENT" "passed" 0
