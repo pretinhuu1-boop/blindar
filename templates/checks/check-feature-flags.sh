@@ -7,10 +7,11 @@ log_section "Check: feature-flags (sistema dedicado + cleanup)"
 if ! command -v rg >/dev/null 2>&1; then emit_result "$BLINDAR_AGENT" "skipped" 0; exit 0; fi
 
 IGNORE=(-g '!node_modules' -g '!dist' -g '!**/*.test.*' -g '!**/*.config.*')
+load_intelligence_globs "$BLINDAR_AGENT"
 
 # 1. process.env.NEW_FEATURE / ENABLE inline (anti-pattern)
 TMP=$(mktemp)
-rg -n "process\.env\.(NEW_|ENABLE_|FEATURE_)[A-Z_]+" --type ts --type js "${IGNORE[@]}" > "$TMP" 2>/dev/null || true
+rg -n "process\.env\.(NEW_|ENABLE_|FEATURE_)[A-Z_]+" --type ts --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
 INLINE_FLAGS=$(wc -l < "$TMP" || echo 0)
 if [ "$INLINE_FLAGS" -gt 2 ]; then
   add_finding "med" "$INLINE_FLAGS process.env feature flag inline — use sistema dedicado (DB ou LaunchDarkly)" "" ""
@@ -18,12 +19,12 @@ fi
 rm -f "$TMP"
 
 # 2. if (true)/if (false) hardcoded
-HARDCODED=$(rg -c "if\s*\(\s*(true|false)\s*\)" --type ts "${IGNORE[@]}" 2>/dev/null | wc -l || echo 0)
+HARDCODED=$(rg -c "if\s*\(\s*(true|false)\s*\)" --type ts "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0)
 [ "$HARDCODED" -gt 5 ] && add_finding "med" "$HARDCODED if(true/false) hardcoded — flag morta?" "" ""
 
 # 3. Comment "TEMP" ou "remover depois"
 TMP=$(mktemp)
-rg -ni "(TEMP|temporary|remover depois|remove later).*flag" --type ts "${IGNORE[@]}" > "$TMP" 2>/dev/null || true
+rg -ni "(TEMP|temporary|remover depois|remove later).*flag" --type ts "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
 TEMP_FLAGS=$(wc -l < "$TMP" || echo 0)
 [ "$TEMP_FLAGS" -gt 0 ] && add_finding "low" "$TEMP_FLAGS flag marcado como temporário (provável dívida)" "" ""
 rm -f "$TMP"

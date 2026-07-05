@@ -7,11 +7,12 @@ log_section "Check: business-logic (ASVS V11 — preço/desconto/race)"
 if ! command -v rg >/dev/null 2>&1; then emit_result "$BLINDAR_AGENT" "skipped" 0; exit 0; fi
 
 IGNORE=(-g '!node_modules' -g '!dist' -g '!**/*.test.*')
+load_intelligence_globs "$BLINDAR_AGENT"
 FAIL=0
 
 # 1. Preço/desconto calculado no client (deveria ser server-side)
 TMP=$(mktemp)
-rg -n "(amount|price|total|discount)\s*=\s*.*req\.(body|query|params)" --type ts "${IGNORE[@]}" > "$TMP" 2>/dev/null || true
+rg -n "(amount|price|total|discount)\s*=\s*.*req\.(body|query|params)" --type ts "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
 CLIENT_PRICING=$(wc -l < "$TMP" || echo 0)
 [ "$CLIENT_PRICING" -gt 0 ] && add_finding "crit" "$CLIENT_PRICING — preço/desconto do client aceito sem validar no DB" "" "" && FAIL=1
 rm -f "$TMP"
@@ -24,7 +25,7 @@ fi
 
 # 3. Race condition em atomicidade (read-then-write sem transaction)
 TMP=$(mktemp)
-rg -nB 5 "\.update\(" --type ts "${IGNORE[@]}" 2>/dev/null | grep -B 5 "findUnique\|findFirst" | grep -v "transaction\|\$transaction" | head -20 > "$TMP" || true
+rg -nB 5 "\.update\(" --type ts "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | grep -B 5 "findUnique\|findFirst" | grep -v "transaction\|\$transaction" | head -20 > "$TMP" || true
 RACE=$(grep -c "findUnique\|findFirst" "$TMP" 2>/dev/null)
 [ "$RACE" -gt 0 ] && add_finding "med" "$RACE read-then-write sem transaction (race condition risk)" "" ""
 rm -f "$TMP"

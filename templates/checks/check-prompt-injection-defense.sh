@@ -6,12 +6,13 @@ log_section "Check: prompt-injection-defense (LLM01 + tool output RCE)"
 
 if ! command -v rg >/dev/null 2>&1; then emit_result "$BLINDAR_AGENT" "skipped" 0; exit 0; fi
 IGNORE=(-g '!node_modules' -g '!dist' -g '!.blindar' -g '!.git' -g '!**/*.test.*' -g '!**/*.spec.*')
+load_intelligence_globs "$BLINDAR_AGENT"
 FAIL=0
 
 # Pré-check: projeto usa LLM? Se não, skip gracioso.
 USES_LLM=0
-rg -l "(openai|anthropic|@google/genai|langchain|llamaindex|@vercel/ai|@ai-sdk)" --type ts --type js "${IGNORE[@]}" >/dev/null 2>&1 && USES_LLM=1
-rg -l "^(import|from)\s+(openai|anthropic|google\.generativeai|langchain|llama_index)" --type py "${IGNORE[@]}" >/dev/null 2>&1 && USES_LLM=1
+rg -l "(openai|anthropic|@google/genai|langchain|llamaindex|@vercel/ai|@ai-sdk)" --type ts --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" >/dev/null 2>&1 && USES_LLM=1
+rg -l "^(import|from)\s+(openai|anthropic|google\.generativeai|langchain|llama_index)" --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" >/dev/null 2>&1 && USES_LLM=1
 if [ "$USES_LLM" -eq 0 ]; then
   log_info "Projeto não usa LLM detectável — skip."
   emit_result "$BLINDAR_AGENT" "skipped" 0
@@ -21,27 +22,27 @@ fi
 # 1. CRIT — system + user_input concatenado como template string
 # Detecta: `${SYSTEM}...${userInput}`, f"{system}...{user_input}", system + user_input
 TMP=$(mktemp)
-rg -n "(SYSTEM|system_prompt|systemPrompt|SYSTEM_PROMPT).*\\\$\{.*(user|input|message|query|prompt)" --type ts --type js "${IGNORE[@]}" 2>/dev/null > "$TMP" || true
-rg -n "f['\"].*\{(system|SYSTEM).*\}.*\{(user_input|user_message|query|prompt)\}" --type py "${IGNORE[@]}" 2>/dev/null >> "$TMP" || true
+rg -n "(SYSTEM|system_prompt|systemPrompt|SYSTEM_PROMPT).*\\\$\{.*(user|input|message|query|prompt)" --type ts --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null > "$TMP" || true
+rg -n "f['\"].*\{(system|SYSTEM).*\}.*\{(user_input|user_message|query|prompt)\}" --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null >> "$TMP" || true
 CONCAT=$(wc -l < "$TMP" | tr -d ' ')
 rm -f "$TMP"
 [ "$CONCAT" -gt 0 ] && add_finding "crit" "$CONCAT system+user concatenados sem delimitador (LLM01 injection)" "" ""
 
 # 2. CRIT — completions.create com prompt único (legacy completion API)
-LEGACY=$(rg -c "(completions|completion)\.create\s*\(\s*\{[^}]*prompt\s*:" --type ts --type js "${IGNORE[@]}" 2>/dev/null | awk -F: '{s+=$2} END {print s+0}')
+LEGACY=$(rg -c "(completions|completion)\.create\s*\(\s*\{[^}]*prompt\s*:" --type ts --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | awk -F: '{s+=$2} END {print s+0}')
 [ "${LEGACY:-0}" -gt 0 ] && add_finding "high" "$LEGACY uso de legacy completions.create({prompt}) — migrar pra chat.completions com roles" "" ""
 
 # 3. CRIT — tool output em eval/exec/innerHTML (RCE via indirect injection)
 TMP=$(mktemp)
-rg -n "(eval|new Function|exec)\s*\(.*(tool|toolResult|tool_output|tool_response|toolCall|function_call)" --type ts --type js --type py "${IGNORE[@]}" 2>/dev/null > "$TMP" || true
-rg -n "(innerHTML|dangerouslySetInnerHTML|outerHTML|document\.write)\s*[=({].*(tool|llm|completion|response\.choices|response\.content)" --type ts --type js "${IGNORE[@]}" 2>/dev/null >> "$TMP" || true
+rg -n "(eval|new Function|exec)\s*\(.*(tool|toolResult|tool_output|tool_response|toolCall|function_call)" --type ts --type js --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null > "$TMP" || true
+rg -n "(innerHTML|dangerouslySetInnerHTML|outerHTML|document\.write)\s*[=({].*(tool|llm|completion|response\.choices|response\.content)" --type ts --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null >> "$TMP" || true
 TOOL_RCE=$(wc -l < "$TMP" | tr -d ' ')
 rm -f "$TMP"
 [ "$TOOL_RCE" -gt 0 ] && add_finding "crit" "$TOOL_RCE tool/LLM output em eval/exec/innerHTML (RCE via injection)" "" ""
 
 # 4. HIGH — RAG/context externo sem spotlighting/delimiter
 TMP=$(mktemp)
-rg -n "(context|retrieved|chunks|documents|rag_results|search_results)\s*[+:].*\\\$\{" --type ts --type js "${IGNORE[@]}" 2>/dev/null > "$TMP" || true
+rg -n "(context|retrieved|chunks|documents|rag_results|search_results)\s*[+:].*\\\$\{" --type ts --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null > "$TMP" || true
 RAG_RAW=0
 while IFS=: read -r file line content; do
   [ -z "$file" ] && continue
@@ -53,12 +54,12 @@ rm -f "$TMP"
 
 # 5. MED — ausência de injection pattern detection
 HAS_DETECT=0
-rg -l "(ignore\s+previous|jailbreak|prompt_injection|injection_filter|guardrail)" --type ts --type js --type py "${IGNORE[@]}" >/dev/null 2>&1 && HAS_DETECT=1
+rg -l "(ignore\s+previous|jailbreak|prompt_injection|injection_filter|guardrail)" --type ts --type js --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" >/dev/null 2>&1 && HAS_DETECT=1
 [ "$HAS_DETECT" -eq 0 ] && add_finding "med" "Nenhuma detecção de injection patterns ('ignore previous', jailbreak filters)" "" ""
 
 # 6. HIGH — endpoint que chama LLM sem rate limit visível
 TMP=$(mktemp)
-rg -l "(openai|anthropic|@google/genai)\." --type ts --type js "${IGNORE[@]}" 2>/dev/null > "$TMP" || true
+rg -l "(openai|anthropic|@google/genai)\." --type ts --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null > "$TMP" || true
 NO_RL=0
 while IFS= read -r file; do
   [ -z "$file" ] && continue
@@ -69,7 +70,7 @@ rm -f "$TMP"
 
 # 7. MED — falta de token cap (max_tokens / max_output_tokens)
 TMP=$(mktemp)
-rg -l "(chat\.completions\.create|messages\.create|generateContent)" --type ts --type js "${IGNORE[@]}" 2>/dev/null > "$TMP" || true
+rg -l "(chat\.completions\.create|messages\.create|generateContent)" --type ts --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null > "$TMP" || true
 NO_CAP=0
 while IFS= read -r file; do
   [ -z "$file" ] && continue

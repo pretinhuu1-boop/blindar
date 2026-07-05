@@ -28,6 +28,7 @@ fi
 
 FAIL=0
 IGNORE=(-g '!node_modules' -g '!dist' -g '!build' -g '!**/*.test.*' -g '!**/*.spec.*')
+load_intelligence_globs "$BLINDAR_AGENT"
 
 # 1. bcrypt em projeto novo (use Argon2id)
 log_info "Buscando bcrypt..."
@@ -41,7 +42,7 @@ fi
 # 2. JWT HS256 (deveria ser RS256/EdDSA em microservices)
 log_info "Buscando HS256..."
 TMP=$(mktemp)
-rg -n "(algorithm|alg)[:\s]*['\"]HS256['\"]" --type ts --type js "${IGNORE[@]}" > "$TMP" 2>/dev/null || true
+rg -n "(algorithm|alg)[:\s]*['\"]HS256['\"]" --type ts --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
 HS256=$(wc -l < "$TMP" || echo 0)
 if [ "$HS256" -gt 0 ]; then
   while IFS=: read -r file line content; do
@@ -54,7 +55,7 @@ rm -f "$TMP"
 # 3. Token em localStorage (CRIT — XSS lê)
 log_info "Buscando JWT em localStorage..."
 TMP=$(mktemp)
-rg -n "localStorage\.setItem.*['\"](token|access[_-]?token|jwt|auth)" --type ts --type js  "${IGNORE[@]}" > "$TMP" 2>/dev/null || true
+rg -n "localStorage\.setItem.*['\"](token|access[_-]?token|jwt|auth)" --type ts --type js  "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
 LS_TOKEN=$(wc -l < "$TMP" || echo 0)
 if [ "$LS_TOKEN" -gt 0 ]; then
   while IFS=: read -r file line content; do
@@ -68,8 +69,8 @@ rm -f "$TMP"
 
 # 4. Refresh token sem rotation
 log_info "Verificando refresh token rotation..."
-if rg -l "refreshToken|refresh_token" --type ts "${IGNORE[@]}" 2>/dev/null | head -1 | grep -q .; then
-  if ! rg -l "(rotation|rotate|used_at|family_id)" --type ts "${IGNORE[@]}" 2>/dev/null | head -1 | grep -q .; then
+if rg -l "refreshToken|refresh_token" --type ts "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | head -1 | grep -q .; then
+  if ! rg -l "(rotation|rotate|used_at|family_id)" --type ts "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | head -1 | grep -q .; then
     add_finding "high" "Refresh token sem rotation detectado (sem rotation = token roubado vira eterno)" "" ""
     log_warn "Sem indicador de refresh rotation"
   fi
@@ -78,7 +79,7 @@ fi
 # 5. Argon2id memoryCost adequado (OWASP 2024: 19MB)
 log_info "Verificando Argon2id memoryCost..."
 TMP=$(mktemp)
-rg -n "argon2\.(hash|verify)" --type ts --type js "${IGNORE[@]}" -A 10 2>/dev/null > "$TMP" || true
+rg -n "argon2\.(hash|verify)" --type ts --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" -A 10 2>/dev/null > "$TMP" || true
 if grep -q "memoryCost" "$TMP"; then
   if ! grep -qE "memoryCost.*19|memoryCost.*2\*\*14" "$TMP"; then
     add_finding "med" "Argon2id memoryCost diferente do recomendado OWASP 2024 (19MB)" "" ""

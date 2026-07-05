@@ -22,6 +22,7 @@ if [ "$HAS_UI" -eq 0 ]; then
 fi
 
 IGNORE=(-g '!node_modules' -g '!dist' -g '!build' -g '!.next' -g '!**/*.test.*')
+load_intelligence_globs "$BLINDAR_AGENT"
 FAIL=0
 
 # 1. size-limit configurado
@@ -35,7 +36,7 @@ fi
 # 2. next/image em vez de <img>
 if is_nextjs; then
   log_info "Verificando next/image..."
-  RAW_IMG=$(rg -c "<img "   "${IGNORE[@]}" 2>/dev/null | wc -l || echo 0)
+  RAW_IMG=$(rg -c "<img "   "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0)
   if [ "$RAW_IMG" -gt 3 ]; then
     add_finding "high" "$RAW_IMG <img> sem next/image — perde optimization (AVIF/WebP/lazy)" "" ""
     log_warn "$RAW_IMG <img> raw em Next.js"
@@ -73,7 +74,7 @@ fi
 
 # 5. Dynamic imports / code splitting
 log_info "Verificando code splitting..."
-DYNAMIC=$(rg -c "(dynamic\(|lazy\(|import\()" --type ts "${IGNORE[@]}" 2>/dev/null | wc -l || echo 0)
+DYNAMIC=$(rg -c "(dynamic\(|lazy\(|import\()" --type ts "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0)
 if [ "$DYNAMIC" -eq 0 ] && [ "$HAS_UI" -eq 1 ]; then
   add_finding "low" "Sem dynamic import / React.lazy — tudo carrega no bundle inicial" "" ""
 fi

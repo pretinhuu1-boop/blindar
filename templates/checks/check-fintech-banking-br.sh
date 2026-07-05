@@ -15,6 +15,7 @@ if ! command -v rg >/dev/null 2>&1 && ! type rg >/dev/null 2>&1; then
 fi
 
 IGNORE=(-g '!node_modules' -g '!dist' -g '!build' -g '!.next' -g '!.blindar' -g '!**/*.test.*' -g '!**/*.spec.*' -g '!**/__mocks__/**' -g '!**/__tests__/**')
+load_intelligence_globs "$BLINDAR_AGENT"
 
 # ─── Detecção: roda só se houver sinal de integração financeira BR ───
 FINTECH_DETECTED=0
@@ -38,7 +39,7 @@ if [ -n "$ENV_FILES" ]; then
 fi
 
 # Sinais em endpoints
-ENDPOINT_HITS=$(rg -l "(/cob|/cobv|/pix/devolucao|/open-banking/|/openfinance/|/consents|/accounts/balances)" --type ts --type js --type py "${IGNORE[@]}" 2>/dev/null | head -5)
+ENDPOINT_HITS=$(rg -l "(/cob|/cobv|/pix/devolucao|/open-banking/|/openfinance/|/consents|/accounts/balances)" --type ts --type js --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | head -5)
 if [ -n "$ENDPOINT_HITS" ]; then
   FINTECH_DETECTED=1
   DETECTED_SIGNALS+=("endpoints:pix-or-openfinance")
@@ -59,7 +60,7 @@ log_info "Buscando chave PIX hardcoded..."
 TMP=$(mktemp)
 # CPF formato 11 dígitos, CNPJ 14 dígitos, email/phone como string longa
 rg -n "(pix.?key|chave.?pix|chavePix|pixKey)\s*[:=]\s*['\"][0-9a-zA-Z@.+-]{8,}['\"]" \
-  --type ts --type js --type py "${IGNORE[@]}" > "$TMP" 2>/dev/null || true
+  --type ts --type js --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
 HARDCODED=$(wc -l < "$TMP" | tr -d ' ')
 if [ "${HARDCODED:-0}" -gt 0 ]; then
   while IFS=: read -r file line content; do
@@ -75,7 +76,7 @@ rm -f "$TMP"
 log_info "Buscando webhook PIX/financeiro sem verify..."
 TMP=$(mktemp)
 rg -n "(webhook|notificacao|callback).*(pix|bancario|financeiro|openbanking)" \
-  --type ts --type js --type py "${IGNORE[@]}" -A 10 2>/dev/null | \
+  --type ts --type js --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" -A 10 2>/dev/null | \
   grep -B 10 -E "(req\.body|@Body|request\.json)" | \
   grep -v -E "(verifySignature|constructEvent|hmac|verifyHmac|x-signature|verify_signature)" | \
   grep -E "(webhook|notificacao|callback).*(pix|bancario|financeiro)" > "$TMP" 2>/dev/null || true
@@ -91,7 +92,7 @@ rm -f "$TMP"
 log_info "Verificando audit log em handlers financeiros..."
 TMP=$(mktemp)
 # Pega arquivos com endpoint financeiro
-rg -l "(/cob|/pix|/transferencia|/devolucao|/open-banking)" --type ts --type js --type py "${IGNORE[@]}" 2>/dev/null > "$TMP" || true
+rg -l "(/cob|/pix|/transferencia|/devolucao|/open-banking)" --type ts --type js --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null > "$TMP" || true
 FILES_FIN=$(wc -l < "$TMP" | tr -d ' ')
 NO_AUDIT_COUNT=0
 if [ "${FILES_FIN:-0}" -gt 0 ]; then
@@ -113,7 +114,7 @@ rm -f "$TMP"
 log_info "Buscando POST PIX/cob sem idempotência..."
 TMP=$(mktemp)
 rg -n "(\.post|@Post|@POST|app\.post|router\.post).*(/cob|/cobv|/pix/devolucao|/transferencia)" \
-  --type ts --type js --type py "${IGNORE[@]}" -A 15 2>/dev/null | \
+  --type ts --type js --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" -A 15 2>/dev/null | \
   grep -B 15 -E "(@Body|req\.body|request\.json)" | \
   grep -v -E "(idempoten|endToEndId|end_to_end_id|txid|X-Idempotency)" | \
   grep -E "/cob|/cobv|/pix/devolucao|/transferencia" > "$TMP" 2>/dev/null || true
@@ -127,7 +128,7 @@ rm -f "$TMP"
 # ─── 5. HIGH: Open Finance endpoint sem headers FAPI ───
 log_info "Verificando headers FAPI em Open Finance..."
 TMP=$(mktemp)
-rg -l "(openfinance|open-banking|openBanking)" --type ts --type js --type py "${IGNORE[@]}" 2>/dev/null > "$TMP" || true
+rg -l "(openfinance|open-banking|openBanking)" --type ts --type js --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null > "$TMP" || true
 OF_FILES=$(wc -l < "$TMP" | tr -d ' ')
 NO_FAPI=0
 if [ "${OF_FILES:-0}" -gt 0 ]; then
@@ -148,7 +149,7 @@ rm -f "$TMP"
 log_info "Buscando JWT com alg fraco (HS256/RS256/none) em contexto Open Finance..."
 TMP=$(mktemp)
 rg -n "algorithm[s]?\s*[:=]\s*\[?\s*['\"](HS256|RS256|none|HS384|HS512)['\"]" \
-  --type ts --type js --type py "${IGNORE[@]}" > "$TMP" 2>/dev/null || true
+  --type ts --type js --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
 WEAK_JWT=$(wc -l < "$TMP" | tr -d ' ')
 if [ "${WEAK_JWT:-0}" -gt 0 ]; then
   while IFS=: read -r file line content; do
@@ -166,7 +167,7 @@ rm -f "$TMP"
 log_info "Buscando valor monetário em Float..."
 TMP=$(mktemp)
 rg -n "(valor|amount|montante|saldo|preco|price|fee|tarifa)\s*:\s*(Float|number|float|double)" \
-  --type ts --type prisma --type py "${IGNORE[@]}" > "$TMP" 2>/dev/null || true
+  --type ts --type prisma --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
 FLOAT_COUNT=$(wc -l < "$TMP" | tr -d ' ')
 if [ "${FLOAT_COUNT:-0}" -gt 0 ]; then
   while IFS=: read -r file line content; do
@@ -180,7 +181,7 @@ rm -f "$TMP"
 # ─── 8. MED: Sem retry com backoff em chamada PIX ───
 log_info "Buscando chamadas PIX sem retry/backoff..."
 TMP=$(mktemp)
-rg -l "(/cob|/cobv|/pix/)" --type ts --type js --type py "${IGNORE[@]}" 2>/dev/null > "$TMP" || true
+rg -l "(/cob|/cobv|/pix/)" --type ts --type js --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null > "$TMP" || true
 NO_RETRY=0
 while IFS= read -r file; do
   [ -z "$file" ] && continue
@@ -197,7 +198,7 @@ rm -f "$TMP"
 # ─── 9. MED: Limites de horário noturno PIX sem validação ───
 log_info "Verificando validação de limite noturno PIX..."
 TMP=$(mktemp)
-rg -l "(transferencia|/cob|pix.?send|enviar.?pix)" --type ts --type js --type py "${IGNORE[@]}" 2>/dev/null > "$TMP" || true
+rg -l "(transferencia|/cob|pix.?send|enviar.?pix)" --type ts --type js --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null > "$TMP" || true
 NO_NIGHT_LIMIT=0
 while IFS= read -r file; do
   [ -z "$file" ] && continue
@@ -214,7 +215,7 @@ rm -f "$TMP"
 # ─── 10. LOW: Currency hardcoded sem suporte multi-currency ───
 log_info "Buscando currency hardcoded..."
 TMP=$(mktemp)
-rg -n "currency\s*[:=]\s*['\"]BRL['\"]" --type ts --type js --type py "${IGNORE[@]}" > "$TMP" 2>/dev/null || true
+rg -n "currency\s*[:=]\s*['\"]BRL['\"]" --type ts --type js --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
 HARD_CURRENCY=$(wc -l < "$TMP" | tr -d ' ')
 if [ "${HARD_CURRENCY:-0}" -gt 3 ]; then
   add_finding "low" "$HARD_CURRENCY ocorrência(s) de BRL hardcoded (considere config se multi-currency)" "código" ""

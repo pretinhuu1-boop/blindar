@@ -28,11 +28,12 @@ fi
 
 FAIL=0
 IGNORE=(-g '!node_modules' -g '!dist' -g '!build' -g '!**/*.test.*' -g '!**/*.spec.*')
+load_intelligence_globs "$BLINDAR_AGENT"
 
 # 1. Multer/busboy em rota produção (deveria ser presigned)
 log_info "Buscando upload via backend (deveria ser presigned)..."
 TMP=$(mktemp)
-rg -n "multer\(|formidable\(|new Busboy" --type ts --type js "${IGNORE[@]}" > "$TMP" 2>/dev/null || true
+rg -n "multer\(|formidable\(|new Busboy" --type ts --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
 BACKEND_UPLOAD=$(wc -l < "$TMP" || echo 0)
 if [ "$BACKEND_UPLOAD" -gt 0 ]; then
   while IFS=: read -r file line content; do
@@ -46,7 +47,7 @@ rm -f "$TMP"
 # 2. SVG sem DOMPurify (XSS risk)
 log_info "Buscando SVG aceito sem sanitize..."
 TMP=$(mktemp)
-rg -n "image/svg\+xml|\.svg" --type ts --type js "${IGNORE[@]}" 2>/dev/null | \
+rg -n "image/svg\+xml|\.svg" --type ts --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | \
   grep -v "DOMPurify\|sanitize" > "$TMP" || true
 SVG_NO_SAN=$(wc -l < "$TMP" || echo 0)
 if [ "$SVG_NO_SAN" -gt 0 ]; then
@@ -58,7 +59,7 @@ rm -f "$TMP"
 # 3. S3 bucket public-read em código
 log_info "Buscando ACL public-read..."
 TMP=$(mktemp)
-rg -n "ACL\s*:\s*['\"]public-read|public-read-write" --type ts --type js --type yaml --type tf "${IGNORE[@]}" > "$TMP" 2>/dev/null || true
+rg -n "ACL\s*:\s*['\"]public-read|public-read-write" --type ts --type js --type yaml --type tf "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
 PUBLIC_ACL=$(wc -l < "$TMP" || echo 0)
 if [ "$PUBLIC_ACL" -gt 0 ]; then
   while IFS=: read -r file line content; do
@@ -73,7 +74,7 @@ rm -f "$TMP"
 # 4. ContentLength sem validação (anti-DoS upload gigante)
 log_info "Buscando presigned sem ContentLength..."
 TMP=$(mktemp)
-rg -n "getSignedUrl.*putObject" --type ts --type js "${IGNORE[@]}" -A 10 2>/dev/null | \
+rg -n "getSignedUrl.*putObject" --type ts --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" -A 10 2>/dev/null | \
   grep -v "ContentLength" > "$TMP" || true
 NO_SIZE=$(grep -c "getSignedUrl" "$TMP" 2>/dev/null)
 if [ "$NO_SIZE" -gt 0 ]; then

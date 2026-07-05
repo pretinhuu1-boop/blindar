@@ -10,6 +10,7 @@ if ! has_dir "public" && ! has_dir "app" && ! has_dir "pages"; then
 fi
 
 IGNORE=(-g '!node_modules' -g '!dist' -g '!**/*.test.*')
+load_intelligence_globs "$BLINDAR_AGENT"
 
 # 1. sitemap.xml ausente
 if [ ! -f "public/sitemap.xml" ] && [ ! -f "app/sitemap.ts" ] && [ ! -f "pages/sitemap.xml.ts" ]; then
@@ -21,7 +22,7 @@ fi
 
 # 3. metadata.robots = 'noindex' em rota pública (provável erro)
 TMP=$(mktemp)
-rg -n "robots:\s*['\"]noindex" --type ts  "${IGNORE[@]}" 2>/dev/null > "$TMP" || true
+rg -n "robots:\s*['\"]noindex" --type ts  "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null > "$TMP" || true
 NOINDEX=$(wc -l < "$TMP" || echo 0)
 # Só warn se acharmos noindex fora de /admin /app /dashboard
 while IFS=: read -r file line content; do
@@ -53,7 +54,7 @@ fi
 rm -f "$TMP"
 
 # 6. JSON-LD structured data
-HAS_JSONLD=$(rg -l "application/ld\+json" --type ts --type html "${IGNORE[@]}" 2>/dev/null | head -1)
+HAS_JSONLD=$(rg -l "application/ld\+json" --type ts --type html "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | head -1)
 [ -z "$HAS_JSONLD" ] && add_finding "low" "Sem JSON-LD structured data — perde rich snippets" "" ""
 
 CRITS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"crit"')

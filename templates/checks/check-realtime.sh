@@ -13,27 +13,28 @@ done
 if [ "$HAS_WS" -eq 0 ]; then emit_result "$BLINDAR_AGENT" "skipped" 0; exit 0; fi
 
 IGNORE=(-g '!node_modules' -g '!dist' -g '!**/*.test.*')
+load_intelligence_globs "$BLINDAR_AGENT"
 
 # 1. io.on connection sem auth
 TMP=$(mktemp)
-rg -n "io\.on\(['\"]connection" --type ts "${IGNORE[@]}" -A 8 2>/dev/null | grep -v "auth\|verify\|jwt" > "$TMP" || true
+rg -n "io\.on\(['\"]connection" --type ts "${IGNORE[@]}" "${INTEL_GLOBS[@]}" -A 8 2>/dev/null | grep -v "auth\|verify\|jwt" > "$TMP" || true
 NO_AUTH=$(grep -c "io.on" "$TMP" 2>/dev/null)
 [ "$NO_AUTH" -gt 0 ] && add_finding "crit" "$NO_AUTH socket.on('connection') sem auth — qualquer um conecta" "" ""
 rm -f "$TMP"
 
 # 2. Broadcast sem tenant namespace
 TMP=$(mktemp)
-rg -n "io\.emit\(" --type ts "${IGNORE[@]}" 2>/dev/null | grep -v "tenant:\|user:\|room:" > "$TMP" || true
+rg -n "io\.emit\(" --type ts "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | grep -v "tenant:\|user:\|room:" > "$TMP" || true
 BROADCAST_LEAK=$(wc -l < "$TMP" || echo 0)
 [ "$BROADCAST_LEAK" -gt 0 ] && add_finding "high" "$BROADCAST_LEAK io.emit sem namespace — vaza cross-tenant" "" ""
 rm -f "$TMP"
 
 # 3. Token em URL path (vaza em logs)
-URL_TOKEN=$(rg -c "io\(['\"]ws://.*token=" --type ts "${IGNORE[@]}" 2>/dev/null | wc -l || echo 0)
+URL_TOKEN=$(rg -c "io\(['\"]ws://.*token=" --type ts "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0)
 [ "$URL_TOKEN" -gt 0 ] && add_finding "high" "Token em URL WS (vaza em logs/proxies)" "" ""
 
 # 4. Sem heartbeat config
-HAS_HEARTBEAT=$(rg -l "(pingInterval|pingTimeout|heartbeat)" --type ts "${IGNORE[@]}" 2>/dev/null | head -1)
+HAS_HEARTBEAT=$(rg -l "(pingInterval|pingTimeout|heartbeat)" --type ts "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | head -1)
 [ -z "$HAS_HEARTBEAT" ] && add_finding "med" "Sem heartbeat configurado — conexões zumbi consomem RAM" "" ""
 
 CRITS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"crit"')

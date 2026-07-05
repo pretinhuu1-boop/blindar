@@ -15,6 +15,7 @@ if ! command -v rg >/dev/null 2>&1 && ! type rg >/dev/null 2>&1; then
 fi
 
 IGNORE=(-g '!node_modules' -g '!dist' -g '!build' -g '!.next' -g '!.blindar' -g '!**/*.test.*' -g '!**/*.spec.*' -g '!**/__mocks__/**' -g '!**/__tests__/**')
+load_intelligence_globs "$BLINDAR_AGENT"
 
 # ─── Detecção: roda só se houver sinal de e-commerce ───
 ECOM_DETECTED=0
@@ -29,14 +30,14 @@ for sig in "stripe" "mercadopago" "@mercadopago" "pagseguro" "cielo" "getnet" "p
 done
 
 # Sinais em rotas/arquivos
-ROUTES_HITS=$(rg -l "(/checkout|/cart|/carrinho|/finalizar-compra|/sacola)" --type ts --type tsx --type js --type jsx "${IGNORE[@]}" 2>/dev/null | head -5)
+ROUTES_HITS=$(rg -l "(/checkout|/cart|/carrinho|/finalizar-compra|/sacola)" --type ts --type tsx --type js --type jsx "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | head -5)
 if [ -n "$ROUTES_HITS" ]; then
   ECOM_DETECTED=1
   DETECTED_SIGNALS+=("routes:checkout-or-cart")
 fi
 
 # Componentes
-COMP_HITS=$(rg -l "(<Checkout|<Cart|<PaymentForm|<CartItem|useCart)" --type ts --type tsx --type jsx "${IGNORE[@]}" 2>/dev/null | head -5)
+COMP_HITS=$(rg -l "(<Checkout|<Cart|<PaymentForm|<CartItem|useCart)" --type ts --type tsx --type jsx "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | head -5)
 if [ -n "$COMP_HITS" ]; then
   ECOM_DETECTED=1
   DETECTED_SIGNALS+=("components:checkout-or-cart")
@@ -56,7 +57,7 @@ FAIL=0
 log_info "Verificando número de etapas do checkout..."
 TMP=$(mktemp)
 # Heurística: arquivos de checkout com referência a step/etapa numerada
-rg -l "(checkout|cart|carrinho)" --type ts --type tsx --type jsx "${IGNORE[@]}" 2>/dev/null > "$TMP" || true
+rg -l "(checkout|cart|carrinho)" --type ts --type tsx --type jsx "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null > "$TMP" || true
 MAX_STEPS=0
 while IFS= read -r file; do
   [ -z "$file" ] && continue
@@ -78,7 +79,7 @@ rm -f "$TMP"
 log_info "Verificando autocomplete cc-* em form de cartão..."
 TMP=$(mktemp)
 rg -n "<input[^>]*name=['\"]?(card|cc|cardnumber|card_number|cardNumber)" \
-  --type tsx --type jsx --type html "${IGNORE[@]}" > "$TMP" 2>/dev/null || true
+  --type tsx --type jsx --type html "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
 CC_INPUTS=$(wc -l < "$TMP" | tr -d ' ')
 NO_AUTOCOMPLETE=0
 if [ "${CC_INPUTS:-0}" -gt 0 ]; then
@@ -98,9 +99,9 @@ rm -f "$TMP"
 # ─── 3. HIGH: Sem 3DS2 em pagamento (presumido > R$ 500) ───
 log_info "Verificando 3DS2 configurado..."
 TMP=$(mktemp)
-rg -l "(paymentIntents|payment_intents|stripe\.confirm|payment_method_types)" --type ts --type tsx --type js "${IGNORE[@]}" 2>/dev/null > "$TMP" || true
+rg -l "(paymentIntents|payment_intents|stripe\.confirm|payment_method_types)" --type ts --type tsx --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null > "$TMP" || true
 HAS_PAYMENT=$(wc -l < "$TMP" | tr -d ' ')
-HAS_3DS=$(rg -l "(three_d_secure|3ds|3DSecure|handleCardAction|request_three_d_secure)" --type ts --type tsx --type js "${IGNORE[@]}" 2>/dev/null | head -1)
+HAS_3DS=$(rg -l "(three_d_secure|3ds|3DSecure|handleCardAction|request_three_d_secure)" --type ts --type tsx --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | head -1)
 if [ "${HAS_PAYMENT:-0}" -gt 0 ] && [ -z "$HAS_3DS" ]; then
   add_finding "high" "Pagamento sem suporte a 3DS2 (risco fraude + BCB 3978 exige > R$ 500)" "código" ""
   log_warn "Sem suporte a 3DS2 detectado — HIGH"
@@ -109,8 +110,8 @@ rm -f "$TMP"
 
 # ─── 4. MED: Apple Pay / Google Pay ausentes ───
 log_info "Verificando Apple Pay / Google Pay..."
-HAS_APPLEPAY=$(rg -l "(PaymentRequestButton|applepay|apple-pay|ApplePay)" --type ts --type tsx --type js --type jsx "${IGNORE[@]}" 2>/dev/null | head -1)
-HAS_GPAY=$(rg -l "(googlepay|google-pay|GooglePay|google\.payments)" --type ts --type tsx --type js --type jsx "${IGNORE[@]}" 2>/dev/null | head -1)
+HAS_APPLEPAY=$(rg -l "(PaymentRequestButton|applepay|apple-pay|ApplePay)" --type ts --type tsx --type js --type jsx "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | head -1)
+HAS_GPAY=$(rg -l "(googlepay|google-pay|GooglePay|google\.payments)" --type ts --type tsx --type js --type jsx "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | head -1)
 if [ -z "$HAS_APPLEPAY" ] && [ -z "$HAS_GPAY" ]; then
   add_finding "medium" "Sem Apple Pay nem Google Pay configurado (conversão mobile cai ~50%)" "código" ""
   log_warn "Wallets mobile ausentes — MED"
@@ -119,7 +120,7 @@ fi
 # ─── 5. HIGH: Cart sem persist (refresh perde carrinho) ───
 log_info "Verificando persist do carrinho..."
 TMP=$(mktemp)
-rg -l "(useCart|cartStore|CartContext|CartProvider)" --type ts --type tsx --type jsx "${IGNORE[@]}" 2>/dev/null > "$TMP" || true
+rg -l "(useCart|cartStore|CartContext|CartProvider)" --type ts --type tsx --type jsx "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null > "$TMP" || true
 CART_FILES=$(wc -l < "$TMP" | tr -d ' ')
 NO_PERSIST=0
 if [ "${CART_FILES:-0}" -gt 0 ]; then
@@ -143,7 +144,7 @@ rm -f "$TMP"
 # ─── 6. MED: Sem retry com método alternativo em pagamento falho ───
 log_info "Verificando retry com método alternativo..."
 TMP=$(mktemp)
-rg -l "(payment.?fail|payment.?error|paymentDeclined|card.?declined)" --type ts --type tsx "${IGNORE[@]}" 2>/dev/null > "$TMP" || true
+rg -l "(payment.?fail|payment.?error|paymentDeclined|card.?declined)" --type ts --type tsx "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null > "$TMP" || true
 FAIL_FILES=$(wc -l < "$TMP" | tr -d ' ')
 NO_FALLBACK=0
 if [ "${FAIL_FILES:-0}" -gt 0 ]; then
@@ -163,7 +164,7 @@ rm -f "$TMP"
 # ─── 7. LOW: Currency display sem locale pt-BR ───
 log_info "Verificando formato de currency..."
 TMP=$(mktemp)
-rg -n "toFixed\(2\)" --type ts --type tsx --type js --type jsx "${IGNORE[@]}" > "$TMP" 2>/dev/null || true
+rg -n "toFixed\(2\)" --type ts --type tsx --type js --type jsx "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
 TOFIXED=$(wc -l < "$TMP" | tr -d ' ')
 NO_LOCALE=0
 if [ "${TOFIXED:-0}" -gt 0 ]; then
@@ -183,8 +184,8 @@ rm -f "$TMP"
 
 # ─── 8. HIGH: Frete não calculado pré-checkout ───
 log_info "Verificando cálculo de frete na sacola..."
-HAS_SHIPPING=$(rg -l "(calcFrete|calcularFrete|calculate.?shipping|shippingCost|viaCorreios|melhorEnvio|frenet)" --type ts --type tsx "${IGNORE[@]}" 2>/dev/null | head -1)
-HAS_CART=$(rg -l "(cart|carrinho|sacola)" --type ts --type tsx "${IGNORE[@]}" 2>/dev/null | head -1)
+HAS_SHIPPING=$(rg -l "(calcFrete|calcularFrete|calculate.?shipping|shippingCost|viaCorreios|melhorEnvio|frenet)" --type ts --type tsx "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | head -1)
+HAS_CART=$(rg -l "(cart|carrinho|sacola)" --type ts --type tsx "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | head -1)
 if [ -n "$HAS_CART" ] && [ -z "$HAS_SHIPPING" ]; then
   add_finding "high" "Sem cálculo de frete detectado (deveria estar na sacola/produto, não no fim do checkout)" "código" ""
   log_warn "Frete não calculado pré-checkout — HIGH"
@@ -192,8 +193,8 @@ fi
 
 # ─── 9. LOW: CEP sem ViaCEP/BrasilAPI fallback ───
 log_info "Verificando autocomplete de CEP..."
-HAS_CEP_INPUT=$(rg -l "(<input[^>]*cep|name=['\"]?cep)" --type tsx --type jsx --type html "${IGNORE[@]}" 2>/dev/null | head -1)
-HAS_VIACEP=$(rg -l "(viacep\.com\.br|brasilapi\.com\.br|cep.*correios)" --type ts --type tsx --type js "${IGNORE[@]}" 2>/dev/null | head -1)
+HAS_CEP_INPUT=$(rg -l "(<input[^>]*cep|name=['\"]?cep)" --type tsx --type jsx --type html "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | head -1)
+HAS_VIACEP=$(rg -l "(viacep\.com\.br|brasilapi\.com\.br|cep.*correios)" --type ts --type tsx --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | head -1)
 if [ -n "$HAS_CEP_INPUT" ] && [ -z "$HAS_VIACEP" ]; then
   add_finding "low" "Campo de CEP sem ViaCEP/BrasilAPI autocomplete (UX de form longa)" "código" ""
   log_warn "CEP sem autocomplete — LOW"

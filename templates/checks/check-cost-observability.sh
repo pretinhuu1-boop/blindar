@@ -7,6 +7,7 @@ log_section "Check: cost-observability (LLM + DB + storage cost)"
 if ! command -v rg >/dev/null 2>&1; then emit_result "$BLINDAR_AGENT" "skipped" 0; exit 0; fi
 
 IGNORE=(-g '!node_modules' -g '!dist' -g '!**/*.test.*')
+load_intelligence_globs "$BLINDAR_AGENT"
 
 # 1. LLM call sem tabela de tracking
 HAS_LLM=$(grep -qE "\"(openai|anthropic|@google/genai)\":" package.json 2>/dev/null && echo "yes")

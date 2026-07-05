@@ -13,6 +13,7 @@ if ! command -v rg >/dev/null 2>&1; then
 fi
 
 IGNORE=(-g '!node_modules' -g '!dist' -g '!build' -g '!**/*.test.*')
+load_intelligence_globs "$BLINDAR_AGENT"
 FAIL=0
 
 # 1. Logger estruturado (pino/winston/bunyan), não console.* em prod
@@ -26,7 +27,7 @@ fi
 # 2. Health endpoints (live/ready/deep)
 log_info "Verificando health endpoints..."
 TMP=$(mktemp)
-rg -l "(\/health\/live|\/healthz|\/health\/ready|\/readyz)" --type ts --type js "${IGNORE[@]}" 2>/dev/null > "$TMP" || true
+rg -l "(\/health\/live|\/healthz|\/health\/ready|\/readyz)" --type ts --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null > "$TMP" || true
 HEALTH_COUNT=$(wc -l < "$TMP" || echo 0)
 if [ "$HEALTH_COUNT" -eq 0 ]; then
   add_finding "high" "Sem health endpoints (/health/live, /health/ready) — K8s não consegue monitorar" "" ""
@@ -46,7 +47,7 @@ fi
 log_info "Buscando PII em log..."
 TMP=$(mktemp)
 rg -n "(logger|console|print)\.(info|debug|warn|error)\(.*(password|cpf|cnpj|cvv|ssn|credit_card|email)" \
-  --type ts --type js --type py "${IGNORE[@]}" > "$TMP" 2>/dev/null || true
+  --type ts --type js --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
 PII_LOG=$(wc -l < "$TMP" || echo 0)
 if [ "$PII_LOG" -gt 0 ]; then
   while IFS=: read -r file line content; do

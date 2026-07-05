@@ -15,11 +15,12 @@ fi
 IGNORE=('!node_modules' '!dist' '!build' '!.next' '!**/*.test.*' '!**/*.spec.*'
         '!**/*.stories.*' '!**/__mocks__/**' '!**/*.config.*' '!**/*.env*'
         '!**/*.gen.ts' '!**/locales/**' '!**/i18n/**')
+load_intelligence_globs "$BLINDAR_AGENT"
 
 # 1. URLs https://*.com hardcoded em código
 log_info "Buscando URLs de produção hardcoded..."
 TMP=$(mktemp)
-rg -n "https?://[a-z0-9.-]+\.(com|net|io|app|br)" --type ts --type py --type go "${IGNORE[@]}" 2>/dev/null | \
+rg -n "https?://[a-z0-9.-]+\.(com|net|io|app|br)" --type ts --type py --type go "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | \
   grep -vE "(localhost|127\.0\.0\.1|0\.0\.0\.0|example\.com|github\.com|w3\.org|schema\.org|@blindar:hardcode-ok)" > "$TMP" || true
 
 URL_COUNT=$(wc -l < "$TMP" || echo 0)
@@ -35,7 +36,7 @@ rm -f "$TMP"
 # 2. Senhas/tokens hardcoded em código TS/JS (similar ao check-secrets mas escopo mais amplo)
 log_info "Buscando password/secret hardcoded em literal..."
 TMP=$(mktemp)
-rg -n "(password|passwd|api[_-]?key|secret|token)\s*[:=]\s*['\"][a-zA-Z0-9_\-]{8,}['\"]" --type ts --type js --type py "${IGNORE[@]}" 2>/dev/null | \
+rg -n "(password|passwd|api[_-]?key|secret|token)\s*[:=]\s*['\"][a-zA-Z0-9_\-]{8,}['\"]" --type ts --type js --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | \
   grep -v "@blindar:hardcode-ok" > "$TMP" || true
 
 SEC_COUNT=$(wc -l < "$TMP" || echo 0)
@@ -80,7 +81,7 @@ fi
 # 4. Cores hex em JSX/TSX (deveriam ser design tokens)
 log_info "Buscando cores hex em componentes..."
 TMP=$(mktemp)
-rg -n "#[0-9a-fA-F]{3,8}\b" --type css "${IGNORE[@]}" 2>/dev/null | \
+rg -n "#[0-9a-fA-F]{3,8}\b" --type css "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | \
   grep -vE "(tokens|theme|design-system|@blindar:hardcode-ok)" > "$TMP" || true
 
 COLOR_COUNT=$(wc -l < "$TMP" || echo 0)

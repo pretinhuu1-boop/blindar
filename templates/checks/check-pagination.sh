@@ -7,10 +7,11 @@ log_section "Check: pagination obrigatória"
 if ! command -v rg >/dev/null 2>&1; then emit_result "$BLINDAR_AGENT" "skipped" 0; exit 0; fi
 
 IGNORE=(-g '!node_modules' -g '!dist' -g '!**/*.test.*')
+load_intelligence_globs "$BLINDAR_AGENT"
 
 # Prisma findMany sem take
 TMP=$(mktemp)
-rg -n "findMany\(\s*\{?" --type ts "${IGNORE[@]}" 2>/dev/null > "$TMP" || true
+rg -n "findMany\(\s*\{?" --type ts "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null > "$TMP" || true
 NO_TAKE=0
 while IFS=: read -r file line content; do
   [ -z "$file" ] && continue

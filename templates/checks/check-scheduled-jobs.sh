@@ -26,12 +26,13 @@ if [ "$HAS_SCHEDULER" -eq 0 ]; then
 fi
 
 IGNORE=(-g '!node_modules' -g '!dist' -g '!build' -g '!**/*.test.*')
+load_intelligence_globs "$BLINDAR_AGENT"
 FAIL=0
 
 # 1. Cron sem lock em multi-instance
 log_info "Buscando @Cron sem lock distribuído..."
 TMP=$(mktemp)
-rg -n "@Cron\(" --type ts "${IGNORE[@]}" -A 8 2>/dev/null | \
+rg -n "@Cron\(" --type ts "${IGNORE[@]}" "${INTEL_GLOBS[@]}" -A 8 2>/dev/null | \
   grep -B 2 "async" | grep -v "redlock\|acquire\|lock" > "$TMP" || true
 CRON_NO_LOCK=$(grep -c "@Cron" "$TMP" 2>/dev/null)
 if [ "$CRON_NO_LOCK" -gt 0 ]; then
@@ -44,7 +45,7 @@ rm -f "$TMP"
 # 2. BullMQ sem attempts/backoff
 log_info "Verificando retry em queue.add..."
 TMP=$(mktemp)
-rg -n "queue\.add\(" --type ts "${IGNORE[@]}" -A 5 2>/dev/null | \
+rg -n "queue\.add\(" --type ts "${IGNORE[@]}" "${INTEL_GLOBS[@]}" -A 5 2>/dev/null | \
   grep -B 5 "}" | grep -v "attempts:\|backoff:" > "$TMP" || true
 QUEUE_NO_RETRY=$(grep -c "queue\.add" "$TMP" 2>/dev/null)
 if [ "$QUEUE_NO_RETRY" -gt 0 ]; then
@@ -53,14 +54,14 @@ fi
 rm -f "$TMP"
 
 # 3. Sem watchdog de jobs (alerta quando job para de rodar)
-HAS_WATCHDOG=$(rg -l "(cron_runs|cronRun|watchdog|silent_failure)" --type ts "${IGNORE[@]}" 2>/dev/null | head -1)
+HAS_WATCHDOG=$(rg -l "(cron_runs|cronRun|watchdog|silent_failure)" --type ts "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | head -1)
 if [ -z "$HAS_WATCHDOG" ] && [ "$HAS_SCHEDULER" -eq 1 ]; then
   add_finding "med" "Sem watchdog de jobs — silent failure invisível" "" ""
 fi
 
 # 4. Sem DLQ tracking
 if grep -qE "bullmq" package.json 2>/dev/null; then
-  HAS_DLQ=$(rg -l "(getFailed|DLQ|dead.letter)" --type ts "${IGNORE[@]}" 2>/dev/null | head -1)
+  HAS_DLQ=$(rg -l "(getFailed|DLQ|dead.letter)" --type ts "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | head -1)
   if [ -z "$HAS_DLQ" ]; then
     add_finding "low" "Sem tracking de DLQ — jobs falhados acumulam invisíveis" "" ""
   fi
@@ -69,7 +70,7 @@ fi
 # 5. setInterval/setTimeout sem clear (memory leak)
 log_info "Buscando timer sem cleanup..."
 TMP=$(mktemp)
-rg -n "setInterval\(" --type ts "${IGNORE[@]}" -A 3 2>/dev/null | grep -v "clearInterval" > "$TMP" || true
+rg -n "setInterval\(" --type ts "${IGNORE[@]}" "${INTEL_GLOBS[@]}" -A 3 2>/dev/null | grep -v "clearInterval" > "$TMP" || true
 INTERVAL=$(grep -c "setInterval" "$TMP" 2>/dev/null)
 if [ "$INTERVAL" -gt 3 ]; then
   add_finding "low" "$INTERVAL setInterval sem clearInterval próximo — investigar leak" "" ""

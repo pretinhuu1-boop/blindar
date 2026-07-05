@@ -16,12 +16,13 @@ done
 if [ "$HAS_REDIS" -eq 0 ]; then emit_result "$BLINDAR_AGENT" "skipped" 0; exit 0; fi
 
 IGNORE=(-g '!node_modules' -g '!dist' -g '!**/*.test.*')
+load_intelligence_globs "$BLINDAR_AGENT"
 FAIL=0
 
 # 1. Chave sem TTL (memory leak)
 log_info "Buscando redis.set sem TTL..."
 TMP=$(mktemp)
-rg -n "redis\.(set|hset|sadd|zadd)\(" --type ts --type js "${IGNORE[@]}" 2>/dev/null | \
+rg -n "redis\.(set|hset|sadd|zadd)\(" --type ts --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | \
   grep -v "(EX:|PX:|EXAT:|setEx|setex|SETEX|expire|@blindar:redis-keep|EXPIRE)" > "$TMP" || true
 NO_TTL=$(wc -l < "$TMP" || echo 0)
 if [ "$NO_TTL" -gt 0 ]; then
@@ -37,7 +38,7 @@ rm -f "$TMP"
 # 2. SETNX cru (race condition)
 log_info "Buscando SETNX sem Redlock..."
 TMP=$(mktemp)
-rg -ni "(setnx|setNX)\(" --type ts --type js "${IGNORE[@]}" 2>/dev/null | grep -v "redlock" > "$TMP" || true
+rg -ni "(setnx|setNX)\(" --type ts --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | grep -v "redlock" > "$TMP" || true
 SETNX_RAW=$(wc -l < "$TMP" || echo 0)
 if [ "$SETNX_RAW" -gt 0 ]; then
   add_finding "high" "$SETNX_RAW SETNX cru — usar Redlock pra distributed lock" "" ""
@@ -52,7 +53,7 @@ grep -lE "tenantId|tenant_id" prisma/schema.prisma 2>/dev/null | head -1 | grep 
 if [ "$IS_MULTITENANT" -eq 1 ]; then
   log_info "Buscando keys Redis sem tenant prefix..."
   TMP=$(mktemp)
-  rg -n "redis\.(get|set|hget|hset|del)\(['\"][^t]" --type ts --type js "${IGNORE[@]}" 2>/dev/null | \
+  rg -n "redis\.(get|set|hget|hset|del)\(['\"][^t]" --type ts --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | \
     grep -v "tenant:" | grep -v "@blindar:redis-keep" > "$TMP" || true
   NO_PREFIX=$(wc -l < "$TMP" || echo 0)
   if [ "$NO_PREFIX" -gt 5 ]; then
@@ -70,7 +71,7 @@ fi
 
 # 5. AUTH ausente em prod
 TMP=$(mktemp)
-rg -n "new Redis\(\{|new IORedis\(\{" --type ts "${IGNORE[@]}" -A 5 2>/dev/null | grep -v "password\|@blindar:keep" > "$TMP" || true
+rg -n "new Redis\(\{|new IORedis\(\{" --type ts "${IGNORE[@]}" "${INTEL_GLOBS[@]}" -A 5 2>/dev/null | grep -v "password\|@blindar:keep" > "$TMP" || true
 NO_AUTH=$(grep -c "new Redis\|new IORedis" "$TMP" 2>/dev/null)
 if [ "$NO_AUTH" -gt 0 ]; then
   add_finding "high" "$NO_AUTH conexão Redis sem password — exigir REDIS_PASSWORD em prod" "" ""
@@ -78,19 +79,19 @@ fi
 rm -f "$TMP"
 
 # 6. KEYS * em código (bloqueia Redis)
-KEYS_STAR=$(rg -c "redis\.keys\(['\"]\*" --type ts --type js "${IGNORE[@]}" 2>/dev/null | wc -l || echo 0)
+KEYS_STAR=$(rg -c "redis\.keys\(['\"]\*" --type ts --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0)
 if [ "$KEYS_STAR" -gt 0 ]; then
   add_finding "high" "$KEYS_STAR uso(s) de KEYS * — bloqueia Redis. Usar SCAN" "" ""
 fi
 
 # 7. FLUSHALL em código (destrutivo)
-FLUSH=$(rg -ci "flushall|flushdb" --type ts --type js "${IGNORE[@]}" 2>/dev/null | wc -l || echo 0)
+FLUSH=$(rg -ci "flushall|flushdb" --type ts --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0)
 if [ "$FLUSH" -gt 0 ]; then
   add_finding "med" "$FLUSH uso(s) de FLUSHALL/FLUSHDB — apaga tudo, revisar urgente" "" ""
 fi
 
 # 8. Pipeline em loop com N round-trips
-LOOP_ROUNDTRIPS=$(rg -n "for.*\{[^}]*await redis\." --type ts "${IGNORE[@]}" 2>/dev/null | wc -l || echo 0)
+LOOP_ROUNDTRIPS=$(rg -n "for.*\{[^}]*await redis\." --type ts "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0)
 [ "$LOOP_ROUNDTRIPS" -gt 3 ] && add_finding "med" "$LOOP_ROUNDTRIPS loop com await redis dentro — usar pipeline" "" ""
 
 if [ "$FAIL" -eq 1 ]; then

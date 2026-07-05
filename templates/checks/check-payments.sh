@@ -29,11 +29,12 @@ fi
 
 FAIL=0
 IGNORE=(-g '!node_modules' -g '!dist' -g '!build' -g '!**/*.test.*' -g '!**/*.spec.*' -g '!**/__mocks__/**')
+load_intelligence_globs "$BLINDAR_AGENT"
 
 # 1. CVV armazenado (CRIT — PCI violation)
 log_info "Buscando CVV/CVC/security_code armazenado..."
 TMP=$(mktemp)
-rg -ni "(cvv|cvc|security_code|cid)\s*[:=]" --type ts --type js --type py "${IGNORE[@]}" > "$TMP" 2>/dev/null || true
+rg -ni "(cvv|cvc|security_code|cid)\s*[:=]" --type ts --type js --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
 CVV_COUNT=$(wc -l < "$TMP" || echo 0)
 if [ "$CVV_COUNT" -gt 0 ]; then
   while IFS=: read -r file line content; do
@@ -48,7 +49,7 @@ rm -f "$TMP"
 # 2. PAN/card_number em log
 log_info "Buscando PAN em log/console..."
 TMP=$(mktemp)
-rg -n "(log|console|print).*(pan|card_number|cardnumber)" --type ts --type js --type py "${IGNORE[@]}" > "$TMP" 2>/dev/null || true
+rg -n "(log|console|print).*(pan|card_number|cardnumber)" --type ts --type js --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
 PAN_LOG=$(wc -l < "$TMP" || echo 0)
 if [ "$PAN_LOG" -gt 0 ]; then
   while IFS=: read -r file line content; do
@@ -63,7 +64,7 @@ rm -f "$TMP"
 # 3. Money em Float/Number em vez de BigInt cents
 log_info "Buscando money em Float..."
 TMP=$(mktemp)
-rg -n "(amount|price|total|fee)\s*:\s*(Float|number)" --type ts --type prisma "${IGNORE[@]}" > "$TMP" 2>/dev/null || true
+rg -n "(amount|price|total|fee)\s*:\s*(Float|number)" --type ts --type prisma "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
 FLOAT_MONEY=$(wc -l < "$TMP" || echo 0)
 if [ "$FLOAT_MONEY" -gt 0 ]; then
   while IFS=: read -r file line content; do
@@ -77,7 +78,7 @@ rm -f "$TMP"
 # 4. Webhook sem signature verify
 log_info "Buscando webhooks sem verify..."
 TMP=$(mktemp)
-rg -n "(webhook|stripe.*event|@Post.*webhook)" --type ts "${IGNORE[@]}" -A 15 2>/dev/null | \
+rg -n "(webhook|stripe.*event|@Post.*webhook)" --type ts "${IGNORE[@]}" "${INTEL_GLOBS[@]}" -A 15 2>/dev/null | \
   grep -B 15 -E "(req\.body|@Body)" | \
   grep -v -E "(constructEvent|verifySignature|verifyHmac|signature)" | \
   grep -E "@Post.*webhook" > "$TMP" || true
@@ -92,7 +93,7 @@ rm -f "$TMP"
 # 5. Endpoint payment sem idempotency
 log_info "Buscando POST /payments sem Idempotency-Key..."
 TMP=$(mktemp)
-rg -n "@Post.*payment" --type ts "${IGNORE[@]}" -A 10 2>/dev/null | \
+rg -n "@Post.*payment" --type ts "${IGNORE[@]}" "${INTEL_GLOBS[@]}" -A 10 2>/dev/null | \
   grep -B 10 "@Body" | \
   grep -v -E "(Idempotency-Key|idempotency)" > "$TMP" || true
 # Heurística: se aparecer "@Post...payment" mas nenhum "Idempotency-Key" nas próximas 10 linhas

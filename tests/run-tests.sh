@@ -118,6 +118,13 @@ if command -v node >/dev/null 2>&1; then
     FAIL_LIST+=("tests/smoke.test.js")
   fi
   echo ""
+  echo "${BOLD}── intelligence-globs (supressão por-agente) ──${RESET}"
+  if node "$SCRIPT_DIR/intel-globs.test.js"; then
+    PASS_COUNT=$((PASS_COUNT+1))
+  else
+    FAIL_COUNT=$((FAIL_COUNT+1)); FAIL_LIST+=("tests/intel-globs.test.js")
+  fi
+  echo ""
   echo "${BOLD}── pentest ATIVO (gate de autorização) ──${RESET}"
   if node "$SCRIPT_DIR/pentest-active.test.js"; then
     PASS_COUNT=$((PASS_COUNT+1))

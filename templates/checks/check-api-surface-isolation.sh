@@ -7,6 +7,7 @@ log_section "Check: api-surface-isolation (interna×externa)"
 
 if ! command -v rg >/dev/null 2>&1; then emit_result "$BLINDAR_AGENT" "skipped" 0; exit 0; fi
 IGNORE=(-g '!node_modules' -g '!dist' -g '!.git' -g '!**/*.test.*')
+load_intelligence_globs "$BLINDAR_AGENT"
 FAIL=0
 
 # Garante o grafo (reusa Fase 1; constrói se faltar)
@@ -29,23 +30,23 @@ if [ -f "$GRAPH" ] && command -v node >/dev/null 2>&1; then
 fi
 
 # 2. API interna com bind em 0.0.0.0 (todas as interfaces) (CRIT)
-BIND_ALL=$(rg -l "0\.0\.0\.0" --type ts --type js --type py "${IGNORE[@]}" 2>/dev/null | grep -iE "internal|rpc|worker|admin" | wc -l)
+BIND_ALL=$(rg -l "0\.0\.0\.0" --type ts --type js --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | grep -iE "internal|rpc|worker|admin" | wc -l)
 if [ "$BIND_ALL" -gt 0 ]; then
   add_finding "crit" "API interna faz bind em 0.0.0.0 (todas interfaces) — restrinja a 127.0.0.1/rede interna" "" ""
   FAIL=1
 fi
 
 # 3. Endpoints externos (POST/PUT/PATCH) sem validação de schema de input (HIGH)
-HAS_WRITE=$(rg -c "(app|router|fastify)\.(post|put|patch)\(|@(Post|Put|Patch)\(" --type ts --type js "${IGNORE[@]}" 2>/dev/null | wc -l)
-HAS_VALIDATION=$(rg -c "(zod|z\.object|joi|yup|class-validator|@IsString|@IsNotEmpty|pydantic|BaseModel|ajv|express-validator|valibot)" --type ts --type js --type py "${IGNORE[@]}" 2>/dev/null | wc -l)
+HAS_WRITE=$(rg -c "(app|router|fastify)\.(post|put|patch)\(|@(Post|Put|Patch)\(" --type ts --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l)
+HAS_VALIDATION=$(rg -c "(zod|z\.object|joi|yup|class-validator|@IsString|@IsNotEmpty|pydantic|BaseModel|ajv|express-validator|valibot)" --type ts --type js --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l)
 if [ "$HAS_WRITE" -gt 0 ] && [ "$HAS_VALIDATION" -eq 0 ]; then
   add_finding "high" "Endpoints externos de escrita sem validação de schema de input (zod/joi/pydantic/class-validator) — superfície externa deve validar TODO input" "" ""
   FAIL=1
 fi
 
 # 4. Endpoints externos sem nenhuma proteção de rate-limit/WAF (HIGH, defesa em profundidade)
-HAS_EXTERNAL_EP=$(rg -c "(app|router|fastify)\.(get|post|put|delete|patch)\(" --type ts --type js "${IGNORE[@]}" 2>/dev/null | wc -l)
-HAS_EDGE_PROTECT=$(rg -c "(rate-limit|rateLimit|@nestjs/throttler|helmet|@upstash/ratelimit|cloudflare|waf|mod_security)" --type ts --type js --type json "${IGNORE[@]}" 2>/dev/null | wc -l)
+HAS_EXTERNAL_EP=$(rg -c "(app|router|fastify)\.(get|post|put|delete|patch)\(" --type ts --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l)
+HAS_EDGE_PROTECT=$(rg -c "(rate-limit|rateLimit|@nestjs/throttler|helmet|@upstash/ratelimit|cloudflare|waf|mod_security)" --type ts --type js --type json "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l)
 if [ "$HAS_EXTERNAL_EP" -gt 0 ] && [ "$HAS_EDGE_PROTECT" -eq 0 ]; then
   add_finding "high" "Superfície externa sem rate-limit/WAF/helmet — externa precisa de proteção de borda contra abuso/DoS" "" ""
   FAIL=1

@@ -1,0 +1,13 @@
+# .blindar/intelligence.yml — inteligência por-projeto (opcional).
+# Copie para .blindar/intelligence.yml no projeto-alvo e ajuste.
+#
+# Supressão de falso-positivo POR AGENTE, sem editar o código dos checks.
+# Cada glob vira uma exclusão ripgrep (-g '!<glob>') só para aquele check.
+ignore_globs:
+  # Ignora a pasta legada só no check de CORS/CSRF:
+  check-cors-csrf:
+    - "legacy/**"
+  # Ignora artefatos gerados em TODOS os checks:
+  all:
+    - "**/*.generated.*"
+    - "**/__generated__/**"

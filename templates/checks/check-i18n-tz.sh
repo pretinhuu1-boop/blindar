@@ -8,6 +8,7 @@ source "$(dirname "$0")/_lib.sh"
 log_section "Check: i18n-tz (TIMESTAMPTZ, BigInt cents, locales sync, IANA tz)"
 
 IGNORE=(-g '!node_modules' -g '!dist' -g '!build' -g '!**/*.test.*')
+load_intelligence_globs "$BLINDAR_AGENT"
 FAIL=0
 
 # 1. Prisma com DateTime sem timezone awareness
@@ -44,7 +45,7 @@ fi
 # 4. Telefone sem libphonenumber (E.164)
 log_info "Buscando telefone sem normalização..."
 TMP=$(mktemp)
-rg -n "phone\s*:\s*String|telefone\s*:\s*String" --type ts --type prisma "${IGNORE[@]}" > "$TMP" 2>/dev/null || true
+rg -n "phone\s*:\s*String|telefone\s*:\s*String" --type ts --type prisma "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
 PHONES=$(wc -l < "$TMP" || echo 0)
 if [ "$PHONES" -gt 0 ]; then
   if ! grep -qE "libphonenumber" package.json 2>/dev/null; then
@@ -80,7 +81,7 @@ fi
 # 6. Date.now() sem timezone awareness em código
 log_info "Buscando new Date() problemas..."
 TMP=$(mktemp)
-rg -n "new Date\(['\"]?20[0-9]{2}-" --type ts --type js "${IGNORE[@]}" > "$TMP" 2>/dev/null || true
+rg -n "new Date\(['\"]?20[0-9]{2}-" --type ts --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
 HARDCODED_DATES=$(wc -l < "$TMP" || echo 0)
 if [ "$HARDCODED_DATES" -gt 3 ]; then
   add_finding "low" "$HARDCODED_DATES new Date('YYYY-MM-DD') hardcoded — pode dar drift entre fusos" "" ""

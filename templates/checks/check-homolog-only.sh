@@ -20,6 +20,7 @@ if [ -z "$DEPLOY_FILES" ] && ! ls .env.production .env.homolog >/dev/null 2>&1; 
 fi
 
 IGNORE=(-g '!node_modules' -g '!dist' -g '!.git' -g '!**/*.test.*')
+load_intelligence_globs "$BLINDAR_AGENT"
 FAIL=0
 
 # 1. NODE_ENV=development no artefato de deploy (CRIT)
