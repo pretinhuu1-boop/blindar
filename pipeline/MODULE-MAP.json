@@ -37,6 +37,7 @@
         "tenant-isolation-tests",
         "file-uploads",
         "mlops",
+        "prototype-pollution",
         "semgrep",
         "gitleaks"
       ],
@@ -52,7 +53,8 @@
         "ui_detected"
       ],
       "agents": [
-        "frontend"
+        "frontend",
+        "client-open-redirect"
       ],
       "phases": [
         "04-rounds-loop"

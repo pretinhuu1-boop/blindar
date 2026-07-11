@@ -3,6 +3,42 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.47.0] — 2026-07-11
+
+Rodada "Livros": incorpora conhecimento acionável de 4 livros de referência
+(front-end sec, código legado, appsec, resiliência) ao blindar — como 2 checks
+determinísticos que fecham lacunas reais + camada de conhecimento pros agentes.
+
+### Novos checks determinísticos (lacunas reais, não redundantes)
+
+- **`check-prototype-pollution`** (módulo 2): detecta escrita em
+  `__proto__`/`constructor.prototype` e merge recursivo caseiro sem guard de
+  chave perigosa (padrão CVE-2019-10744 lodash). Antes só existia no pentest
+  via LLM — agora é determinístico. Par de fixtures `project-protopoll-bad/good`.
+- **`check-client-open-redirect`** (módulo 3): detecta open redirect no lado
+  CLIENTE (`location.href = params.get('url')` etc.). O `check-security` só
+  pegava o lado servidor (`res.redirect`). Par de fixtures `project-openredir-bad/good`.
+- Ambos com par verificado no gate `check-selftest` — cobertura mantida em 100%.
+- Agentes playbook: `agents/prototype-pollution.md`, `agents/client-open-redirect.md`.
+- Total: **116 agentes** em 19 módulos.
+
+### Camada de conhecimento (livros → comportamento de agente)
+
+- **`docs/book-insights.md`** (novo): destila regras acionáveis de Rossi
+  (Segurança em Front-end), Feathers (Código Legado), Crawley (AppSec) e Silva
+  (Sistemas Resilientes), cada uma mapeada ao agente/check que a materializa.
+  Os 6 livros de arquitetura entram como princípio consultivo, não como check.
+- **Princípio Feathers no loop de rounds** (`04-rounds-loop.md`): antes de
+  blindar código legado sem teste, escreva um *characterization test* do
+  comportamento atual; ache o *seam*; prefira sprout/wrap a reescrever. Estende
+  "N/A vira teste de regressão".
+- `agents/frontend.md`: seção de checks-irmãos + referência aos livros.
+
+### Sync
+
+- Skill instalada (`~/.claude/skills/blindar`) atualizada pra v0.47 via
+  `sync-skill.sh` — as duas cópias permanecem byte-idênticas.
+
 ## [0.46.0] — 2026-07-11
 
 Rodada "garantia de aplicação": toda invocação aplica TUDO (deferred incluso),

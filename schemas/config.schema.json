@@ -106,7 +106,7 @@
         ]
       },
       "default": [],
-      "description": "Agents que NÃO devem ser ativados (ex: projeto CLI-only pula 'frontend'). Lista alinhada com pipeline/MODULE-MAP.json (114 agentes em 19 módulos)."
+      "description": "Agents que NÃO devem ser ativados (ex: projeto CLI-only pula 'frontend'). Lista alinhada com pipeline/MODULE-MAP.json (116 agentes em 19 módulos)."
     },
     "branch": {
       "type": "string",

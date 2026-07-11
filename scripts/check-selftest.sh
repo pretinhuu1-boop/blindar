@@ -29,6 +29,8 @@ PAIRS=(
   "check-access-control.sh       | project-insecure-api    | project-secure-api"
   "check-mock-killer.sh          | project-with-mocks      | clean-project"
   "check-config-externalization.sh | project-with-secrets | clean-project"
+  "check-prototype-pollution.sh  | project-protopoll-bad   | project-protopoll-good"
+  "check-client-open-redirect.sh | project-openredir-bad   | project-openredir-good"
   "check-prisma-schema.sh        | project-multi-tenant-bad| project-prisma-good"
   "check-homolog-only.sh         | project-dev-leak        | project-homolog"
   "check-api-surface-isolation.sh| project-api-isolation-bad | project-api-isolation-good"

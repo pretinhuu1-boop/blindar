@@ -59,13 +59,20 @@ no `sec.html` com tag `skipped-by-user-selection`.
 
 1. **Pick** — highest-severity gap do matrix **cujo agente está em allowedAgents**
 2. **Spawn** — agente especialista (resolvido via MODULE-MAP.json)
-3. **Implement** — ≤ 80 LOC + teste real (≥ 3 asserts) + grep estático
-4. **Update** — `sec.html`: ATK gap→covered, matrix recalc, version++
-5. **Local check** — suite verde + type-check verde
-6. **Commit** — branch `sec/<round-id>-<slug>` + template message
-7. **Push + CI** — aguardar verde (sem `--no-verify`)
-8. **Merge** — `gh pr merge --squash --delete-branch`
-9. **Next**
+3. **Characterization test primeiro (código legado)** — se o trecho a blindar
+   NÃO tem teste cobrindo o comportamento atual, escreva um teste que
+   documenta o que ele faz HOJE (mesmo que "errado") ANTES de mudar. Ache o
+   *seam* (ponto de alteração sem editar in-loco) e prefira **sprout/wrap** a
+   reescrever método grande. Ver [`docs/book-insights.md`](../docs/book-insights.md)
+   § Feathers. Isso estende "N/A vira teste de regressão" pra
+   "comportamento pré-existente vira teste antes de tocar".
+4. **Implement** — ≤ 80 LOC + teste real (≥ 3 asserts) + grep estático
+5. **Update** — `sec.html`: ATK gap→covered, matrix recalc, version++
+6. **Local check** — suite verde + type-check verde
+7. **Commit** — branch `sec/<round-id>-<slug>` + template message
+8. **Push + CI** — aguardar verde (sem `--no-verify`)
+9. **Merge** — `gh pr merge --squash --delete-branch`
+10. **Next**
 
 A cada 10 rounds completos: **Fase 4** (adversarial review) automaticamente.
 
@@ -84,7 +91,7 @@ Comportamento depende de `config.mode`:
 **Fonte da verdade**: [`pipeline/MODULE-MAP.json`](MODULE-MAP.json). Pipeline lê esse JSON
 em tempo de execução pra resolver agentes por módulo selecionado.
 
-Versão atual: **114 agentes em v0.46** distribuídos em 19 módulos numerados.
+Versão atual: **116 agentes em v0.47** distribuídos em 19 módulos numerados.
 Para a tabela visual completa, ver [`SKILL.md`](../SKILL.md) seção "Menu de
 módulos numerados". A filtragem real respeita `config.selected_modules` ∩
 `MODULE-MAP[id].agents`.

@@ -45,3 +45,20 @@ Implement minimal hardening. CSP report-only primeiro, enforce depois.
 - Build com CSP enforce não quebra páginas críticas (smoke E2E).
 - Headers presentes em todas as rotas (teste de integração).
 - Logout limpa storage (teste e2e).
+
+## Checks relacionados (mesma família)
+
+Frontend security é multi-check — não confie em um só:
+
+- [`check-frontend`](../templates/checks/check-frontend.sh) — CSP, Trusted Types, SRI, tabnabbing, iframe, postMessage
+- [`check-client-open-redirect`](../templates/checks/check-client-open-redirect.sh) ⭐ v0.47 — `location = input do usuário`
+- [`check-prototype-pollution`](../templates/checks/check-prototype-pollution.sh) ⭐ v0.47 — `__proto__`/merge inseguro
+- [`check-security`](../templates/checks/check-security.sh) — `innerHTML`/`eval`/`document.write`
+- [`check-headers-security`](../templates/checks/check-headers-security.sh) — headers HTTP
+
+## Referências (livros)
+
+Ver [`docs/book-insights.md`](../docs/book-insights.md) § Rossi (Segurança em
+Front-end) e § Crawley (AppSec). Princípio: **sanitize na saída, valide na
+entrada, assuma que o CSP vai falhar** — defesa em profundidade, nunca uma
+camada só.
