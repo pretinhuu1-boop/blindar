@@ -39,6 +39,22 @@ nenhum resultado stale passa por atual, e dev ↔ instalada sincronizam com 1 co
   drift). Modo `--check` pra CI/inspeção. Substitui o sync manual via
   `git archive | tar -x`.
 
+### Fixes de qualidade
+
+- `check-config-externalization.sh`: `.env.example` só é exigido se o projeto
+  usa config por ENV (referência no código ou `.env` real presente). Projeto
+  vazio/sem ENV não reprova mais (falso positivo high).
+- CI (`lint.yml`): job de schemas aceitava só draft-07, mas 3 schemas
+  (check-result, intelligence, run-report) declaram 2020-12 — CI quebraria no
+  primeiro push. Agora aceita os dois dialetos. Bonus: `bash -n` também em
+  `scripts/*.sh` e `_lib.sh` (antes só nos check-*.sh).
+- Line endings: working tree renormalizado (239 arquivos CRLF→LF conforme
+  `.gitattributes`); era a causa dos falsos "differ" no diff dev×instalada.
+- Instalada deixou de ser clone git: `.git` órfão (parado na v0.42) removido —
+  era footgun (um `install.sh` acidental faria `git pull` de código antigo por
+  cima da versão sincronizada). Histórico preservado nas tags
+  `archive/local42-*` do repo dev.
+
 ## [0.45.0] — 2026-07-04
 
 Rodada "Fundação primeiro": consertar o motor determinístico, dar ao blindar um

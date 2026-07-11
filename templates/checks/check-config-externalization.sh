@@ -74,8 +74,21 @@ if has_file ".env.example"; then
   fi
   rm -f "$TMP"
 else
-  add_finding "high" ".env.example não existe — devs novos não sabem o que configurar" "" ""
-  log_fail ".env.example ausente"
+  # Só exige .env.example se o projeto realmente usa config por ENV:
+  # referência a env no código OU um .env real presente. Projeto vazio /
+  # sem config por ENV não tem o que documentar (evita falso positivo).
+  USES_ENV=0
+  rg -q "process\.env\.|import\.meta\.env|os\.environ|os\.Getenv" \
+    --type ts --type js --type py --type go "${IGNORE[@]}" 2>/dev/null && USES_ENV=1
+  if [ "$USES_ENV" -eq 0 ]; then
+    { [ -f .env ] || [ -f .env.local ] || [ -f .env.production ]; } && USES_ENV=1
+  fi
+  if [ "$USES_ENV" -eq 1 ]; then
+    add_finding "high" ".env.example não existe — devs novos não sabem o que configurar" "" ""
+    log_fail ".env.example ausente"
+  else
+    log_pass "projeto não usa config por ENV — .env.example não exigido"
+  fi
 fi
 
 # 4. Cores hex em JSX/TSX (deveriam ser design tokens)

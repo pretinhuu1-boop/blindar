@@ -17,14 +17,16 @@ jobs:
             echo "Checking $f"
             jq empty "$f"
           done
-      - name: Validate schemas are draft-07
+      - name: Validate schemas declare a dialect suportado
         run: |
+          # Dialetos aceitos: draft-07 (maioria) e 2020-12 (schemas novos).
           for f in schemas/*.json; do
             schema=$(jq -r '."$schema" // empty' "$f")
-            if [ "$schema" != "http://json-schema.org/draft-07/schema#" ]; then
-              echo "FAIL: $f does not declare draft-07"
-              exit 1
-            fi
+            case "$schema" in
+              "http://json-schema.org/draft-07/schema#") ;;
+              "https://json-schema.org/draft/2020-12/schema") ;;
+              *) echo "FAIL: $f declara dialeto não suportado: '$schema'"; exit 1 ;;
+            esac
           done
 
   validate-version:
@@ -74,6 +76,14 @@ jobs:
         run: |
           fail=0
           for f in templates/checks/check-*.sh; do
+            bash -n "$f" || { echo "SYNTAX ERROR: $f"; fail=1; }
+          done
+          exit $fail
+      - name: Syntax-check orchestrator + scripts
+        run: |
+          fail=0
+          for f in scripts/*.sh templates/checks/_*.sh; do
+            [ -f "$f" ] || continue
             bash -n "$f" || { echo "SYNTAX ERROR: $f"; fail=1; }
           done
           exit $fail
