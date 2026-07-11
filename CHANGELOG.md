@@ -3,6 +3,33 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.48.0] — 2026-07-11
+
+Rodada "Livros de IA": auditoria da cobertura OWASP LLM Top 10 2025 contra os
+agentes de IA existentes + fecha a única lacuna determinística encontrada.
+
+### OWASP LLM Top 10 — auditoria + lacuna fechada
+
+- Auditado: dos 10 riscos, 9 já eram cobertos (`ai-llm-safety` sozinho cobre
+  LLM01/02/05/06/09/10; `prompt-injection-defense`, `vector-db-security`,
+  `fine-tune-data-leak`, `supply-chain`/`mcp` cobrem o resto).
+- **`check-llm-system-prompt-leak`** (novo, módulo 2): fecha **LLM07 (System
+  Prompt Leakage)** — system prompt devolvido em resposta HTTP (high) ou logado
+  (med). Era o único do Top 10 sem check determinístico. Self-skip sem lib de
+  LLM no `package.json`. Par de fixtures `project-sysprompt-bad/good`, gate
+  62→63, 0 regressões. Agente `agents/llm-system-prompt-leak.md`. Total 117 agentes.
+
+### Camada de conhecimento (livros de engenharia de IA)
+
+- `docs/book-insights.md` § 5 (novo): destila Huyen (*Designing ML Systems*),
+  Hulten (*Engineering Intelligent Systems*), Burkov (*ML Engineering*) e ML
+  Design Patterns. Inclui:
+  - **Mapa de cobertura OWASP LLM Top 10** → agente/check que materializa cada risco.
+  - **Isolar o provider** (Clean Arch + Ports & Adapters + AI Gateway): não
+    acoplar SDK do provider na regra de negócio (consultivo — agentes `architect`).
+  - **Qualidade sob não-determinismo**: mock de adapter, asserção por schema,
+    LLM-as-judge, guardrails de saída, monitorar data drift.
+
 ## [0.47.0] — 2026-07-11
 
 Rodada "Livros": incorpora conhecimento acionável de 4 livros de referência

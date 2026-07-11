@@ -169,7 +169,7 @@ Grava `.blindar/config.yml` com as escolhas. Pula automaticamente em
 | 18 | Smoke / Runtime Truth + checks de infra (prova que a app SOBE) | sempre (self-skip sem docker/URL) | [`smoke-runtime`](agents/smoke-runtime.md) + 9 checks de infra/runtime |
 | 19 | Pentest ATIVO — payloads reais (requer `.blindar/.accept-authorization`) | só com autorização | [`pentest-active`](agents/pentest-active.md) |
 
-> **Total**: 116 agentes em 19 módulos (80 checks determinísticos + 14 API-wrapped + playbooks).
+> **Total**: 117 agentes em 19 módulos (81 checks determinísticos + 14 API-wrapped + playbooks).
 > Fonte da verdade: [`pipeline/MODULE-MAP.json`](pipeline/MODULE-MAP.json).
 
 **Módulos não-negociáveis** (sempre rodam, mesmo em "MVP"): **1, 2, 11, 12, 15** (+ 18, que self-skipa quando não há runtime pra subir).

@@ -102,6 +102,67 @@ Sustenta o princípio fundador `security-first` e os agentes de resiliência.
 
 ---
 
+## 5. Engenharia de sistemas de IA (Huyen, Hulten, Burkov) + OWASP LLM Top 10
+
+Foco: arquitetar, integrar, testar e **manter** sistemas que usam IA/LLM de
+forma segura. Fontes: *Designing Machine Learning Systems* (Chip Huyen),
+*Building/Engineering Intelligent Systems* (Geoff Hulten), *ML Engineering*
+(Andriy Burkov), *ML Design Patterns* (Lakshmanan et al.) e o
+[OWASP Top 10 para Aplicações de LLM 2025](https://genai.owasp.org/).
+
+### Cobertura OWASP LLM Top 10 no blindar (mapa)
+
+| # | Risco | Materializado em |
+|---|---|---|
+| LLM01 | Prompt Injection | [`prompt-injection-defense`](../templates/checks/check-prompt-injection-defense.sh), `ai-llm-safety` |
+| LLM02 | Sensitive Info Disclosure | `ai-llm-safety` (PII em prompt sem redact) |
+| LLM03 | Supply Chain | `supply-chain`, `mcp-security`, `sbom-slsa` |
+| LLM04 | Data/Model Poisoning | `fine-tune-data-leak` (API) |
+| LLM05 | Improper Output Handling | `ai-llm-safety` (output em eval/innerHTML/SQL) |
+| LLM06 | Excessive Agency | `ai-llm-safety` (tool destrutiva sem confirmação humana) |
+| **LLM07** | **System Prompt Leakage** | [`llm-system-prompt-leak`](../templates/checks/check-llm-system-prompt-leak.sh) ⭐ v0.48 |
+| LLM08 | Vector/Embedding Weaknesses | `vector-db-security` (API), `rag-quality` (API) |
+| LLM09 | Misinformation/Overreliance | `ai-llm-safety` (aviso "pode conter erros") |
+| LLM10 | Unbounded Consumption | `ai-llm-safety` (max_tokens + rate limit) |
+
+### Arquitetura: isolar o provider (Clean Arch + Ports & Adapters)
+
+O maior erro é acoplar o SDK do provider (`openai`, `anthropic`) direto na regra
+de negócio. Se o provider muda a assinatura ou você migra pra modelo local
+(Llama), o sistema inteiro quebra.
+
+- **Domínio define um Port** (`interface AnaliseSentimentoPort`) — não sabe o que
+  é token, JSON de provider, nem HTTP.
+- **Infra implementa o Adapter** (`OpenAIAdapter`, `LlamaAdapter`) — traduz
+  objeto de negócio ↔ formato do provider.
+- **AI Gateway centralizado**: roteamento de prompts, rotação de chave, rate
+  limit e rastreamento de custo num lugar só (não cada serviço chamando a IA
+  caótico). Casa com `cost-observability` e `api-gateway`.
+
+> Consultivo (não vira check determinístico por alto FP): os agentes `architect`
+> e `solution-architect` recomendam esse desacoplamento quando veem SDK de
+> provider importado dentro de camada de domínio.
+
+### Qualidade sob não-determinismo (o teste da IA)
+
+Mesmo input → saída ligeiramente diferente. Testar exige estratégia própria:
+
+1. **Mock do adapter** pra testes de unidade da regra de negócio — substitui o
+   provider por stub que retorna string previsível. Testes ficam 100%
+   determinísticos. (Habilitado pelo Ports & Adapters acima.)
+2. **Asserção flexível, não exata**: valide **schema** (retornou JSON com os
+   campos obrigatórios?) em vez de `assert == "X"`.
+3. **LLM-as-a-judge**: um modelo avaliador julga a saída por métrica
+   (toxicidade, acurácia, tom) em vez de igualdade literal.
+4. **Guardrails de saída**: trate a resposta da IA como **não confiável** —
+   parsing robusto + validação de esquema + sanitização antes de renderizar ou
+   executar (LLM05). Já materializado em `ai-llm-safety`.
+5. **Monitorar data drift**: sistema de IA degrada em produção conforme os dados
+   do mundo real mudam. Exige telemetria contínua + alerta (não é "funciona até
+   alguém mexer no código"). Casa com `observability` e `mlops`.
+
+---
+
 ## Livros de arquitetura e código (princípio, não check)
 
 Clean Architecture, Fundamentals of Software Architecture, The Hard Parts,

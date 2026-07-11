@@ -38,6 +38,7 @@
         "file-uploads",
         "mlops",
         "prototype-pollution",
+        "llm-system-prompt-leak",
         "semgrep",
         "gitleaks"
       ],

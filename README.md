@@ -5,8 +5,8 @@ otimiza e prepara projetos para produção** — e também sabe criar projetos
 novos do zero, gerar/refazer frontend lendo o backend, e entregar pacote
 completo (DEPLOY/MANUAL/API/Postman/diagramas/SLA) ao final.
 
-**v0.47 — 116 agentes em 19 módulos numerados, com camada determinística
-(94 checks executáveis) que garante cobertura independente da diligência do LLM.**
+**v0.48 — 117 agentes em 19 módulos numerados, com camada determinística
+(95 checks executáveis) que garante cobertura independente da diligência do LLM.**
 
 Comportamento: **launcher curto** no início (4 perguntas + menu de
 19 módulos, ≤30s) → roda autônomo até termination conforme modo escolhido:
@@ -30,7 +30,7 @@ selecionados completos em modo ESCOLHIDOS).
 
 - **19 módulos numerados** — operador escolhe "tudo", "defaults", "1,3,5", "1-8" ou "tudo menos 13,14"
 - **3 modos de execução** — AUTO / SUPERVISIONADO / ESCOLHIDOS
-- **116 agentes especialistas** em segurança, frontend, banco, API, performance, compliance, AI, payments, etc.
+- **117 agentes especialistas** em segurança, frontend, banco, API, performance, compliance, AI, payments, etc.
 - **Camada determinística** — 92 checks executáveis (`templates/checks/`) + gate `check-selftest` (60/60 pares fixture-verificados) que provam que cada check dispara no vulnerável e cala no limpo. Cobertura garantida mesmo em modo AUTO.
 - **Grafo de conhecimento nativo** ([`scripts/graph-build.js`](scripts/graph-build.js)) — construído 1× na discovery, reusado por todos os agentes (mais cobertura, menos tokens)
 - **Smoke / Runtime Truth** ([`scripts/smoke-run.sh`](scripts/smoke-run.sh)) — sobe o stack em homolog e prova que a app boota + responde `/health` antes de qualquer "verde"
@@ -103,15 +103,15 @@ blindar/
 │   ├── 07-final-report.md
 │   ├── 08-maintenance.md        (opcional)
 │   ├── 09-drift-detection.md    (opcional)
-│   └── MODULE-MAP.json          ⭐ fonte da verdade módulo→agentes (116 agentes em 19 módulos)
+│   └── MODULE-MAP.json          ⭐ fonte da verdade módulo→agentes (117 agentes em 19 módulos)
 │
-├── agents/               ← 116 especialistas em 19 módulos numerados
+├── agents/               ← 117 especialistas em 19 módulos numerados
 │   │                       Roster completo em SKILL.md ou MODULE-MAP.json.
 │   │                       Categorias (frontmatter `category:`):
 │   │                       security · frontend · ops · data · compliance ·
 │   │                       performance · resilience · quality · cleanup ·
 │   │                       dx · ai · payments · scaffolding · delivery · ...
-│   └── (116 arquivos .md)
+│   └── (117 arquivos .md)
 │
 ├── frameworks/           ← mapeamento controles ↔ agentes (referência)
 │   ├── iso-27001.md      ← mais aceito globalmente
