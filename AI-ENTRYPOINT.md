@@ -7,6 +7,16 @@
 
 ---
 
+## Passo -1 — Orquestrador determinístico SEMPRE primeiro (v0.46+)
+
+Antes de qualquer coisa deste decision tree, execute a sequência mandatória de
+`SKILL.md` § "EXECUÇÃO MANDATÓRIA": `blindar-run.sh --parallel auto` →
+validar frescor do `run-report.json` (`ran_at`) → **executar os agentes
+deferred** (playbook-only) → apresentar resumo. O pipeline abaixo
+(Fases 00–7, rounds/PRs/sec.html) é o engajamento COMPLETO de hardening — ele
+consome o run-report como entrada, nunca o substitui. Se o usuário só disse
+"blindar", a sequência mandatória É a entrega; o pipeline completo é opt-in.
+
 ## Ordem security-first (não-negociável, v0.45+)
 
 Segurança não é uma fase — é gate em CADA passo. A sequência é:

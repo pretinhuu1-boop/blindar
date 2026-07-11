@@ -3,6 +3,42 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.46.0] — 2026-07-11
+
+Rodada "garantia de aplicação": toda invocação aplica TUDO (deferred incluso),
+nenhum resultado stale passa por atual, e dev ↔ instalada sincronizam com 1 comando.
+
+### Orquestrador — anti-stale + versão rastreável
+
+- `scripts/blindar-run.sh`: **fix de resultado stale** — o result JSON do run
+  anterior é removido antes de executar cada check (serial E paralelo). Check
+  que morre sem escrever agora vira `errored` de verdade, em vez de reler o
+  JSON antigo como se fosse desta execução (falso verde silencioso).
+- `run-report.json` ganha `skill_version` (conteúdo de `VERSION`) — todo report
+  diz qual versão do blindar o gerou. Declarado em `schemas/run-report.schema.json`.
+
+### Contrato de invocação — deferred é fila de trabalho, não rodapé
+
+- `SKILL.md` § EXECUÇÃO MANDATÓRIA: sequência estendida — (1) registrar hora de
+  início, (4) validar frescor do report (`ran_at` ≥ início; stale = ERRORED),
+  (5) **executar TODOS os agentes deferred** (playbook-only) gravando
+  `check-<agent>.json` real antes de apresentar resultado. "Aplicado sempre que
+  chamado" agora é regra escrita, não intenção.
+- Precedência documentada: sequência mandatória roda em TODA invocação; launcher
+  (4 perguntas) e pipeline completo (rounds/PRs) são opt-in. Remove a
+  contradição SKILL.md × AI-ENTRYPOINT que deixava o fluxo ao acaso do LLM.
+- `AI-ENTRYPOINT.md`: novo "Passo -1" — orquestrador determinístico primeiro,
+  decision tree consome o run-report como entrada.
+
+### Sync dev ↔ instalada — 1 comando, verificado
+
+- `scripts/sync-skill.sh` (novo): sincroniza o repo dev → `~/.claude/skills/blindar`
+  usando o file-set tracked do git como fonte da verdade. Copia só o que difere,
+  remove órfãos, limpa diretórios vazios, preserva runtime da instalada
+  (`.git/`, `.blindar/`, `.last-check`) e verifica ao final (exit 1 se sobrou
+  drift). Modo `--check` pra CI/inspeção. Substitui o sync manual via
+  `git archive | tar -x`.
+
 ## [0.45.0] — 2026-07-04
 
 Rodada "Fundação primeiro": consertar o motor determinístico, dar ao blindar um

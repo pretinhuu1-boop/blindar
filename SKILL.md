@@ -24,12 +24,23 @@ triggers:
 
 Quando esta skill for invocada (`blindar`, `blinda este projeto`, etc.), você (Claude) DEVE executar EXATAMENTE esta sequência, sem pular, sem perguntar antes de cada passo, sem alternativas:
 
-1. `bash ~/.claude/skills/blindar/scripts/blindar-run.sh --parallel auto` (ou `--fast` se usuário pediu rápido)
-2. Aguardar conclusão (exit code 0-4)
-3. Ler `.blindar/run-report.json` que foi gerado
-4. Ler `.blindar/proactive-analysis.md` se existir (análise consultiva nas 8 dimensões)
-5. Apresentar ao usuário:
-   - Resumo numérico (passed/failed/skipped/deferred/cobertura%)
+1. Registre a hora de início: `date -u +%Y-%m-%dT%H:%M:%SZ`
+2. `bash ~/.claude/skills/blindar/scripts/blindar-run.sh --parallel auto` (ou `--fast` se usuário pediu rápido)
+3. Aguardar conclusão (exit code 0-4)
+4. Ler `.blindar/run-report.json` e **validar frescor**: `ran_at` DEVE ser ≥ hora
+   registrada no passo 1. Se for mais antigo, o orquestrador morreu antes de
+   escrever o report — trate como exit 4 (ERRORED), reporte e PARE. Nunca
+   apresente um report de execução anterior como se fosse desta.
+5. **Se `deferred > 0`**: para CADA entrada de `results` com
+   `"status":"deferred"`, leia `agents/<agent>.md`, execute o playbook contra o
+   projeto e grave `.blindar/results/check-<agent>.json` (schema
+   `blindar/check-result@v1`, status real: passed/failed/skipped + findings).
+   A invocação só está completa depois disso — **deferred não é opcional**; é a
+   sua fila de trabalho. Exceção: usuário pediu explicitamente pra pular.
+6. Ler `.blindar/proactive-analysis.md` se existir (análise consultiva nas 8 dimensões)
+7. Apresentar ao usuário:
+   - Resumo numérico (passed/failed/skipped/deferred/cobertura%), incluindo os
+     deferred que VOCÊ executou no passo 5
    - Top 5 findings críticos (severity crit/high)
    - Análise proativa resumida (se gerada)
    - Recomendação de próxima ação
@@ -39,9 +50,20 @@ Quando esta skill for invocada (`blindar`, `blinda este projeto`, etc.), você (
 - Pular passos da sequência acima
 - "Decidir" que algum agente não é necessário
 - Apresentar findings sem antes rodar o orquestrador
+- Apresentar resultado final com `deferred > 0` sem ter executado os playbooks (passo 5)
+- Confiar num `run-report.json` sem validar `ran_at` (passo 4)
 - Pular `proactive-analysis` se ANTHROPIC_API_KEY existe
 
 **Se algo falhar**: reporte exit code + arquivo de log, NÃO tente "consertar" rodando outras coisas.
+
+### Precedência: sequência mandatória × launcher
+
+A sequência acima roda em **TODA invocação**, sem perguntas. O launcher
+(4 perguntas + menu, seção "Comportamento" abaixo) só entra quando o usuário
+pedir o **engajamento completo de hardening** (rounds/PRs/sec.html) ou modo
+supervisionado — e mesmo nesse caso, o primeiro passo continua sendo o
+orquestrador determinístico. Em caso de dúvida sobre qual fluxo o usuário quer:
+a sequência mandatória é o default; o pipeline completo é opt-in.
 
 Esta restrição existe porque blindar foi desenhado pra ser determinístico e auditável. Pular passos quebra a garantia de cobertura.
 
@@ -424,6 +446,20 @@ Em todos: 1 reporte claro do que falta, sem tentar adivinhar.
 - CI vermelha mergeada
 - Schema `sec.html` mudando entre rounds (schema é commitado uma vez)
 - **Categoria não-security vencendo de security em empate** (security-first)
+
+## Sincronização dev ↔ instalada
+
+Se você desenvolve o blindar num repo separado (ex: `Documents/Axial/Blidar`),
+a cópia instalada em `~/.claude/skills/blindar` é um **artefato** — nunca edite
+lá. Após qualquer mudança no dev:
+
+```bash
+bash scripts/sync-skill.sh          # aplica (copia tracked + remove órfãos + verifica)
+bash scripts/sync-skill.sh --check  # só reporta drift (exit 1 se divergiu)
+```
+
+O script usa o file-set tracked do git como fonte da verdade e preserva o
+estado de runtime da instalada (`.git/`, `.blindar/`, `.last-check`).
 
 ## Auto-update
 

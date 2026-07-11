@@ -22,6 +22,10 @@
       "type": "string",
       "const": "blindar/run-report@v1"
     },
+    "skill_version": {
+      "type": "string",
+      "description": "Versão do skill blindar que gerou o report (conteúdo de VERSION). 'unknown' se VERSION ausente."
+    },
     "ran_at": {
       "type": "string",
       "format": "date-time"

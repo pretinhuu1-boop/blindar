@@ -66,6 +66,7 @@ fi
 PROJECT_DIR="${PWD}"
 RESULTS_DIR="${BLINDAR_DIR:-$PROJECT_DIR/.blindar}/results"
 RUN_REPORT="${BLINDAR_DIR:-$PROJECT_DIR/.blindar}/run-report.json"
+SKILL_VERSION="$(tr -d '[:space:]' < "$SKILL_DIR/VERSION" 2>/dev/null || echo unknown)"
 
 mkdir -p "$RESULTS_DIR"
 
@@ -145,6 +146,7 @@ if [ -n "$SINCE_REF" ]; then
     cat > "$RUN_REPORT" <<EOF
 {
   "schema": "blindar/run-report@v1",
+  "skill_version": "$SKILL_VERSION",
   "ran_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
   "duration_sec": 0,
   "since": "$SINCE_REF",
@@ -248,6 +250,10 @@ EOF
 
   [ "$JSON_ONLY" -eq 0 ] && echo "${B}▶${RST}  $agent (module $module_id, $kind)..." >&2
 
+  # Remove resultado de run anterior: se o check morrer sem escrever, o status
+  # vira "errored" em vez de reler um JSON stale como se fosse desta execução.
+  rm -f "$result_json" 2>/dev/null || true
+
   if [ "$VERBOSE" -eq 1 ]; then
     # Preserva stdout/stderr, prefixa com nome do agente
     bash "$script" 2>&1 | sed "s/^/  [$agent] /" >&2
@@ -319,6 +325,9 @@ fi
 
 [ "${JSON_ONLY:-0}" -eq 0 ] && echo "${B}▶${RST}  $agent (module $module_id, $kind)..." >&2
 
+# Anti-stale: mesmo contrato do modo serial
+rm -f "$result_json" 2>/dev/null || true
+
 if [ "${VERBOSE:-0}" -eq 1 ]; then
   bash "$script" 2>&1 | sed "s/^/  [$agent] /" >&2
 else
@@ -384,6 +393,7 @@ fi
 {
   echo "{"
   echo "  \"schema\": \"blindar/run-report@v1\","
+  echo "  \"skill_version\": \"$SKILL_VERSION\","
   echo "  \"ran_at\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\","
   echo "  \"duration_sec\": $DURATION,"
   echo "  \"modules_filter\": \"$FILTER\","
