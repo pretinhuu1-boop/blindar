@@ -105,7 +105,7 @@ Na primeira execução em projeto novo, o blindar abre o **launcher**
 3. Modo de execução (1=AUTO, 2=SUPERVISIONADO, 3=ESCOLHIDOS)
 4. Rigor (P/C/M)
 
-Depois exibe **menu de 15 módulos** com defaults inteligentes. Você
+Depois exibe **menu de 19 módulos** com defaults inteligentes. Você
 escolhe: `tudo`, `defaults`, `1,3,5,7,10`, `1-8`, ou `tudo menos 13,14`.
 
 Após a confirmação final, o skill roda do começo ao fim conforme o modo:

@@ -54,7 +54,7 @@ Em conversas com janela menor, cole os outros arquivos sob demanda.
 
 Cole [`pipeline/00-launcher.md`](pipeline/00-launcher.md). Peça:
 > "Atue como Launcher do blindar. Faça as 4 perguntas, exiba o menu de
-> 15 módulos, grave .blindar/config.yml conforme schema."
+> 19 módulos, grave .blindar/config.yml conforme schema."
 
 Você responde as perguntas, o agente grava o config. Depois pula pra Passo 2.
 

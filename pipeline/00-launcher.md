@@ -87,8 +87,10 @@ Sem key: avisa e segue como A (hardening puro).
 
 ## Passo 2 — Menu de módulos
 
-Exiba **exatamente** a tabela abaixo. Sempre mostre os 15 módulos (independente
-das respostas das perguntas 1–4 — elas só ajustam defaults).
+Exiba **exatamente** a tabela abaixo. Sempre mostre os 19 módulos (independente
+das respostas das perguntas 1–4 — elas só ajustam defaults). Módulos 16–19 são
+de escopo especial (evolução de produto e ataque) e só ligam sob condição
+explícita — ver "Resolução dos defaults".
 
 ```
 ═══════════════════════════════════════════════════════════════════
@@ -111,11 +113,15 @@ das respostas das perguntas 1–4 — elas só ajustam defaults).
  13   Resiliência & escalabilidade (breakers, 10x)         [rigor≠mvp]
  14   DX & onboarding (.env.example, scripts, README)      ✓ ON
  15   Pentest + adversarial review                         ✓ ON
- 16   Product Evolution (APIs órfãs/gaps/UX/oportunidades) [escopo B|C]
+ 16   Product Evolution (APIs órfãs/gaps/UX/oportunidades) [escopo B|C, API-key]
+ 17   Ataque — recon passivo externo                       [se URL alvo]
+ 18   Smoke/Runtime Truth + checks de infra (app SOBE?)    ✓ ON (self-skip)
+ 19   Pentest ATIVO — payloads reais contra alvo           [autorizado]
 ═══════════════════════════════════════════════════════════════════
 
 Como você quer rodar?
-  • "tudo"        → roda os 16 módulos (módulo 16 só se ANTHROPIC_API_KEY)
+  • "tudo"        → roda os módulos aplicáveis (16 exige ANTHROPIC_API_KEY;
+                    17 exige URL; 19 exige autorização assinada)
   • "defaults"    → roda apenas os marcados ✓ ON (recomendado por padrão)
   • "1,3,5,7,10"  → roda apenas esses
   • "1-8"         → roda do 1 ao 8 (faixa)
@@ -127,13 +133,15 @@ Como você quer rodar?
 
 Aplique nesta ordem (cada regra sobrepõe a anterior):
 
-1. **Sempre ON**: 1, 2, 11, 12, 15 (núcleo não-negociável)
+1. **Sempre ON**: 1, 2, 11, 12, 15, 18 (núcleo não-negociável; 18 self-skipa se não há runtime pra subir)
 2. **ON se tem UI** (detectado em Fase 1 — `package.json` com react/vue/svelte/next, `index.html`, etc.): 3, 10
 3. **ON se tem DB** (detectado em Fase 1 — `DATABASE_URL`, prisma, drizzle, migrations/): 7
 4. **ON se sensibilidade ≠ B**: 8
 5. **ON se tipo ∈ {SaaS, E-com, API}**: 4, 6, 9, 13
 6. **ON sempre**: 5, 14
-7. **ON apenas se Pergunta 5 = B ou C** (escopo evolução): 16
+7. **ON apenas se Pergunta 5 = B ou C** (escopo evolução) **E `ANTHROPIC_API_KEY` presente**: 16
+8. **ON apenas se o operador forneceu URL de alvo externo**: 17 (recon passivo, read-only)
+9. **ON apenas com autorização assinada** (`.blindar/.accept-authorization` presente): 19 (pentest ativo — payloads reais). NUNCA ligue por default.
 
 ### Resolução do escopo (Pergunta 5)
 
@@ -189,7 +197,7 @@ Crie o arquivo (sobrescreve se existir) com este conteúdo:
 # .blindar/config.yml — gerado pelo launcher
 schema: blindar/config@v0.8
 mode: auto              # auto | supervised | chosen
-selected_modules:       # números do menu (1..15)
+selected_modules:       # números do menu (1..19)
   - 1
   - 2
   - 11

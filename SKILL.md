@@ -2,7 +2,7 @@
 name: blindar
 description: |
   Audita, blinda, otimiza e prepara o projeto para produção. Pipeline:
-  launcher interativo (4 perguntas + menu de 15 módulos) → baseline →
+  launcher interativo (4 perguntas + menu de 19 módulos) → baseline →
   discovery → bootstrap sec.html → rounds pequenos (1 PR cada) →
   adversarial review → production checklist → relatório. Mantém sec.html
   como dashboard vivo. Termina quando: 0 crit + ≤2 high após adversarial.
@@ -139,13 +139,13 @@ objetivas:
 3. **Modo de execução** (Auto / Supervisionado / Escolhidos)
 4. **Rigor** (Produção / Compliance / MVP)
 
-E exibe o menu numerado de **15 módulos** (próxima seção). Aceita "tudo",
+E exibe o menu numerado de **19 módulos** (próxima seção). Aceita "tudo",
 "defaults", "1,3,5,7", "1-8", "tudo menos 13,14".
 
 Grava `.blindar/config.yml` com as escolhas. Pula automaticamente em
 `--resume` ou `--headless` (CI/cron).
 
-## Menu de módulos (15 numerados)
+## Menu de módulos (19 numerados)
 
 | # | Módulo | Quando default ON | Agentes |
 |---|---|---|---|
@@ -164,10 +164,15 @@ Grava `.blindar/config.yml` com as escolhas. Pula automaticamente em
 | 13 | Resiliência + escalabilidade + Process + Scheduled jobs + Chaos + Event-driven | rigor ≠ MVP | [`resilience`](agents/resilience.md), [`scalability`](agents/scalability.md), [`process-resilience`](agents/process-resilience.md), [`scheduled-jobs`](agents/scheduled-jobs.md), [`chaos-engineering`](agents/chaos-engineering.md), [`event-driven`](agents/event-driven.md) |
 | 14 | DX + Flags + Backoffice + Email + Docs + Reports + Architect + Delivery + Project bootstrap | sempre | [`devops`](agents/devops.md), [`feature-flags`](agents/feature-flags.md), [`backoffice-admin`](agents/backoffice-admin.md), [`email-deliverability`](agents/email-deliverability.md), [`documentation-live`](agents/documentation-live.md), [`execution-report`](agents/execution-report.md), [`architect`](agents/architect.md), [`delivery-bundle`](agents/delivery-bundle.md), [`project-bootstrap`](agents/project-bootstrap.md) |
 | 15 | Pentest + adversarial review | sempre | [`pentest`](agents/pentest.md), [`adversarial-reviewer`](agents/adversarial-reviewer.md) |
+| 16 | Product Evolution (opt-in, escopo separado — requer `ANTHROPIC_API_KEY`) | só se pedido | [`api-frontend-coverage`](agents/api-frontend-coverage.md), [`user-journey-simulator`](agents/user-journey-simulator.md), [`feature-gap-analyzer`](agents/feature-gap-analyzer.md), [`growth-opportunities`](agents/growth-opportunities.md), [`product-critic`](agents/product-critic.md) |
+| 17 | Ataque — recon passivo externo (requer URL alvo) | se URL fornecida | [`attack-recon`](agents/attack-recon.md) |
+| 18 | Smoke / Runtime Truth + checks de infra (prova que a app SOBE) | sempre (self-skip sem docker/URL) | [`smoke-runtime`](agents/smoke-runtime.md) + 9 checks de infra/runtime |
+| 19 | Pentest ATIVO — payloads reais (requer `.blindar/.accept-authorization`) | só com autorização | [`pentest-active`](agents/pentest-active.md) |
 
-> **Total**: 72 agentes em v0.21. Fonte da verdade: [`pipeline/MODULE-MAP.json`](pipeline/MODULE-MAP.json).
+> **Total**: 114 agentes em 19 módulos (92 checks determinísticos + 14 API-wrapped).
+> Fonte da verdade: [`pipeline/MODULE-MAP.json`](pipeline/MODULE-MAP.json).
 
-**Módulos não-negociáveis** (sempre rodam, mesmo em "MVP"): **1, 2, 11, 12, 15**.
+**Módulos não-negociáveis** (sempre rodam, mesmo em "MVP"): **1, 2, 11, 12, 15** (+ 18, que self-skipa quando não há runtime pra subir).
 
 ## Modos de execução
 

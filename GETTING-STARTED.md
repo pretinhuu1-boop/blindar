@@ -60,7 +60,7 @@ Em qualquer sessão Claude Code:
 ```
 /blindar
 ```
-Roda o launcher interativo (4 perguntas + menu de 15 módulos). Claude segue o `pipeline/` orquestrado pelo SKILL.md.
+Roda o launcher interativo (4 perguntas + menu de 19 módulos). Claude segue o `pipeline/` orquestrado pelo SKILL.md.
 
 ## Comandos essenciais
 

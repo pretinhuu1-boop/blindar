@@ -5,10 +5,11 @@ otimiza e prepara projetos para produção** — e também sabe criar projetos
 novos do zero, gerar/refazer frontend lendo o backend, e entregar pacote
 completo (DEPLOY/MANUAL/API/Postman/diagramas/SLA) ao final.
 
-**v0.21 — 72 agentes em 15 módulos numerados.**
+**v0.46 — 114 agentes em 19 módulos numerados, com camada determinística
+(92 checks executáveis) que garante cobertura independente da diligência do LLM.**
 
 Comportamento: **launcher curto** no início (4 perguntas + menu de
-15 módulos, ≤30s) → roda autônomo até termination conforme modo escolhido:
+19 módulos, ≤30s) → roda autônomo até termination conforme modo escolhido:
 
 - **AUTO** — vai do início ao fim sem pausar (default)
 - **SUPERVISIONADO** — pausa entre rounds
@@ -25,12 +26,15 @@ Mantém `sec.html`, `blindar-report.html` (técnico) e `client-report.html`
 Termina quando: **0 crit + ≤2 high** após review adversarial (ou módulos
 selecionados completos em modo ESCOLHIDOS).
 
-## Recursos chave da v0.21
+## Recursos chave da v0.46
 
-- **15 módulos numerados** — operador escolhe "tudo", "defaults", "1,3,5", "1-8" ou "tudo menos 13,14"
+- **19 módulos numerados** — operador escolhe "tudo", "defaults", "1,3,5", "1-8" ou "tudo menos 13,14"
 - **3 modos de execução** — AUTO / SUPERVISIONADO / ESCOLHIDOS
-- **72 agentes especialistas** em segurança, frontend, banco, API, performance, compliance, AI, payments, etc.
-- **Intelligence system** ([`schemas/intelligence.schema.json`](schemas/intelligence.schema.json)) — 11 agentes consultam `.blindar/intelligence.yml` pra evitar falso positivo
+- **114 agentes especialistas** em segurança, frontend, banco, API, performance, compliance, AI, payments, etc.
+- **Camada determinística** — 92 checks executáveis (`templates/checks/`) + gate `check-selftest` (60/60 pares fixture-verificados) que provam que cada check dispara no vulnerável e cala no limpo. Cobertura garantida mesmo em modo AUTO.
+- **Grafo de conhecimento nativo** ([`scripts/graph-build.js`](scripts/graph-build.js)) — construído 1× na discovery, reusado por todos os agentes (mais cobertura, menos tokens)
+- **Smoke / Runtime Truth** ([`scripts/smoke-run.sh`](scripts/smoke-run.sh)) — sobe o stack em homolog e prova que a app boota + responde `/health` antes de qualquer "verde"
+- **Intelligence system** ([`schemas/intelligence.schema.json`](schemas/intelligence.schema.json)) — agentes consultam `.blindar/intelligence.yml` pra evitar falso positivo
 - **Frontend generator com aprovação** — 3 portões (preview HTML + decisões + confirmação) antes de tocar em qualquer arquivo
 - **Project bootstrap** — cria projeto novo do zero (Next.js 15 / NestJS / Postgres / Stripe / etc.)
 - **Delivery bundle** — gera pasta `release/` com DEPLOY, MANUAL, API docs, Postman collection production-ready, diagramas Mermaid, SLA, checklist go-live
@@ -88,7 +92,7 @@ blindar/
 ├── README.md             ← este arquivo
 │
 ├── pipeline/             ← Fase 00 launcher + 10 fases (00-09) + MODULE-MAP.json
-│   ├── 00-launcher.md           ← 4 perguntas + menu de 15 módulos
+│   ├── 00-launcher.md           ← 4 perguntas + menu de 19 módulos
 │   ├── 00-strategic-scan.md     ← pre-blindar scan + plano
 │   ├── 01-baseline.md
 │   ├── 02-discovery.md
@@ -99,15 +103,15 @@ blindar/
 │   ├── 07-final-report.md
 │   ├── 08-maintenance.md        (opcional)
 │   ├── 09-drift-detection.md    (opcional)
-│   └── MODULE-MAP.json          ⭐ fonte da verdade módulo→agentes (72 agentes em v0.21)
+│   └── MODULE-MAP.json          ⭐ fonte da verdade módulo→agentes (114 agentes em 19 módulos)
 │
-├── agents/               ← 72 especialistas em 15 módulos numerados
+├── agents/               ← 114 especialistas em 19 módulos numerados
 │   │                       Roster completo em SKILL.md ou MODULE-MAP.json.
 │   │                       Categorias (frontmatter `category:`):
 │   │                       security · frontend · ops · data · compliance ·
 │   │                       performance · resilience · quality · cleanup ·
 │   │                       dx · ai · payments · scaffolding · delivery · ...
-│   └── (72 arquivos .md)
+│   └── (114 arquivos .md)
 │
 ├── frameworks/           ← mapeamento controles ↔ agentes (referência)
 │   ├── iso-27001.md      ← mais aceito globalmente

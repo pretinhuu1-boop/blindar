@@ -58,7 +58,7 @@ Antes de invocar `blindar` num projeto que importa:
 
 ## 7. Riscos aceitos
 
-- [ ] Você entendeu o **launcher** (4 perguntas + menu de 15 módulos, ≤30s)
+- [ ] Você entendeu o **launcher** (4 perguntas + menu de 19 módulos, ≤30s)
       na primeira execução em projeto novo (v0.8+)
 - [ ] Você escolheu o **modo** de execução: **AUTO** (vai até o fim sem
       pausar), **SUPERVISIONADO** (pausa entre rounds), **ESCOLHIDOS**

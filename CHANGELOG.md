@@ -39,6 +39,19 @@ nenhum resultado stale passa por atual, e dev ↔ instalada sincronizam com 1 co
   drift). Modo `--check` pra CI/inspeção. Substitui o sync manual via
   `git archive | tar -x`.
 
+### Docs sincronizados com a realidade (eram v0.21)
+
+- Contagens defasadas corrigidas em TODA a doc de uso: "72 agentes / 15 módulos"
+  → **114 agentes / 19 módulos** (SKILL.md, README.md, USAGE.md, AI-ENTRYPOINT.md,
+  CHECKLIST.md, GETTING-STARTED.md, MULTI-AI.md, launcher, rounds-loop). A fonte
+  da verdade sempre foi `pipeline/MODULE-MAP.json`; os docs estavam parados na v0.21.
+- **Bug de schema**: `config.schema.json` limitava `selected_modules` a
+  `maximum: 15` — rejeitaria qualquer config que selecionasse os módulos 16–19
+  (evolução/ataque/smoke). Elevado pra 19.
+- SKILL.md e launcher agora listam módulos 16–19 (Product Evolution, recon
+  passivo, Smoke/Runtime Truth, pentest ativo) com suas condições de ativação
+  (API-key / URL / autorização assinada) e o módulo 18 marcado como núcleo.
+
 ### Fixes de qualidade
 
 - `check-config-externalization.sh`: `.env.example` só é exigido se o projeto

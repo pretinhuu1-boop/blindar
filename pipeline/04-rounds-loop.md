@@ -84,7 +84,7 @@ Comportamento depende de `config.mode`:
 **Fonte da verdade**: [`pipeline/MODULE-MAP.json`](MODULE-MAP.json). Pipeline lê esse JSON
 em tempo de execução pra resolver agentes por módulo selecionado.
 
-Versão atual: **72 agentes em v0.21** distribuídos em 15 módulos numerados.
+Versão atual: **114 agentes em v0.46** distribuídos em 19 módulos numerados.
 Para a tabela visual completa, ver [`SKILL.md`](../SKILL.md) seção "Menu de
 módulos numerados". A filtragem real respeita `config.selected_modules` ∩
 `MODULE-MAP[id].agents`.

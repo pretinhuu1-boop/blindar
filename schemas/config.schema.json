@@ -16,10 +16,10 @@
       "items": {
         "type": "integer",
         "minimum": 1,
-        "maximum": 15
+        "maximum": 19
       },
       "uniqueItems": true,
-      "description": "Módulos numerados do menu (1..15) a executar. Ver SKILL.md > Menu de módulos. v0.8.0+. Sem default no schema — quando vazio/missing, pipeline trata como 'rodar todos' (compat retroativa com v0.7). Launcher (Fase 00) preenche este array conforme escolha do operador."
+      "description": "Módulos numerados do menu (1..19) a executar. Ver SKILL.md > Menu de módulos. v0.8.0+. Módulos 16-19 são de escopo especial (evolução/ataque) e só entram sob condição explícita. Sem default no schema — quando vazio/missing, pipeline trata como 'rodar todos' (compat retroativa com v0.7). Launcher (Fase 00) preenche este array conforme escolha do operador."
     },
     "project_type": {
       "type": "string",
@@ -106,7 +106,7 @@
         ]
       },
       "default": [],
-      "description": "Agents que NÃO devem ser ativados (ex: projeto CLI-only pula 'frontend'). Lista alinhada com pipeline/MODULE-MAP.json (72 agentes em v0.21)."
+      "description": "Agents que NÃO devem ser ativados (ex: projeto CLI-only pula 'frontend'). Lista alinhada com pipeline/MODULE-MAP.json (114 agentes em 19 módulos)."
     },
     "branch": {
       "type": "string",

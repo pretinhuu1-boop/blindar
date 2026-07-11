@@ -93,12 +93,12 @@ contra os princípios do skill.
   └─ NÃO → rode pipeline/00-launcher.md:
           1. 4 perguntas objetivas ao operador (≤30s):
              - tipo de projeto, sensibilidade, modo, rigor
-          2. Mostra menu de 15 módulos com defaults inteligentes
+          2. Mostra menu de 19 módulos com defaults inteligentes
           3. Aceita "tudo" / "defaults" / "1,3,5,7,10" / "1-8" / "tudo menos 13,14"
           4. Confirmação final (default-yes em modo AUTO, timeout 10s)
           5. Grava .blindar/config.yml com:
              - mode (auto|supervised|chosen)
-             - selected_modules [1..15]
+             - selected_modules [1..19]
              - project_type, data_sensitivity, rigor
              - ui_detected, db_detected (preenche em Fase 02)
           6. Atualiza .blindar/state.json: phase="00-launcher-done"
