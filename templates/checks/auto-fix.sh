@@ -67,7 +67,7 @@ fi
 if [ -z "$ONLY_CHECK" ] || [ "$ONLY_CHECK" = "mock-killer" ]; then
   log_info "Procurando TODOs sem issue link..."
   # SÓ sugere (não aplica — operador precisa criar issue)
-  TODO_COUNT=$(rg -n "TODO[^(]" --type ts  2>/dev/null | grep -v "TODO(issue-\|@blindar:keep-todo" | wc -l || echo 0)
+  TODO_COUNT=$(rg -n "TODO[^(]" --type ts 2>/dev/null | grep -v "TODO(issue-\|@blindar:keep-todo" | wc -l || echo 0)
   if [ "$TODO_COUNT" -gt 0 ]; then
     SUGGESTIONS+=("$TODO_COUNT TODOs sem issue — crie issues e use TODO(issue-#N): ... (não auto-fixed)")
   fi

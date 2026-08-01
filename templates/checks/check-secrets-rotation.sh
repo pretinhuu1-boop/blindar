@@ -5,10 +5,15 @@ source "$(dirname "$0")/_lib.sh"
 log_section "Check: secrets rotation"
 
 # 1. Hardcoded secrets (grosseiro)
+# ATENÇÃO: exclusões vão como `-g '!glob'`. A forma posicional ('!node_modules')
+# NÃO é sintaxe do ripgrep — o rg real trata cada uma como PATH a pesquisar, não
+# acha, sai com erro 2 e stdout vazio; o `2>/dev/null` esconde o erro e o `|| true`
+# mascara o exit → o check reportava passed mesmo com secret hardcoded.
+IGNORE=(-g '!node_modules' -g '!.git' -g '!dist' -g '!build' -g '!.blindar')
 TMP=$(mktemp)
 rg -n "(sk_live_|pk_live_|ghp_|xox[baprs]-|AIza[0-9A-Za-z\-_]{35}|AKIA[0-9A-Z]{16})" \
-  --type ts --type js --type yml --type yaml --type env \
-  '!node_modules' '!.git' '!dist' 2>/dev/null > "$TMP" || true
+  --type ts --type js --type yaml --type-add 'env:.env*' --type env \
+  "${IGNORE[@]}" 2>/dev/null > "$TMP" || true
 
 COUNT=$(wc -l < "$TMP" || echo 0)
 if [ "$COUNT" -gt 0 ]; then

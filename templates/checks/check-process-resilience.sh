@@ -59,7 +59,9 @@ fi
 # 4. Cache infinito (new Map() sem TTL)
 log_info "Buscando caches unbounded..."
 TMP=$(mktemp)
-rg -n "new Map\(\)" --type ts --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" -A 5 2>/dev/null | grep -B 5 "set\(" | grep "new Map" > "$TMP" || true
+# `grep "set\("` sem -E é BRE: `\(` abre GRUPO → "Unmatched ( or \(" em stderr,
+# pipeline vazio, UNBOUNDED=0 → a detecção nunca disparava. -F casa literal.
+rg -n "new Map\(\)" --type ts --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" -A 5 2>/dev/null | grep -B 5 -F "set(" | grep -F "new Map" > "$TMP" || true
 UNBOUNDED=$(wc -l < "$TMP" || echo 0)
 if [ "$UNBOUNDED" -gt 3 ]; then
   add_finding "med" "$UNBOUNDED uso(s) de new Map() — verificar se há TTL/LRU pra evitar OOM" "" ""

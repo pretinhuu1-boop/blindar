@@ -54,7 +54,7 @@ if command -v rg >/dev/null 2>&1; then
 
   # API key exposure no front
   EVIDENCE+="\n=== Vector DB key/client em frontend (suspeito) ===\n"
-  EVIDENCE+="$(rg -n --type tsx --type jsx --type ts --type js 'PINECONE_API_KEY|QDRANT_API_KEY|WEAVIATE_API_KEY|new Pinecone\(|PineconeClient\(|chromadb\.' \
+  EVIDENCE+="$(rg -n --type ts --type js 'PINECONE_API_KEY|QDRANT_API_KEY|WEAVIATE_API_KEY|new Pinecone\(|PineconeClient\(|chromadb\.' \
     -g '!**/server/**' -g '!**/api/**' -g '!**/backend/**' . 2>/dev/null | head -15)\n"
 
   # Audit log

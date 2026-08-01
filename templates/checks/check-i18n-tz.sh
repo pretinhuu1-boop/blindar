@@ -45,7 +45,7 @@ fi
 # 4. Telefone sem libphonenumber (E.164)
 log_info "Buscando telefone sem normalização..."
 TMP=$(mktemp)
-rg -n "phone\s*:\s*String|telefone\s*:\s*String" --type ts --type prisma "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
+rg -n "phone\s*:\s*String|telefone\s*:\s*String" --type ts --type-add 'prisma:*.prisma' --type prisma "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
 PHONES=$(wc -l < "$TMP" || echo 0)
 if [ "$PHONES" -gt 0 ]; then
   if ! grep -qE "libphonenumber" package.json 2>/dev/null; then

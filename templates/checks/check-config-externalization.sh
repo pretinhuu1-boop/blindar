@@ -12,9 +12,14 @@ if ! command -v rg >/dev/null 2>&1; then
   exit 0
 fi
 
-IGNORE=('!node_modules' '!dist' '!build' '!.next' '!**/*.test.*' '!**/*.spec.*'
-        '!**/*.stories.*' '!**/__mocks__/**' '!**/*.config.*' '!**/*.env*'
-        '!**/*.gen.ts' '!**/locales/**' '!**/i18n/**')
+# Os globs PRECISAM ir com -g. Passados soltos, o ripgrep real os trata como
+# CAMINHOS: todos inválidos → não sobra caminho válido → varre nada, sai 2, e o
+# check reporta passed. O fallback de grep do _lib.sh aceita a forma solta por
+# compat, então o bug só aparece COM ripgrep instalado.
+IGNORE=(-g '!node_modules' -g '!dist' -g '!build' -g '!.next' -g '!**/*.test.*'
+        -g '!**/*.spec.*' -g '!**/*.stories.*' -g '!**/__mocks__/**'
+        -g '!**/*.config.*' -g '!**/*.env*' -g '!**/*.gen.ts'
+        -g '!**/locales/**' -g '!**/i18n/**')
 load_intelligence_globs "$BLINDAR_AGENT"
 
 # 1. URLs https://*.com hardcoded em código

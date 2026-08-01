@@ -139,6 +139,24 @@ if command -v node >/dev/null 2>&1; then
     FAIL_COUNT=$((FAIL_COUNT+1)); FAIL_LIST+=("tests/load-test.test.js")
   fi
   echo ""
+  echo "${BOLD}── paridade ripgrep real × fallback de grep ──${RESET}"
+  if node "$SCRIPT_DIR/rg-parity.test.mjs"; then
+    PASS_COUNT=$((PASS_COUNT+1))
+  else
+    FAIL_COUNT=$((FAIL_COUNT+1))
+    FAIL_LIST+=("tests/rg-parity.test.mjs")
+  fi
+
+  echo ""
+  echo "${BOLD}── log-ops (rotação / retenção / redação / disco cheio) ──${RESET}"
+  if node "$SCRIPT_DIR/log-ops.test.mjs"; then
+    PASS_COUNT=$((PASS_COUNT+1))
+  else
+    FAIL_COUNT=$((FAIL_COUNT+1))
+    FAIL_LIST+=("tests/log-ops.test.mjs")
+  fi
+
+  echo ""
   echo "${BOLD}── módulo 17 (blindar ataque — recon passivo) ──${RESET}"
   if node "$SCRIPT_DIR/attack-recon.test.js"; then
     PASS_COUNT=$((PASS_COUNT+1))

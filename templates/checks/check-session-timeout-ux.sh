@@ -25,7 +25,11 @@ if [ "$HAS_IDLE" -eq 0 ]; then
 fi
 
 # 2. Timeout é configurável (adm)?
-HAS_CONFIG=$(rg -c "(SESSION_TIMEOUT|INACTIVITY_TIMEOUT|idleTimeoutMinutes|timeoutMinutes|sessionTimeoutMs|IDLE_TIMEOUT)" --type ts --type js -g '.env*' "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l)
+# NÃO usar `-g '.env*'` junto com --type: no rg um glob POSITIVO é whitelist e
+# INTERSECTA com os tipos (arquivo tinha que ser .env* E ts/js) → zero arquivos
+# varridos, HAS_CONFIG sempre 0, finding "hardcoded" disparava sempre.
+# `--type env ` (registrado no wrapper do rg em _lib.sh) faz UNIÃO, que é a intenção.
+HAS_CONFIG=$(rg -c "(SESSION_TIMEOUT|INACTIVITY_TIMEOUT|idleTimeoutMinutes|timeoutMinutes|sessionTimeoutMs|IDLE_TIMEOUT)" --type ts --type js --type-add 'env:.env*' --type env "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l)
 [ "$HAS_CONFIG" -eq 0 ] && add_finding "low" "Timeout de inatividade parece hardcoded — torne configurável pelo adm nas configurações" "" ""
 
 # 3. Popup + blur ao expirar (proteção visual)

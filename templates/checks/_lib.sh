@@ -40,8 +40,11 @@ declare -a FINDINGS=()
 
 add_finding() {
   local sev="$1"; local msg="$2"; local file="${3:-}"; local line="${4:-}"
+  # file/line TAMBÉM passam por escape_json: no Windows o rg emite paths com
+  # barra invertida (src\config.ts) e "\c" não é escape JSON válido → o result
+  # ficava impossível de parsear justamente quando o check ACHAVA algo.
   local f=$(printf '{"severity":"%s","message":"%s","file":"%s","line":"%s"}' \
-    "$sev" "$(escape_json "$msg")" "$file" "$line")
+    "$sev" "$(escape_json "$msg")" "$(escape_json "$file")" "$(escape_json "$line")")
   FINDINGS+=("$f")
 }
 
@@ -81,6 +84,32 @@ EOF
   esac
 }
 
+# ─── Tipos customizados do ripgrep ───
+# 'prisma' e 'env' NÃO existem no ripgrep, mas o fallback de grep abaixo os
+# mapeia. Sem isto, `--type prisma ` faz o rg REAL sair com erro 2 ("unrecognized
+# file type"), a saída vem vazia, o `|| true` mascara, e o check reporta passed.
+# Definir centralmente aqui garante que os dois caminhos concordem.
+# NÃO usar RIPGREP_CONFIG_PATH aqui: no Git Bash o valor sai em forma POSIX
+# (/c/Users/...), o rg.exe é nativo e não abre esse caminho — ele erra em TODA
+# invocação ("failed to read the file specified in RIPGREP_CONFIG_PATH").
+# Os tipos customizados são injetados pelo wrapper abaixo, que não depende de
+# config externa nem pode ser sobrescrito pelo operador.
+
+# ─── TMPDIR em forma nativa (Git Bash / MSYS) ───
+# Os checks usam $(mktemp), que devolve /tmp/tmp.XXXX. Como o wrapper desliga a
+# conversão de argumentos do MSYS (necessário pra que padrões iniciados por '/'
+# cheguem intactos), o rg.exe nativo passaria a NÃO conseguir abrir esses
+# arquivos: "IO error ... os error 2", saída vazia, detecção muda. Apontar o
+# TMPDIR pra forma mista (C:/...) resolve os dois lados de uma vez.
+if [ -z "${BLINDAR_TMPDIR_SET:-}" ] && command -v cygpath >/dev/null 2>&1; then
+  _blindar_tmp="$(cygpath -m /tmp 2>/dev/null || true)"
+  if [ -n "$_blindar_tmp" ] && [ -d "$_blindar_tmp" ]; then
+    export TMPDIR="$_blindar_tmp"
+    export BLINDAR_TMPDIR_SET=1
+  fi
+  unset _blindar_tmp
+fi
+
 # ─── rg fallback (grep) quando ripgrep não está instalado como BINÁRIO ───
 # Detecta rg BINÁRIO real (type -P ignora função/alias do shell — command -v não basta).
 # Emula ripgrep sobre grep com FIDELIDADE aos flags usados pelos checks. Bugs
@@ -91,6 +120,41 @@ EOF
 #     contava TODOS os arquivos, não os com match. Agora filtra `:0` (igual rg -c).
 #   • `-n` era descartado → checks que fazem `IFS=: read file line content`
 #     recebiam content na var line → parsing quebrado. Agora `-n` vira grep -n.
+# ─── Tipos customizados, iguais nos DOIS caminhos ───
+# 'prisma' e 'env' não existem no ripgrep, mas o fallback de grep abaixo os
+# mapeia (linhas 'prisma)' e 'env)'). Sem isto, `--type prisma ` faz o rg REAL
+# sair com erro 2 ("unrecognized file type"), a saída vem vazia, o `|| true`
+# mascara, e o check reporta passed. Wrapper em vez de RIPGREP_CONFIG_PATH:
+# config global pode ser sobrescrita pelo operador; wrapper não.
+# ─── STDIN: o rg REAL lê stdin quando ele NÃO é tty e nenhum path foi passado ───
+# Todos os checks chamam `rg PADRAO --type ts ...` SEM path, contando que o rg
+# varra o diretório atual. Isso só vale quando stdin é um tty. Se o check roda com
+# stdin em pipe/arquivo (execFileSync stdio:'pipe', CI, `run-all | tee`, cron,
+# `bash check.sh < /dev/null` em runner), o rg passa a buscar NO STDIN vazio →
+# zero matches → `|| echo 0` mascara → check reporta PASSED estando CEGO.
+# `</dev/null` força stdin a um char device, que o rg não considera "buscável",
+# então ele volta a varrer o cwd. Nenhum check pipa dados PRA dentro do rg
+# (auditado: 0 ocorrências de `| rg` e `rg <<<`), então isto é seguro.
+# O caminho de fallback (grep, abaixo) já resolvia isso com `paths=(".")`.
+if type -P rg >/dev/null 2>&1; then
+  BLINDAR_RG_BIN="$(type -P rg)"
+  export BLINDAR_RG_BIN
+  # ─── MSYS/Cygwin argv path-mangling (Git Bash no Windows) ───
+  # rg.exe é binário NATIVO do Windows. Ao spawnar um nativo, o runtime MSYS
+  # reescreve TODO argumento que "parece" caminho POSIX. Um padrão de URL como
+  # "/health/live" ou "(/checkout|/cart)" vira "C:/Program Files/Git/health/live"
+  # ANTES do rg ver — o regex nunca casa, saída vazia, `|| true` mascara → a
+  # detecção some silenciosamente (o check acusa ausência de rota que EXISTE).
+  # MSYS2_ARG_CONV_EXCL='*' desliga a conversão só para este processo; o rg aceita
+  # barras normais em caminhos, então nada mais é afetado. Em Linux/macOS as vars
+  # são ignoradas. Não passar caminho POSIX absoluto (/c/...) pro rg daqui.
+  rg() {
+    MSYS2_ARG_CONV_EXCL='*' MSYS_NO_PATHCONV=1 \
+      command "$BLINDAR_RG_BIN" --type-add 'prisma:*.prisma' --type-add 'env:.env*' "$@" </dev/null
+  }
+  export -f rg
+fi
+
 if ! type -P rg >/dev/null 2>&1; then
   rg() {
     # Isola erros do grep — pipefail/errexit do caller não devem matar o wrapper.

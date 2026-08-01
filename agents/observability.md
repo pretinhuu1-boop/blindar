@@ -15,6 +15,12 @@ Logs, métricas, traces, audit trail. Cobre técnica #7 do baseline
 Complementa [`compliance.md`](compliance.md) — este foca em sinais
 operacionais; compliance foca em audit chain para PII.
 
+Fronteira com [`log-ops-retention.md`](log-ops-retention.md): este agente
+é dono do **conteúdo** do log (formato, níveis, correlation_id, métricas,
+audit trail). O ciclo de vida em **disco** — pasta por dia, rotação, um
+arquivo por processo, retenção, guarda de disco cheio — é de lá. Não
+duplique nenhum dos dois lados.
+
 ## Quando ativar
 
 Round cujo gap envolve:
@@ -47,8 +53,10 @@ Implement (≤80 LOC):
 - Grep estático: falha em print(/console.log(/logger.info(...PII...
 - sec.html: ATK → covered, atualiza tab Métricas com baseline atual.
 
-Não inventar novas dependências de SIEM. Stdout JSON é suficiente —
-infra coleta.
+Não inventar novas dependências de SIEM. Stdout JSON é o piso — quando
+há coletor externo (Loki/ES/CloudWatch), ele basta. Quando NÃO há, ou
+quando o log precisa sobreviver ao restart do container, o ciclo de vida
+em disco é de log-ops-retention.md — não resolva aqui.
 ```
 
 ## Princípios

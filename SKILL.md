@@ -154,7 +154,7 @@ Grava `.blindar/config.yml` com as escolhas. Pula automaticamente em
 | 3 | Frontend hardening (CSP/XSS/SRI/Trusted Types) | se UI detectada | [`frontend`](agents/frontend.md) |
 | 4 | Rede & API + Payments + Realtime + API Gateway + GraphQL + gRPC | tipo ∈ SaaS/E-com/API | [`network-security`](agents/network-security.md), [`api-design`](agents/api-design.md), [`payments`](agents/payments.md), [`realtime`](agents/realtime.md), [`api-gateway`](agents/api-gateway.md), [`graphql`](agents/graphql.md), [`grpc-internal`](agents/grpc-internal.md) |
 | 5 | Supply chain & patch + SBOM/SLSA (compliance 2026) | sempre | [`supply-chain`](agents/supply-chain.md), [`patch-management`](agents/patch-management.md), [`sbom-slsa`](agents/sbom-slsa.md) |
-| 6 | Observabilidade & audit + Cost monitoring | tipo ∈ SaaS/E-com/API | [`observability`](agents/observability.md), [`cost-observability`](agents/cost-observability.md) |
+| 6 | Observabilidade & audit + Log lifecycle/retenção + Cost monitoring | tipo ∈ SaaS/E-com/API | [`observability`](agents/observability.md), [`log-ops-retention`](agents/log-ops-retention.md), [`cost-observability`](agents/cost-observability.md) |
 | 7 | Banco de dados + Backup & DR + Multi-region + Data Warehouse/ETL | se DB detectado | [`backup-recovery`](agents/backup-recovery.md), [`db-architect`](agents/db-architect.md), [`multi-region`](agents/multi-region.md), [`data-warehouse-etl`](agents/data-warehouse-etl.md) |
 | 8 | Compliance: LGPD + GDPR + HIPAA + PCI-DSS + frameworks | sensibilidade ≠ Baixa OU compliance | [`compliance-lgpd-br`](agents/compliance-lgpd-br.md), [`compliance`](agents/compliance.md), [`compliance-gdpr`](agents/compliance-gdpr.md), [`compliance-hipaa`](agents/compliance-hipaa.md), [`compliance-pci-deep`](agents/compliance-pci-deep.md) |
 | 9 | Performance backend + Query + CDN strategy | tipo ∈ SaaS/E-com/API | [`performance`](agents/performance.md), [`db-architect`](agents/db-architect.md), [`cdn-strategy`](agents/cdn-strategy.md) |
@@ -169,7 +169,7 @@ Grava `.blindar/config.yml` com as escolhas. Pula automaticamente em
 | 18 | Smoke / Runtime Truth + checks de infra (prova que a app SOBE) | sempre (self-skip sem docker/URL) | [`smoke-runtime`](agents/smoke-runtime.md) + 9 checks de infra/runtime |
 | 19 | Pentest ATIVO — payloads reais (requer `.blindar/.accept-authorization`) | só com autorização | [`pentest-active`](agents/pentest-active.md) |
 
-> **Total**: 117 agentes em 19 módulos (81 checks determinísticos + 14 API-wrapped + playbooks).
+> **Total**: 118 agentes em 19 módulos (81 checks determinísticos + 14 API-wrapped + playbooks).
 > Fonte da verdade: [`pipeline/MODULE-MAP.json`](pipeline/MODULE-MAP.json).
 
 **Módulos não-negociáveis** (sempre rodam, mesmo em "MVP"): **1, 2, 11, 12, 15** (+ 18, que self-skipa quando não há runtime pra subir).
@@ -252,7 +252,8 @@ Agentes de **segurança** (sempre carregados primeiro):
 | Secrets em runtime (memória/env/log) | [`agents/runtime-secrets.md`](agents/runtime-secrets.md) |
 | Frontend / CSP / XSS | [`agents/frontend.md`](agents/frontend.md) |
 | Rede em código (WAF/rate-limit/IaC) | [`agents/network-security.md`](agents/network-security.md) |
-| Observabilidade / audit / logs | [`agents/observability.md`](agents/observability.md) |
+| Observabilidade / audit / logs (conteúdo) | [`agents/observability.md`](agents/observability.md) |
+| Log em disco: rotação / retenção / guardas (continente) | [`agents/log-ops-retention.md`](agents/log-ops-retention.md) |
 | Backup / DR / recuperação | [`agents/backup-recovery.md`](agents/backup-recovery.md) |
 | Patch management (OS/runtime/deps) | [`agents/patch-management.md`](agents/patch-management.md) |
 | Supply chain / lockfiles / CI | [`agents/supply-chain.md`](agents/supply-chain.md) |

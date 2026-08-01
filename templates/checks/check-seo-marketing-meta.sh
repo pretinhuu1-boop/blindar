@@ -22,7 +22,7 @@ fi
 
 # 3. metadata.robots = 'noindex' em rota pública (provável erro)
 TMP=$(mktemp)
-rg -n "robots:\s*['\"]noindex" --type ts  "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null > "$TMP" || true
+rg -n "robots:\s*['\"]noindex" --type ts "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null > "$TMP" || true
 NOINDEX=$(wc -l < "$TMP" || echo 0)
 # Só warn se acharmos noindex fora de /admin /app /dashboard
 while IFS=: read -r file line content; do

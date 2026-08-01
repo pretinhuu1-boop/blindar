@@ -92,6 +92,12 @@ jobs:
           sudo apt-get update && sudo apt-get install -y ripgrep
           rg --version
           bash scripts/check-selftest.sh
+      - name: Paridade ripgrep real × fallback de grep
+        # Falha se alguém reintroduzir --type inválido, glob sem -g, ou se as
+        # duas implementações divergirem no veredito. Foi essa divergência que
+        # deixou 71 detecções mudas e a CI vermelha por 5 semanas.
+        run: node tests/rg-parity.test.mjs
+
       - name: Self-test with grep fallback (no ripgrep)
         run: |
           # Exercita o fallback grep de _lib.sh — deve dar o MESMO veredito

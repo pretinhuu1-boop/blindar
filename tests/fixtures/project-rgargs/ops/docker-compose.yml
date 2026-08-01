@@ -1,0 +1,3 @@
+services:
+  api:
+    healthcheck: { test: ["CMD","curl","/healthz"] }

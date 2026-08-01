@@ -15,20 +15,24 @@ if ! command -v rg >/dev/null 2>&1; then
 fi
 
 # Paths padrão a ignorar (sobrepostos via intelligence.yml se existir)
+# Os globs PRECISAM ir com -g. Soltos, o ripgrep real os trata como CAMINHOS:
+# todos inválidos → não sobra caminho válido → varre nada, sai 2, check passa
+# sempre. O fallback de grep do _lib.sh aceita a forma solta por compat, então
+# o bug só aparece COM ripgrep instalado.
 IGNORE_GLOBS=(
-  '!node_modules' '!vendor' '!dist' '!build' '!.next' '!coverage'
-  '!.blindar' '!.git'
-  '!**/*.gen.ts' '!**/*.generated.ts' '!**/*.test.*' '!**/*.spec.*'
-  '!**/*.stories.*' '!**/__mocks__/**' '!**/fixtures/**'
-  '!**/test/**' '!**/tests/**' '!**/__tests__/**'
-  '!**/*.dev.ts' '!scripts/**'
+  -g '!node_modules' -g '!vendor' -g '!dist' -g '!build' -g '!.next' -g '!coverage'
+  -g '!.blindar' -g '!.git'
+  -g '!**/*.gen.ts' -g '!**/*.generated.ts' -g '!**/*.test.*' -g '!**/*.spec.*'
+  -g '!**/*.stories.*' -g '!**/__mocks__/**' -g '!**/fixtures/**'
+  -g '!**/test/**' -g '!**/tests/**' -g '!**/__tests__/**'
+  -g '!**/*.dev.ts' -g '!scripts/**'
 )
 load_intelligence_globs "$BLINDAR_AGENT"
 
 # 1. console.log/debug/warn em código de produção
 log_info "Buscando console.log em código de prod..."
 TMP=$(mktemp)
-rg -n "console\.(log|debug|warn|trace)\(" --type ts --type js  "${IGNORE_GLOBS[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
+rg -n "console\.(log|debug|warn|trace)\(" --type ts --type js "${IGNORE_GLOBS[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
 
 # Filtra linhas com marker @blindar:keep
 grep -v "@blindar:keep" "$TMP" > "$TMP.filtered" || true
@@ -67,7 +71,7 @@ rm -f "$TMP"
 # 3. Mock/fake/stub fora de pasta de teste
 log_info "Buscando mocks em código de produção..."
 TMP=$(mktemp)
-rg -n "(mock|stub|fake|dummy)[A-Z]" --type ts  "${IGNORE_GLOBS[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null > "$TMP" || true
+rg -n "(mock|stub|fake|dummy)[A-Z]" --type ts "${IGNORE_GLOBS[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null > "$TMP" || true
 grep -v "@blindar:keep" "$TMP" > "$TMP.filtered" || true
 mv "$TMP.filtered" "$TMP"
 

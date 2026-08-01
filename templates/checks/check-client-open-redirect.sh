@@ -24,7 +24,7 @@ VALIDATOR="new URL\(|startsWith\([\"']/[\"']\)|allowlist|whitelist|[Ss]afe|[Ss]a
 # Heurística por arquivo: (usa fonte do usuário) E (atribui a sink de navegação)
 # E (não tem validador) → open redirect.
 TMP=$(mktemp)
-rg -ln "$USER_SRC" --type ts --type js --type tsx "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null > "$TMP" || true
+rg -ln "$USER_SRC" --type ts --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null > "$TMP" || true
 while IFS= read -r file; do
   [ -z "$file" ] && continue
   rg -q "$SINK" "$file" 2>/dev/null || continue          # tem sink?

@@ -110,6 +110,7 @@
       ],
       "agents": [
         "observability",
+        "log-ops-retention",
         "cost-observability"
       ],
       "phases": [

@@ -15,8 +15,8 @@ if [ "$HAS_MODEL" -eq 0 ]; then
 fi
 
 # 2. Mutations sensíveis sem audit
-SENSITIVE_OPS=$(rg -l "(prisma\.user|prisma\.role|prisma\.permission|prisma\.payment).*(update|delete)" --type ts '!node_modules' '!**/*.test.*' 2>/dev/null | wc -l || echo 0)
-AUDIT_REFS=$(rg -l "(auditLog\.create|logAction|writeAudit)" --type ts '!node_modules' '!**/*.test.*' 2>/dev/null | wc -l || echo 0)
+SENSITIVE_OPS=$(rg -l "(prisma\.user|prisma\.role|prisma\.permission|prisma\.payment).*(update|delete)" --type ts -g '!node_modules' -g '!**/*.test.*' 2>/dev/null | wc -l || echo 0)
+AUDIT_REFS=$(rg -l "(auditLog\.create|logAction|writeAudit)" --type ts -g '!node_modules' -g '!**/*.test.*' 2>/dev/null | wc -l || echo 0)
 
 if [ "$SENSITIVE_OPS" -gt 0 ] && [ "$AUDIT_REFS" -eq 0 ]; then
   add_finding "high" "Mutations em user/role/payment sem auditLog.create()" "" ""

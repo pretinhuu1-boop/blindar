@@ -86,6 +86,8 @@ PAIRS=(
   "check-fintech-banking-br.sh   | project-fintech-bad     | project-fintech-good"
   "check-healthtech-fhir.sh      | project-healthtech-bad  | project-healthtech-good"
   "check-pii-encryption.sh       | project-pii-bad         | project-pii-good"
+  "check-log-ops.sh              | project-logops-bad      | project-logops-good"
+  "check-pwa-installable.sh      | project-pwa-bad         | project-pwa-good"
   # blindar-learn:insert (mantenha — scripts/blindar-learn.sh insere novos pares acima desta linha)
 )
 
@@ -135,16 +137,51 @@ done
 # ─── Cobertura honesta (só checks GATE-ÁVEIS) ───
 # Exclui .api.sh (precisam de LLM) e wrappers de scanner externo (semgrep/trivy/
 # osv/gitleaks/etc.) — esses não têm par de fixture determinístico.
-TOTAL_CHECKS=$(find "$CHECKS_DIR" -maxdepth 1 -name 'check-*.sh' ! -name '*.api.sh' 2>/dev/null \
-  | grep -vE 'check-(semgrep|trivy|osv-scanner|gitleaks|secrets|lighthouse|strategic-scanner|wave-guardian|mcp-recommended|ai-powered-example|deps-audit|content-quality|visual-regression|functional-e2e|bundle-size|pwa-installable|termination|mcp-security)\.sh' \
-  | wc -l | xargs)
+# Gate-ável é PROPRIEDADE do check, não nome numa lista. A lista curada anterior
+# escondia checks que eram gate-áveis e só não tinham par. Um check entra no
+# denominador quando TODAS valem:
+#   1. não é .api.sh          (precisa de LLM → sem veredito determinístico)
+#   2. emite "failed" em algum caminho  (senão é informativo, não gate)
+#   3. não lê estado FORA do projeto ($HOME/$APPDATA → depende da máquina)
+#   4. não depende de binário externo além de rg/jq, nem de rede/npx
+# Wrappers de scanner externo: o check É a invocação da ferramenta, então sem
+# ela instalada não há veredito nenhum — não é questão de faltar fixture.
+SCANNER_WRAPPERS='check-(semgrep|trivy|osv-scanner|gitleaks|lighthouse|wave-guardian|secrets|deps-audit)\.sh$'
+
+is_gateable() {
+  local f="$1" base
+  base=$(basename "$f")
+  case "$base" in *.api.sh) return 1 ;; esac              # 1
+  echo "$base" | grep -qE "$SCANNER_WRAPPERS" && return 1
+  grep -qE 'emit_result[^\n]*"failed"' "$f" || return 1   # 2
+  grep -qE '\$HOME|\$\{HOME|\$APPDATA|\$\{APPDATA' "$f" && return 1  # 3
+  grep -qE 'npx |curl |wget ' "$f" && return 1            # 4
+  return 0
+}
+
+TOTAL_CHECKS=0
+GATEABLE_LIST=()
+while IFS= read -r f; do
+  if is_gateable "$f"; then
+    TOTAL_CHECKS=$((TOTAL_CHECKS+1))
+    GATEABLE_LIST+=("$(basename "$f")")
+  fi
+done < <(find "$CHECKS_DIR" -maxdepth 1 -name 'check-*.sh' 2>/dev/null | sort)
 VERIFIED_N=${#VERIFIED[@]}
 PCT=0; [ "$TOTAL_CHECKS" -gt 0 ] && PCT=$(( VERIFIED_N * 100 / TOTAL_CHECKS ))
 
+# Denominador honesto: além dos gate-áveis, reporta o total bruto. A lista de
+# exclusão acima é curada à mão, então "100%" sempre foi sobre um subconjunto
+# escolhido — dizer os dois números evita que a métrica vire propaganda.
+ALL_CHECKS=$(find "$CHECKS_DIR" -maxdepth 1 -name 'check-*.sh' 2>/dev/null | wc -l | xargs)
+EXCLUDED=$(( ALL_CHECKS - TOTAL_CHECKS ))
+PCT_ALL=0; [ "$ALL_CHECKS" -gt 0 ] && PCT_ALL=$(( VERIFIED_N * 100 / ALL_CHECKS ))
+
 echo ""
 echo "${B}── cobertura de fixtures ──${RST}"
-echo "Checks com par verificado: ${VERIFIED_N}/${TOTAL_CHECKS} (${PCT}%)"
-echo "Meta: 100%. Cada check novo DEVE entrar em PAIRS antes de mergear."
+echo "Gate-áveis com par verificado: ${VERIFIED_N}/${TOTAL_CHECKS} (${PCT}%)"
+echo "Sobre TODOS os checks:         ${VERIFIED_N}/${ALL_CHECKS} (${PCT_ALL}%)  — ${EXCLUDED} excluídos (.api.sh + scanners externos)"
+echo "Meta: 100% dos gate-áveis. Cada check novo DEVE entrar em PAIRS antes de mergear."
 
 echo ""
 echo "${B}═══ RESUMO ═══${RST}"

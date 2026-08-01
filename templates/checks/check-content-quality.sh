@@ -51,7 +51,7 @@ rm -f "$TMP"
 # 4. Concatenação que vira plural quebrado
 log_info "Buscando plural por concatenação..."
 TMP=$(mktemp)
-rg -n "['\"][a-z]+\s*['\"]\s*\+\s*\w+\s*\+\s*['\"]\s*s\b" --type ts  "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
+rg -n "['\"][a-z]+\s*['\"]\s*\+\s*\w+\s*\+\s*['\"]\s*s\b" --type ts "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
 PLURAL_BROKEN=$(wc -l < "$TMP" || echo 0)
 if [ "$PLURAL_BROKEN" -gt 0 ]; then
   add_finding "med" "$PLURAL_BROKEN plural via concatenação — usar ICU MessageFormat" "" ""

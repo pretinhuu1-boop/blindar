@@ -3,6 +3,119 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [Não lançado]
+
+Módulo de ciclo de vida do log **em disco** — pasta por dia UTC, rotação, um
+arquivo por processo, retenção escalonada com guardas de exclusão.
+
+### Novo agente `log-ops-retention` (módulo 6)
+
+- **`agents/log-ops-retention.md`**: dono do *continente* do log. Fronteira
+  explícita com `observability` (dono do *conteúdo*) e delegação obrigatória da
+  redação a `runtime-secrets` — o agente **para e emite achado** se o alvo não
+  tem política central, em vez de criar a segunda. Total 118 agentes.
+- **`observability.md` corrigido**: a linha "stdout JSON é suficiente — infra
+  coleta" contradizia frontalmente qualquer esquema em disco. Agora é
+  condicional (stdout basta *quando há coletor externo*), com fronteira
+  bidirecional declarada. Sem isso os dois agentes davam conselhos opostos ao
+  mesmo projeto.
+
+### Template de referência (Node, zero dependências)
+
+- `templates/log-ops/logger.mjs` — envelope, streams, rotação 16 MB, gzip no
+  fechamento, escrita em lote fora do caminho quente (descarta antes de
+  bloquear), stdout e arquivo coexistindo, guarda de disco cheio.
+- `templates/log-ops/retention.mjs` — varredor com as 5 guardas obrigatórias
+  (regex exata de data, realpath dentro do LOG_DIR, lstat/symlink, piso rígido
+  de hoje+ontem, bytes liberados) + retenção **por stream** e lock advisory.
+- `templates/log-ops/pseudonym.mjs` — HMAC com chave (recusa operar sem ela;
+  hash puro de CPF ou de IPv4 é força-bruta de segundos), `ip_hash` com salt
+  diário e `ip_net` /24 ÷ /48.
+
+### Gate
+
+- **`check-log-ops.sh`** (novo): 7 detecções — exclusão sem guarda (crit), sem
+  retenção (high), container sem volume (high), sem rotação, escrita
+  bloqueante, log fora do `.gitignore`/`.dockerignore`, sem guarda de disco.
+  Self-skip em projeto que só usa stdout. Par `project-logops-bad/good`.
+- **`tests/log-ops.test.mjs`** (novo): 46 asserções cobrindo os seis
+  comportamentos exigidos — rotação por tamanho, virada do dia em UTC, retenção
+  apagando o que deve e preservando hoje/ontem, isolamento entre processos (dois
+  processos reais), ausência de dado sensível lendo os arquivos produzidos, e
+  disco cheio.
+- `docs/log-ops-incidente.md` — qual stream responde qual pergunta.
+
+### Camada de detecção: quatro bugs de cegueira silenciosa
+
+A CI estava vermelha desde 2026-06-21 (último verde: 06-07), no passo
+`Self-test with real ripgrep`. As v0.44–v0.48 foram publicadas por cima disso.
+Causa: **quatro** bugs independentes, todos com a mesma assinatura — o `rg`
+não varre nada, `2>/dev/null` engole o erro, `|| true` mascara o exit, e o
+check reporta `passed` sem ter olhado um arquivo.
+
+1. **rg lia o STDIN em vez do cwd.** Quando stdin não é TTY e nenhum path é
+   passado, o ripgrep busca no stdin. Todos os checks chamam `rg PADRÃO --type
+   ts` sem path, então sob pipe (CI, `| tee`, cron, `execFileSync`) os **74
+   checks** buscavam num pipe vazio. De longe o mais grave. Corrigido no
+   wrapper com `</dev/null`.
+2. **MSYS reescrevia os padrões.** No Git Bash, o runtime converte argumentos
+   que parecem caminho POSIX antes de spawnar um binário nativo: o padrão
+   `"/health/live"` chegava ao `rg.exe` como `C:/Program Files/Git/health/live`.
+   Atingia todo check com padrão iniciado por `/`. Corrigido com
+   `MSYS2_ARG_CONV_EXCL='*' MSYS_NO_PATHCONV=1`.
+3. **Nomes de `--type` inválidos.** `tsx`, `jsx`, `scss`, `prisma`, `env` não
+   existem no ripgrep — ele sai com erro 2. 71 ocorrências. `tsx`→`ts`,
+   `jsx`→`js`, `scss`→`css` (os tipos reais já cobrem as extensões);
+   `prisma` e `env` passaram a ser injetados via `--type-add` no wrapper.
+4. **Globs de exclusão sem `-g`** em 2 checks (`check-config-externalization`,
+   `check-mock-killer`): viram *caminhos*, todos inválidos, nada varrido.
+
+O denominador comum: o fallback de grep do `_lib.sh` é mais tolerante que o
+ripgrep real — aceita os cinco `--type` inválidos e `'!glob'` solto. Ele
+**mascarava** os bugs, e por isso a CI só falhava no passo com ripgrep real.
+
+Novo `tests/rg-parity.test.mjs` fecha a classe inteira: valida estaticamente o
+vocabulário das duas implementações, exige as blindagens de stdin e MSYS no
+wrapper, e roda pares fixture/check nos **dois** modos exigindo veredito
+idêntico. Ligado ao `lint.yml` e ao gate de release.
+
+### Gate de release
+
+`npm-publish.yml` ganhou um job `gate` que roda self-test, paridade e suíte
+completa **no commit da tag**; `publish` agora depende dele. O `SKILL.md` já
+listava "CI verde antes de merge, sempre" como não-negociável e "CI vermelha
+mergeada" como anti-padrão — faltava o mecanismo.
+
+### Cobertura com denominador derivado — 65/65 (100%)
+
+`check-selftest.sh` reporta dois números (gate-áveis e total bruto) e o
+denominador deixou de ser lista curada. Um check é gate-ável quando quatro
+propriedades verificáveis valem: não é `.api.sh`, emite `failed` em algum
+caminho, não lê estado fora do projeto (`$HOME`/`$APPDATA`), e não usa
+`npx`/`curl`/`wget`. Resta uma lista curta só dos wrappers de scanner
+(`semgrep`, `trivy`, `osv-scanner`, `gitleaks`, `lighthouse`, `wave-guardian`,
+`secrets`, `deps-audit`), onde o check *é* a invocação da ferramenta.
+
+A regra expôs o que a lista escondia:
+
+- **`check-mcp-security`** lê `$HOME/.cursor/mcp.json` e
+  `$APPDATA/Claude/claude_desktop_config.json` — config da máquina do operador,
+  não do projeto. Reportaria achados sobre o MCP pessoal como se fossem do
+  alvo. Não gate-ável por princípio.
+- **`check-strategic-scanner`** e **`check-mcp-recommended`** nunca emitem
+  `failed` — informativos, não gates.
+- **`check-pwa-installable`** não estava fora por falta de fixture: estava
+  quebrado de duas formas. (a) toda a validação do manifest dependia de `jq`,
+  que sem instalação vira no-op silencioso — manifest com `display:browser` e
+  zero ícones reportava `passed`; trocado por `node`, que já é requisito duro.
+  (b) o veredito era `if [ "$FAIL" -eq 1 ]` com `FAIL=0` e nenhum `FAIL=1` no
+  arquivo — ramificação morta, acumulava findings `high` e passava sempre.
+  Corrigido pela convenção da casa (crit/high reprovam) + par
+  `project-pwa-bad/good`.
+
+Pendência registrada: outros 9 checks usam `jq` sem guarda e degradam para
+no-op silencioso quando ele falta.
+
 ## [0.48.0] — 2026-07-11
 
 Rodada "Livros de IA": auditoria da cobertura OWASP LLM Top 10 2025 contra os

@@ -35,30 +35,59 @@ if [ -z "$MANIFEST" ]; then
   log_warn "Sem manifest"
 else
   # 2. Validações do manifest (se for JSON)
+  # Lê com node, NÃO com jq: jq não é garantido no ambiente, e sem ele as
+  # validações abaixo viravam no-op silencioso — o manifest podia ter
+  # display:browser e zero ícones que o check reportava "passed". node já é
+  # requisito duro do blindar (suíte de testes), então não adiciona dependência.
   if [[ "$MANIFEST" == *.json || "$MANIFEST" == *.webmanifest ]]; then
-    for field in name short_name display icons start_url theme_color background_color; do
-      if ! jq -e ".$field" "$MANIFEST" > /dev/null 2>&1; then
-        add_finding "med" "manifest sem campo obrigatório: $field" "$MANIFEST" ""
+    if ! command -v node >/dev/null 2>&1; then
+      add_finding "med" "node ausente — validação do manifest não pôde rodar" "$MANIFEST" ""
+    else
+      MANIFEST_FACTS=$(node -e '
+        const fs = require("fs");
+        let m = {};
+        try { m = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); } catch { console.log("PARSE_ERROR"); process.exit(0); }
+        const icons = Array.isArray(m.icons) ? m.icons : [];
+        const has = (s) => icons.some((i) => String(i.sizes || "").includes(s));
+        const missing = ["name","short_name","display","icons","start_url","theme_color","background_color"]
+          .filter((k) => m[k] === undefined || m[k] === null);
+        console.log("MISSING=" + missing.join(","));
+        console.log("DISPLAY=" + (m.display || ""));
+        console.log("HAS_192=" + (has("192") ? 1 : 0));
+        console.log("HAS_512=" + (has("512") ? 1 : 0));
+        console.log("MASKABLE=" + (icons.some((i) => String(i.purpose || "").includes("maskable")) ? 1 : 0));
+      ' "$MANIFEST" 2>/dev/null)
+
+      if [ "$MANIFEST_FACTS" = "PARSE_ERROR" ] || [ -z "$MANIFEST_FACTS" ]; then
+        add_finding "high" "manifest não é JSON válido — navegador ignora e o app não instala" "$MANIFEST" ""
+      else
+        MISSING=$(echo "$MANIFEST_FACTS" | grep '^MISSING=' | cut -d= -f2-)
+        DISPLAY=$(echo "$MANIFEST_FACTS" | grep '^DISPLAY=' | cut -d= -f2-)
+        HAS_192=$(echo "$MANIFEST_FACTS" | grep '^HAS_192=' | cut -d= -f2-)
+        HAS_512=$(echo "$MANIFEST_FACTS" | grep '^HAS_512=' | cut -d= -f2-)
+        MASKABLE=$(echo "$MANIFEST_FACTS" | grep '^MASKABLE=' | cut -d= -f2-)
+
+        if [ -n "$MISSING" ]; then
+          for field in $(echo "$MISSING" | tr ',' ' '); do
+            add_finding "med" "manifest sem campo obrigatório: $field" "$MANIFEST" ""
+          done
+        fi
+
+        # display deve ser standalone (não browser)
+        if [ "$DISPLAY" = "browser" ]; then
+          add_finding "high" "manifest com display:browser — não é instalável de verdade" "$MANIFEST" ""
+        fi
+
+        # icons 192 e 512 obrigatórios
+        if [ "$HAS_192" != "1" ] || [ "$HAS_512" != "1" ]; then
+          add_finding "high" "manifest sem ícones 192x192 OU 512x512" "$MANIFEST" ""
+        fi
+
+        # maskable icon (Android adaptive)
+        if [ "$MASKABLE" != "1" ]; then
+          add_finding "med" "Sem ícone maskable — Android pode cortar o ícone" "$MANIFEST" ""
+        fi
       fi
-    done
-
-    # display deve ser standalone (não browser)
-    DISPLAY=$(jq -r '.display' "$MANIFEST" 2>/dev/null)
-    if [ "$DISPLAY" = "browser" ]; then
-      add_finding "high" "manifest com display:browser — não é instalável de verdade" "$MANIFEST" ""
-    fi
-
-    # icons 192 e 512 obrigatórios
-    HAS_192=$(jq '[.icons[]? | select(.sizes | contains("192"))] | length' "$MANIFEST" 2>/dev/null)
-    HAS_512=$(jq '[.icons[]? | select(.sizes | contains("512"))] | length' "$MANIFEST" 2>/dev/null)
-    if [ "$HAS_192" = "0" ] || [ "$HAS_512" = "0" ]; then
-      add_finding "high" "manifest sem ícones 192x192 OU 512x512" "$MANIFEST" ""
-    fi
-
-    # maskable icon (Android adaptive)
-    MASKABLE=$(jq '[.icons[]? | select(.purpose | contains("maskable"))] | length' "$MANIFEST" 2>/dev/null)
-    if [ "${MASKABLE:-0}" = "0" ]; then
-      add_finding "med" "Sem ícone maskable — Android pode cortar o ícone" "$MANIFEST" ""
     fi
   fi
 fi
@@ -89,9 +118,18 @@ if [ -n "$MANIFEST" ]; then
   fi
 fi
 
-if [ "$FAIL" -eq 1 ]; then
-  emit_result "$BLINDAR_AGENT" "failed" 1
-  exit 1
+# Veredito pela convenção da casa: crit/high reprovam, med/low passam com warn.
+# Antes havia um `if [ "$FAIL" -eq 1 ]` com FAIL nunca saindo de 0 — ramificação
+# morta: o check acumulava findings high (display:browser, sem ícone 192/512) e
+# reportava "passed" em qualquer projeto.
+TOTAL=${#FINDINGS[@]}
+if [ "$TOTAL" -gt 0 ]; then
+  CRITS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"crit"')
+  HIGHS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"high"')
+  if [ "$CRITS" -gt 0 ] || [ "$HIGHS" -gt 0 ]; then
+    emit_result "$BLINDAR_AGENT" "failed" 1
+    exit 1
+  fi
 fi
 
 emit_result "$BLINDAR_AGENT" "passed" 0

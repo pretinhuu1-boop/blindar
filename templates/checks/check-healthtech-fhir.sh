@@ -17,7 +17,7 @@ FHIR_HITS=$(( FHIR_HITS + $(rg -c "smart-on-fhir" --type ts --type js --type jso
 FHIR_HITS=$(( FHIR_HITS + $(rg -c "fhir\\.js" --type ts --type js --type json "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0) ))
 FHIR_HITS=$(( FHIR_HITS + $(rg -c "hapi-fhir" --type ts --type js --type json "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0) ))
 FHIR_HITS=$(( FHIR_HITS + $(rg -c "resourceType" --type ts --type json "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0) ))
-FHIR_HITS=$(( FHIR_HITS + $(rg -c "(prontuario|telemedicina|teleconsulta|prescricao)" --type ts --type tsx "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0) ))
+FHIR_HITS=$(( FHIR_HITS + $(rg -c "(prontuario|telemedicina|teleconsulta|prescricao)" --type ts "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0) ))
 
 if [ "$FHIR_HITS" -eq 0 ]; then
   log_warn "Nenhum indício de FHIR/healthtech detectado — pulando"
@@ -49,7 +49,7 @@ fi
 
 # ─── 3. PHI em log/console (CRIT — LGPD art. 11) ───
 PHI_LOG_TMP=$(mktemp 2>/dev/null || echo "/tmp/blindar-phi-log.$$")
-rg -nU "(console\\.(log|error|warn|debug|info)|logger\\.(info|debug|warn|error|trace))" --type ts --type tsx --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" -A 2 2>/dev/null > "$PHI_LOG_TMP" || true
+rg -nU "(console\\.(log|error|warn|debug|info)|logger\\.(info|debug|warn|error|trace))" --type ts --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" -A 2 2>/dev/null > "$PHI_LOG_TMP" || true
 PHI_IN_LOG=0
 if [ -s "$PHI_LOG_TMP" ]; then
   PHI_IN_LOG=$(rg -ic "(diagnosis|cid-?10|prescription|prescricao|patient_?name|nome_?paciente|cpf|cns|mrn|prontuario|laudo|exame|medication)" "$PHI_LOG_TMP" 2>/dev/null || echo 0)
@@ -74,10 +74,10 @@ if [ "$MUTATION_HITS" -gt 5 ] && [ "$PROVENANCE_HITS" -eq 0 ]; then
 fi
 
 # ─── 6. Telemedicina sem registro CFM completo (CRIT) ───
-TELE_HITS=$(rg -c "(telemedicina|teleconsulta|telehealth|telemedicine)" --type ts --type tsx --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0)
+TELE_HITS=$(rg -c "(telemedicina|teleconsulta|telehealth|telemedicine)" --type ts --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0)
 if [ "$TELE_HITS" -gt 0 ]; then
   TELE_TMP=$(mktemp 2>/dev/null || echo "/tmp/blindar-tele.$$")
-  rg -nU "(telemedicina|teleconsulta|telehealth|telemedicine)" --type ts --type tsx --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" -A 30 2>/dev/null > "$TELE_TMP" || true
+  rg -nU "(telemedicina|teleconsulta|telehealth|telemedicine)" --type ts --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" -A 30 2>/dev/null > "$TELE_TMP" || true
   TELE_NO_CONSENT=$(rg -vc "(consent|consentimento|recording|gravacao)" "$TELE_TMP" 2>/dev/null || echo 0)
   TELE_NO_CRM=$(rg -vc "(crm|practitioner|medico)" "$TELE_TMP" 2>/dev/null || echo 0)
   rm -f "$TELE_TMP"

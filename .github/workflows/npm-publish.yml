@@ -8,7 +8,30 @@ on:
   workflow_dispatch:
 
 jobs:
+  # ─── Gate de release ───
+  # v0.44 a v0.48 foram publicadas com a CI vermelha (último verde: 2026-06-07;
+  # falhas em 06-21, 06-22, 07-11 — a v0.48.0 saiu no mesmo dia de um run
+  # vermelho). O SKILL.md lista "CI verde antes de merge, sempre" como gate
+  # não-negociável e "CI vermelha mergeada" como anti-padrão; faltava o
+  # mecanismo. Este job roda a suíte NO COMMIT DA TAG e bloqueia o publish.
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Instalar ripgrep
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+      - name: Self-test dos checks (com ripgrep real)
+        run: bash scripts/check-selftest.sh
+      - name: Paridade ripgrep × fallback de grep
+        run: node tests/rg-parity.test.mjs
+      - name: Suíte completa
+        run: bash tests/run-tests.sh
+
   publish:
+    needs: gate          # sem gate verde, não publica
     runs-on: ubuntu-latest
     permissions:
       contents: read

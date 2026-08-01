@@ -42,7 +42,7 @@ rm -f "$TMP"
 # 2. outline:none sem :focus-visible substituto
 log_info "Buscando outline:none..."
 TMP=$(mktemp)
-rg -n "outline\s*:\s*(none|0)" --type css --type scss   "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
+rg -n "outline\s*:\s*(none|0)" --type css "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
 OUTLINE_NONE=$(wc -l < "$TMP" || echo 0)
 if [ "$OUTLINE_NONE" -gt 0 ]; then
   add_finding "high" "$OUTLINE_NONE outline:none — sem foco visível quebra a11y de teclado" "" ""
@@ -87,7 +87,7 @@ fi
 # 7. font-size < 14px em mobile (Tailwind text-xs etc)
 log_info "Buscando font-size < 14px..."
 TMP=$(mktemp)
-rg -n "font-size\s*:\s*1[0-3]px" --type css --type scss "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
+rg -n "font-size\s*:\s*1[0-3]px" --type css "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
 SMALL_FONT=$(wc -l < "$TMP" || echo 0)
 if [ "$SMALL_FONT" -gt 0 ]; then
   add_finding "low" "$SMALL_FONT regra(s) com font-size < 14px — ilegível em mobile" "" ""

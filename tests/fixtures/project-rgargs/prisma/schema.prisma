@@ -1,0 +1,5 @@
+model AuditLog { id Int @id }
+model User { id Int @id }
+model Person { cpf String
+  phone String
+  amount Float }

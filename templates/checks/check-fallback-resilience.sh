@@ -29,7 +29,7 @@ if [ "$EXTERNAL_CALL" -gt 0 ]; then
 fi
 
 # 4. Health/readiness pra orquestrador reiniciar quando cair (MED)
-HAS_HEALTH=$(rg -c "(/health|/healthz|/readyz|/ready|healthcheck|readiness|liveness)" --type ts --type js --type py --type yml "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l)
+HAS_HEALTH=$(rg -c "(/health|/healthz|/readyz|/ready|healthcheck|readiness|liveness)" --type ts --type js --type py --type yaml "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l)
 if [ "$HAS_HEALTH" -eq 0 ] && rg -q "(express|fastify|nestjs|flask|fastapi|gin|actix)" --type ts --type js --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null; then
   add_finding "med" "Sem endpoint de health/readiness — orquestrador não sabe quando reiniciar após queda (fallback automático)" "" ""
 fi

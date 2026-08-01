@@ -1,0 +1,11 @@
+{
+  "name": "FIXTURE VULNERAVEL — PWA nao instalavel",
+  "short_name": "Fixture",
+  "display": "browser",
+  "start_url": "/",
+  "theme_color": "#ffffff",
+  "background_color": "#ffffff",
+  "icons": [
+    { "src": "/icon-64.png", "sizes": "64x64", "type": "image/png" }
+  ]
+}

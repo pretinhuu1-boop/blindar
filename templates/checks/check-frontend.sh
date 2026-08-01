@@ -28,7 +28,7 @@ TT=$(rg -c "require-trusted-types-for" --type ts --type js --type json --type ht
 
 # 3. Subresource Integrity em <script src=cdn>
 TMP=$(mktemp)
-rg -n "<script[^>]+src=['\"]https://(cdn|unpkg|jsdelivr)" --type html --type tsx "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null > "$TMP" || true
+rg -n "<script[^>]+src=['\"]https://(cdn|unpkg|jsdelivr)" --type html --type ts "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null > "$TMP" || true
 while IFS=: read -r file line content; do
   [ -z "$file" ] && continue
   echo "$content" | grep -q "integrity=" || add_finding "high" "Script CDN sem SRI integrity" "$file" "$line"
@@ -36,11 +36,11 @@ done < "$TMP"
 rm -f "$TMP"
 
 # 4. target="_blank" sem rel="noopener noreferrer"
-NO_NOOPENER=$(rg -n 'target=["\x27]_blank["\x27]' --type tsx --type ts --type html "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | grep -v "noopener" | wc -l)
+NO_NOOPENER=$(rg -n 'target=["\x27]_blank["\x27]' --type ts --type html "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | grep -v "noopener" | wc -l)
 [ "$NO_NOOPENER" -gt 0 ] && add_finding "med" "$NO_NOOPENER target=_blank sem rel=noopener (tabnabbing)" "" ""
 
 # 5. <iframe> sem sandbox
-IFRAME_NO_SANDBOX=$(rg -n "<iframe\b" --type tsx --type ts --type html "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | grep -v "sandbox=" | wc -l)
+IFRAME_NO_SANDBOX=$(rg -n "<iframe\b" --type ts --type html "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | grep -v "sandbox=" | wc -l)
 [ "$IFRAME_NO_SANDBOX" -gt 0 ] && add_finding "med" "$IFRAME_NO_SANDBOX <iframe> sem sandbox attribute" "" ""
 
 # 6. window.postMessage sem origin check
