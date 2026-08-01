@@ -7,7 +7,7 @@ log_section "Check: LGPD/ANPD (Brasil)"
 if ! command -v rg >/dev/null 2>&1; then emit_result "$BLINDAR_AGENT" "skipped" 0; exit 0; fi
 
 # Detecta PII brasileira (CPF, CEP, RG)
-HAS_BR_PII=$(rg -l "(cpf|cnpj|cep|rg)" --type ts --type-add 'prisma:*.prisma' --type prisma 2>/dev/null | head -1)
+HAS_BR_PII=$(rg -l "(cpf|cnpj|cep|rg)" --type ts --type prisma 2>/dev/null | head -1)
 if [ -z "$HAS_BR_PII" ]; then
   emit_result "$BLINDAR_AGENT" "skipped" 0; exit 0
 fi

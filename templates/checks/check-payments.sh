@@ -64,7 +64,9 @@ rm -f "$TMP"
 # 3. Money em Float/Number em vez de BigInt cents
 log_info "Buscando money em Float..."
 TMP=$(mktemp)
-rg -n "(amount|price|total|fee)\s*:\s*(Float|number)" --type ts --type-add 'prisma:*.prisma' --type prisma "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
+# Separador: `:` (TS `amount: number`) OU espaço (Prisma `amount Float`). Só com
+# `\s*:\s*` o .prisma nunca casava — Prisma não usa dois-pontos entre campo e tipo.
+rg -n "(amount|price|total|fee)\s*(?::\s*|\s+)(Float|number)" --type ts --type prisma "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
 FLOAT_MONEY=$(wc -l < "$TMP" || echo 0)
 if [ "$FLOAT_MONEY" -gt 0 ]; then
   while IFS=: read -r file line content; do

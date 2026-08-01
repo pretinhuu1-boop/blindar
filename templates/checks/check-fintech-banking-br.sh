@@ -166,8 +166,10 @@ rm -f "$TMP"
 # ─── 7. HIGH: Valor monetário em float (perde precisão) ───
 log_info "Buscando valor monetário em Float..."
 TMP=$(mktemp)
-rg -n "(valor|amount|montante|saldo|preco|price|fee|tarifa)\s*:\s*(Float|number|float|double)" \
-  --type ts --type-add 'prisma:*.prisma' --type prisma --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
+# Separador: `:` (TS/Py `amount: number`) OU espaço (Prisma `amount Float`). Só com
+# `\s*:\s*` o .prisma nunca casava — Prisma não usa dois-pontos entre campo e tipo.
+rg -n "(valor|amount|montante|saldo|preco|price|fee|tarifa)\s*(?::\s*|\s+)(Float|number|float|double)" \
+  --type ts --type prisma --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
 FLOAT_COUNT=$(wc -l < "$TMP" | tr -d ' ')
 if [ "${FLOAT_COUNT:-0}" -gt 0 ]; then
   while IFS=: read -r file line content; do

@@ -45,7 +45,9 @@ fi
 # 4. Telefone sem libphonenumber (E.164)
 log_info "Buscando telefone sem normalização..."
 TMP=$(mktemp)
-rg -n "phone\s*:\s*String|telefone\s*:\s*String" --type ts --type-add 'prisma:*.prisma' --type prisma "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
+# Separador: `:` (TS `phone: string`) OU espaço (Prisma `phone String`). Só com
+# `\s*:\s*` e `String` maiúsculo o padrão não casava em lugar nenhum.
+rg -n "(phone|telefone)\s*(?::\s*|\s+)[Ss]tring" --type ts --type prisma "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
 PHONES=$(wc -l < "$TMP" || echo 0)
 if [ "$PHONES" -gt 0 ]; then
   if ! grep -qE "libphonenumber" package.json 2>/dev/null; then
