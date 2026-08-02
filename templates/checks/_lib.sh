@@ -49,7 +49,35 @@ add_finding() {
 }
 
 escape_json() {
-  echo -n "$1" | sed 's/\\/\\\\/g; s/"/\\"/g; s/	/\\t/g; s/$/\\n/g' | tr -d '\n' | sed 's/\\n$//'
+  # Codificador JSON de string COMPLETO (RFC 8259 §7): escapa \ " e TODO
+  # caractere de controle U+0000–U+001F. Antes, um `sed` cobria só \ " tab e
+  # newline; um \r (saída CRLF do rg no Windows), \f, \b ou 0x01 vindo do
+  # projeto-alvo passava cru → JSON inválido → `jq -s` do run-all falhava e
+  # SUBSTITUÍA o aggregate inteiro (o alvo apagava o próprio relatório com 1
+  # byte). awk POSIX/GNU (já dependência do fallback de rg), sem jq. Bytes
+  # >= 0x80 (UTF-8 multibyte) passam intactos — JSON aceita UTF-8. `printf '%s'`
+  # em vez de `echo -n` para não comer mensagem iniciada por -e/-n nem \ .
+  # `bs` é a barra montada por código (sprintf %c 92) para não colidir com o
+  # lexer de escape \u do gawk moderno em literais de string.
+  printf '%s' "$1" | LC_ALL=C awk '
+    BEGIN { RS = "\0"; bs = sprintf("%c", 92); for (i = 0; i < 256; i++) ord[sprintf("%c", i)] = i }
+    {
+      n = length($0)
+      for (i = 1; i <= n; i++) {
+        c = substr($0, i, 1); v = ord[c]
+        if      (c == "\\") out = out bs bs
+        else if (c == "\"") out = out bs "\""
+        else if (c == "\b") out = out bs "b"
+        else if (c == "\t") out = out bs "t"
+        else if (c == "\n") out = out bs "n"
+        else if (c == "\f") out = out bs "f"
+        else if (c == "\r") out = out bs "r"
+        else if (v < 32)    out = out bs "u" sprintf("%04x", v)
+        else                out = out c
+      }
+    }
+    END { printf "%s", out }
+  '
 }
 
 # ─── Output JSON padrão por check ───
