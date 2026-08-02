@@ -14,11 +14,20 @@ if ! command -v gitleaks >/dev/null 2>&1; then
   exit 0
 fi
 
-# Roda no diff staged se tem; senão no working tree
+# jq é OBRIGATÓRIO: a contagem de leaks sai dele. Sem jq, `jq 'length' || echo 0`
+# devolvia 0 e o check-secrets — o gate de segredos — reportava PASSED mesmo com
+# segredos presentes (falha ABERTA). require_tool marca skipped-por-ferramenta
+# (missing_tool=jq no result), nunca aprovação.
+require_tool jq "contagem e parsing dos secrets detectados pelo gitleaks"
+
+# Roda no diff staged se tem; senão no working tree.
+# --redact: sem isso, os VALORES dos segredos apareciam no stdout/log de CI via
+# `tee /dev/stderr`. O check só lê RuleID/File/StartLine, então redigir não perde
+# nada necessário e evita vazar o segredo no próprio pipeline que o caça.
 TMP=$(mktemp)
-if gitleaks protect --staged --report-format=json --report-path="$TMP" 2>&1 | tee /dev/stderr; then
+if gitleaks protect --staged --redact --report-format=json --report-path="$TMP" 2>&1 | tee /dev/stderr; then
   scope="staged"
-elif gitleaks detect --no-git --report-format=json --report-path="$TMP" 2>&1 | tee /dev/stderr; then
+elif gitleaks detect --no-git --redact --report-format=json --report-path="$TMP" 2>&1 | tee /dev/stderr; then
   scope="working-tree"
 fi
 

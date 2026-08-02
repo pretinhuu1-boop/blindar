@@ -119,7 +119,11 @@ for check in "${CHECKS[@]}"; do
     if command -v jq >/dev/null 2>&1; then
       status=$(jq -r '.status' "$result_file" 2>/dev/null || echo "unknown")
     else
-      status=$(grep -oE '"status"[[:space:]]*:[[:space:]]*"[a-z]+"' "$result_file" | head -1 | sed -E 's/.*"([a-z]+)".*/\1/')
+      # `|| true`: sob `set -euo pipefail` (linha 15), um result file corrompido
+      # ou sem campo status faz o grep sair 1, o pipefail propaga e o errexit
+      # aborta o run-all NO MEIO do loop, sem agregado. O `|| true` deixa o
+      # fallback abaixo tratar como "unknown" em vez de derrubar a suíte inteira.
+      status=$(grep -oE '"status"[[:space:]]*:[[:space:]]*"[a-z]+"' "$result_file" | head -1 | sed -E 's/.*"([a-z]+)".*/\1/' || true)
       [ -z "$status" ] && status="unknown"
     fi
     case "$status" in

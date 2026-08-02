@@ -54,7 +54,14 @@ LOWS=$(jq '.findings_by_severity.low // 0' "$AGGREGATE")
 # Conta highs em accept-risk
 HIGH_ACCEPTED=0
 if [ -f "$ACCEPT_RISK" ]; then
-  HIGH_ACCEPTED=$(grep -c "^- \[x\].*high" "$ACCEPT_RISK" 2>/dev/null)
+  # grep -c sai 1 quando a contagem é 0. Sob `set -e` (linha 19) isso aborta o
+  # gate inteiro no caso comum — accept-risk.md existe (o instalador o cria) sem
+  # nenhum high marcado [x] — com exit 1, que o próprio contrato deste script lê
+  # como "CRIT aberto". Um portão de release que morre assim é o pior modo de
+  # falha de uma ferramenta de auditoria. `|| true` mantém a contagem (o grep já
+  # imprimiu "0") sem deixar o errexit matar o gate; guarda numérica defensiva.
+  HIGH_ACCEPTED=$(grep -c "^- \[x\].*high" "$ACCEPT_RISK" 2>/dev/null || true)
+  [[ "$HIGH_ACCEPTED" =~ ^[0-9]+$ ]] || HIGH_ACCEPTED=0
 fi
 HIGH_UNACCEPTED=$((HIGHS - HIGH_ACCEPTED))
 
