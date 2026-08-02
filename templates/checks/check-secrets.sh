@@ -35,12 +35,16 @@ LEAK_COUNT=$(jq 'length' "$TMP" 2>/dev/null || echo 0)
 
 if [ "$LEAK_COUNT" -gt 0 ]; then
   log_fail "$LEAK_COUNT secret(s) detectado(s) (scope: $scope)"
-  jq -c '.[]' "$TMP" 2>/dev/null | while read -r leak; do
+  # `< <(...)` em vez de `jq | while`: num pipe o while roda em SUBSHELL e o array
+  # FINDINGS (populado por add_finding) morre com ela → emit_result reportava
+  # `failed` com findings:[] (achou segredo mas não listou nenhum).
+  while read -r leak; do
+    [ -z "$leak" ] && continue
     rule=$(echo "$leak" | jq -r '.RuleID')
     file=$(echo "$leak" | jq -r '.File')
     line=$(echo "$leak" | jq -r '.StartLine')
     add_finding "crit" "Secret hardcoded: $rule" "$file" "$line"
-  done
+  done < <(jq -c '.[]' "$TMP" 2>/dev/null)
   emit_result "$BLINDAR_AGENT" "failed" 1
   rm -f "$TMP"
   exit 1
