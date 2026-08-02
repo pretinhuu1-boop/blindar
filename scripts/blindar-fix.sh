@@ -220,11 +220,14 @@ call_claude() {
   fi
 
   local response
-  response=$(curl -sS --max-time 90 https://api.anthropic.com/v1/messages \
-    -H "x-api-key: $ANTHROPIC_API_KEY" \
-    -H "anthropic-version: 2023-06-01" \
-    -H "content-type: application/json" \
-    -d "$payload" 2>/dev/null)
+  # API key via --config (stdin), fora do argv (legível por `ps`/proc a outros
+  # usuários locais). Demais headers/payload não são credencial.
+  response=$(printf 'header = "x-api-key: %s"\n' "$ANTHROPIC_API_KEY" \
+    | curl -sS --max-time 90 --config - \
+      -H "anthropic-version: 2023-06-01" \
+      -H "content-type: application/json" \
+      -d "$payload" \
+      https://api.anthropic.com/v1/messages 2>/dev/null)
 
   if [ -z "$response" ]; then
     log_warn "API call sem resposta (timeout ou rede)"
