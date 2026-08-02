@@ -28,11 +28,25 @@ done
 command -v curl >/dev/null 2>&1 || { emit_result "$BLINDAR_AGENT" "skipped" 0; exit 0; }
 command -v node >/dev/null 2>&1 || { emit_result "$BLINDAR_AGENT" "skipped" 0; exit 0; }
 
+# Sanitiza os numéricos vindos da CLI. Sem isto, valores não-inteiros eram
+# interpolados em programas awk/node (injeção de código) e `--concurrency` sem
+# teto podia estourar os recursos do runner (xargs -P N). blindar-run.sh já
+# sanitiza --parallel assim; este check não fazia.
+case "$N" in ''|*[!0-9]*) N=200 ;; esac
+case "$C" in ''|*[!0-9]*) C=20 ;; esac
+[ "$N" -lt 1 ] && N=1;  [ "$N" -gt 100000 ] && N=100000
+[ "$C" -lt 1 ] && C=1;  [ "$C" -gt 256 ] && C=256
+case "$SLO_ERR" in ''|*[!0-9.]*) SLO_ERR=1 ;; esac
+case "$SLO_P95" in ''|*[!0-9]*) SLO_P95=800 ;; esac
+
 log_info "Disparando $N requests, concorrência $C, alvo $URL (SLO: erro<${SLO_ERR}% p95<${SLO_P95}ms)"
 TMP=$(mktemp)
-# N linhas com a URL → xargs -P C dispara em paralelo; grava "status time_total"
-if command -v seq >/dev/null 2>&1; then SEQ=$(seq "$N"); else SEQ=$(awk "BEGIN{for(i=0;i<$N;i++)print i}"); fi
-echo "$SEQ" | sed "s#.*#$URL#" | xargs -P "$C" -I{} curl -s -o /dev/null -w "%{http_code} %{time_total}\n" --max-time 20 {} > "$TMP" 2>/dev/null
+# N linhas com a URL, disparadas em paralelo por xargs -P C; grava "status time".
+# N e a URL vão por `awk -v` — NUNCA interpolados no programa awk nem por um
+# `sed s###` (onde `#`/`&`/`\1` na URL quebravam o delimitador ou redirecionavam
+# a carga pro alvo errado). URL entre aspas no curl via placeholder do xargs.
+awk -v n="$N" -v u="$URL" 'BEGIN{for(i=0;i<n;i++) print u}' \
+  | xargs -P "$C" -I{} curl -s -o /dev/null -w "%{http_code} %{time_total}\n" --max-time 20 {} > "$TMP" 2>/dev/null
 
 RESULT=$(node -e '
   const fs=require("fs");
@@ -53,7 +67,9 @@ P95=$(echo "$RESULT" | node -e "process.stdout.write(String(JSON.parse(require('
 log_info "resultado: total=$TOTAL erro=${ERRPCT}% p95=${P95}ms"
 
 FAIL=0
-if node -e "process.exit(($ERRPCT > $SLO_ERR)?0:1)"; then
+# awk -v em vez de `node -e "...$SLO_ERR..."` (que executava código se --slo-error-pct
+# não fosse numérico). exit 0 quando erro% > SLO.
+if awk -v a="$ERRPCT" -v b="$SLO_ERR" 'BEGIN{exit !(a>b)}'; then
   add_finding "high" "erro% ${ERRPCT}% acima do SLO ${SLO_ERR}% sob carga ($C concorrentes) — não escala/trava sob usuários simultâneos" "" ""; FAIL=1
 fi
 if [ "$P95" -gt "$SLO_P95" ]; then
