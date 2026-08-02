@@ -3,6 +3,59 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.50.0] — 2026-08-02
+
+Blindagem da própria skill. Auditoria completa (8 varreduras independentes) e
+correção incremental — tudo no **código-fonte** (`templates/`, `scripts/`), que
+propaga a todo projeto futuro via instalador. `blindar` roda sobre projetos
+não-confiáveis: nome de arquivo, conteúdo, `package.json`, URL de recon e
+arquivos em `.blindar/` do alvo são entrada não-confiável, e as correções fecham
+os pontos onde esse dado virava JSON inválido, HTML no browser do operador,
+argumento de shell/aritmética ou script executado no host.
+
+### Portão de release não falha mais aberto
+
+- **`_lib.sh` `escape_json`**: codificador JSON completo (RFC 8259 §7) em awk —
+  escapa TODO caractere de controle U+0000–U+001F. Antes, um `\r` (saída CRLF do
+  rg no Windows), `\f`, `\b` ou `0x01` vindo do alvo passava cru → JSON inválido
+  → `jq -s` do run-all falhava e **substituía o aggregate inteiro** (o alvo
+  apagava o próprio relatório com 1 byte, e o gate lia 0 crit → GO falso).
+- **`check-termination.sh`** e **`run-all.sh`**: `grep`/parse com `|| true` — sob
+  `set -e` a contagem de highs (grep -c sem match) abortava o gate no caso comum.
+- **`check-secrets.sh`**: `require_tool jq` (sem jq contava 0 e reportava PASSED
+  com segredos — falha aberta) + `gitleaks --redact` + fim do subshell que emitia
+  `failed` com `findings: []`.
+
+### Vazamento de segredo, XSS, RCE
+
+- **Segredo no finding**: `config-externalization`, `payments` (CVV/PAN),
+  `observability` (PII) e `fintech` (chave PIX) não gravam mais o valor casado na
+  mensagem (ia pro aggregate → CI → API). Só `file`/`line`.
+- **XSS nos dashboards**: `esc()` em `dashboard.html`/`sec.html`, escape de
+  `</script>` no `report.js` (breakout em parse-time que derrotava o `esc()`), URL
+  de PR só http(s), CSP restritiva nos 5 templates. O browser do operador era o sink.
+- **Execução de código do repo auditado**: `smoke-run.sh` recusa
+  `.blindar/smoke-flow.sh` versionado no git (opt-in via `BLINDAR_ALLOW_FLOW_SCRIPT`);
+  `blindar-run.sh` valida nome de agente `[a-z0-9-]`; `blindar-fix.sh` valida `line`
+  numérico antes de `$(( ))`; `blindar-learn.sh` sanitiza `--desc`.
+
+### ReDoS, injeção, segredos em trânsito, supply chain
+
+- **`graph-build.js`**: ReDoS na regex de import (3 KB de espaços = 11 s → 4 ms),
+  captura idêntica. Guardas `Array.isArray`/try-catch em `blindar-report.mjs`,
+  `attack-recon-report.js`, `sbom-build.js`, `reproducibility.js`.
+- **Injeção**: `load-test.sh` (awk/sed/node -e → `awk -v` + limites de
+  concorrência), `check-mcp-security.sh` (match literal, fim do bypass da
+  whitelist), `_api_wrapper.sh` (`IFS='||'` corrompia todos os findings de API).
+- **Segredos em trânsito**: `ANTHROPIC_API_KEY` via `curl --config -` (fora do
+  argv); recon não persiste o corpo de arquivo exposto (`.env`); trivy em `mktemp`.
+- **Supply chain / CI**: gitleaks pinado (v8.18.4, não `master` mutável),
+  `permissions: contents: read`, inputs via `env:`, deps fantasma (`kleur`/`mri`)
+  removidas.
+
+Validação: `check-selftest` 65 pares / 0 regressões nos dois modos (ripgrep real
+e grep-fallback), suite Node inteira verde, 0 regressões.
+
 ## [0.49.0] — 2026-08-02
 
 Duas frentes: o módulo de ciclo de vida do log em disco, e o conserto da
