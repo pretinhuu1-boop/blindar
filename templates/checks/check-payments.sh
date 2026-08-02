@@ -39,7 +39,7 @@ CVV_COUNT=$(wc -l < "$TMP" || echo 0)
 if [ "$CVV_COUNT" -gt 0 ]; then
   while IFS=: read -r file line content; do
     [ -z "$file" ] && continue
-    add_finding "crit" "CVV em código (PCI violation): $(echo "$content" | xargs)" "$file" "$line"
+    add_finding "crit" "CVV em código (PCI violation)" "$file" "$line"
   done < "$TMP"
   log_fail "$CVV_COUNT referência(s) a CVV — PCI VIOLATION"
   FAIL=1
@@ -54,7 +54,7 @@ PAN_LOG=$(wc -l < "$TMP" || echo 0)
 if [ "$PAN_LOG" -gt 0 ]; then
   while IFS=: read -r file line content; do
     [ -z "$file" ] && continue
-    add_finding "crit" "PAN em log (PCI violation): $(echo "$content" | xargs)" "$file" "$line"
+    add_finding "crit" "PAN em log (PCI violation)" "$file" "$line"
   done < "$TMP"
   log_fail "$PAN_LOG log de PAN — PCI VIOLATION"
   FAIL=1

@@ -52,7 +52,7 @@ PII_LOG=$(wc -l < "$TMP" || echo 0)
 if [ "$PII_LOG" -gt 0 ]; then
   while IFS=: read -r file line content; do
     [ -z "$file" ] && continue
-    add_finding "crit" "PII em log (LGPD/GDPR violation): $(echo "$content" | xargs | cut -c1-80)" "$file" "$line"
+    add_finding "crit" "PII em log (LGPD/GDPR violation)" "$file" "$line"
   done < "$TMP"
   log_fail "$PII_LOG log(s) com PII"
   FAIL=1

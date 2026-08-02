@@ -48,7 +48,11 @@ SEC_COUNT=$(wc -l < "$TMP" || echo 0)
 if [ "$SEC_COUNT" -gt 0 ]; then
   while IFS=: read -r file line content; do
     [ -z "$file" ] && continue
-    add_finding "crit" "Possível secret hardcoded: $(echo "$content" | xargs | cut -c1-80)" "$file" "$line"
+    # NÃO embutir o valor do segredo na mensagem: o finding vai para
+    # .blindar/results/*.json → aggregate.json → artefatos de CI → e é reenviado
+    # à API pelo adversarial-reviewer. Uma ferramenta que caça segredo não pode
+    # vazar o segredo. file/line localizam o achado (padrão de check-secrets-rotation).
+    add_finding "crit" "Possível secret hardcoded (mover pra ENV)" "$file" "$line"
   done < "$TMP"
   log_fail "$SEC_COUNT secret(s) hardcoded — mover pra ENV"
 fi

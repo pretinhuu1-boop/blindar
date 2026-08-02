@@ -65,7 +65,7 @@ HARDCODED=$(wc -l < "$TMP" | tr -d ' ')
 if [ "${HARDCODED:-0}" -gt 0 ]; then
   while IFS=: read -r file line content; do
     [ -z "$file" ] && continue
-    add_finding "crit" "Chave PIX hardcoded (deveria ser env/config): $(echo "$content" | xargs)" "$file" "$line"
+    add_finding "crit" "Chave PIX hardcoded (deveria ser env/config)" "$file" "$line"
   done < "$TMP"
   log_fail "$HARDCODED chave(s) PIX hardcoded — CRIT"
   FAIL=1
