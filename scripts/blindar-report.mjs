@@ -86,7 +86,13 @@ function evidencias(n) {
     r.lidos++;
     if (j.missing_tool) r.semCobertura.push(`${nome} (falta ${j.missing_tool})`);
     if (j.status === 'failed') r.falharam.push(nome);
-    for (const a of j.findings || []) {
+    // .blindar/results/ vive no diretório do projeto (não-confiável). Um result
+    // com findings:123 / findings:[null] / objeto estouraria "not iterable" e
+    // crasharia justamente o gate que deveria RECUSAR marcar a fase "ok" com
+    // crit/high aberto. Guarda de forma antes de iterar.
+    const findings = Array.isArray(j.findings) ? j.findings : [];
+    for (const a of findings) {
+      if (!a || typeof a !== 'object') continue;
       if (a.severity === 'crit') r.crit++;
       else if (a.severity === 'high') r.high++;
     }

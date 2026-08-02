@@ -87,13 +87,18 @@ function main(argv) {
     return 0;
   }
   if (values.validate) {
-    const sbom = JSON.parse(readFileSync(values.validate, 'utf8'));
+    let sbom;
+    try { sbom = JSON.parse(readFileSync(values.validate, 'utf8')); }
+    catch (e) { console.error(`✗ não consegui ler/parsear ${values.validate}: ${e.message}`); return 1; }
     const errors = validateSbom(sbom);
     if (errors.length) { errors.forEach((e) => console.error(`  ✗ ${e}`)); return 1; }
     console.log(`✓ SBOM válido — ${sbom.atks.length} ATK(s)`);
     return 0;
   }
-  const findings = JSON.parse(readFileSync(values.build, 'utf8')).findings || [];
+  let parsed;
+  try { parsed = JSON.parse(readFileSync(values.build, 'utf8')); }
+  catch (e) { console.error(`✗ não consegui ler/parsear ${values.build}: ${e.message}`); return 1; }
+  const findings = (parsed && parsed.findings) || [];
   const sbom = buildSbom(findings, { blindar_version: values.version || '' });
   const out = values.out || '.blindar/sbom.json';
   writeFileSync(out, JSON.stringify(sbom, null, 2));

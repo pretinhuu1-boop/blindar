@@ -82,15 +82,22 @@ function main(argv) {
     console.log('uso: reproducibility.js --hash f.json | --check a.json b.json');
     return 0;
   }
+  const readJson = (p) => {
+    try { return JSON.parse(readFileSync(p, 'utf8')); }
+    catch (e) { console.error(`✗ não consegui ler/parsear ${p}: ${e.message}`); process.exitCode = 1; return null; }
+  };
   if (values.hash) {
-    const h = canonicalHash(JSON.parse(readFileSync(positionals[0], 'utf8')));
-    console.log(h);
+    const data = readJson(positionals[0]);
+    if (data === null) return 1;
+    console.log(canonicalHash(data));
     return 0;
   }
   // --check
   const [a, b] = positionals;
-  const ha = canonicalHash(JSON.parse(readFileSync(a, 'utf8')));
-  const hb = canonicalHash(JSON.parse(readFileSync(b, 'utf8')));
+  const da = readJson(a), db = readJson(b);
+  if (da === null || db === null) return 1;
+  const ha = canonicalHash(da);
+  const hb = canonicalHash(db);
   if (ha === hb) { console.log(`✓ reproduzível — hash idêntico: ${ha.slice(0, 16)}…`); return 0; }
   console.error(`✗ NÃO reproduzível:\n  ${a}: ${ha.slice(0, 16)}…\n  ${b}: ${hb.slice(0, 16)}…`);
   return 1;
