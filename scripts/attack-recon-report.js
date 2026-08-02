@@ -80,14 +80,16 @@ function checkForgotten(dir, url, findings) {
     if (!existsSync(hdrPath)) continue;
     const { status } = parseHeaders(readFileSync(hdrPath, 'utf8'));
     if (status !== 200) continue;
-    const bodyPath = join(dir, f);
-    const body = existsSync(bodyPath) ? readFileSync(bodyPath, 'utf8').slice(0, 400) : '';
     const path = f.replace(/^f_/, '').replace(/__/g, '/').replace('/', '.');
     const isCrit = FORGOTTEN_CRIT.has(path);
+    // NÃO persiste o conteúdo do arquivo exposto: um forgotten file (.env,
+    // .git/config, database.sql — justamente o que o recon busca) traria
+    // credenciais reais pro .blindar/findings.attack.json, que pode ser
+    // commitado/anexado. O path + status 200 já é o achado acionável.
     findings.push({
       title: `Arquivo exposto publicamente: /${path}`,
       lens: 'security', sev: isCrit ? 'crit' : 'med', file: `${url}/${path}`,
-      description: `GET /${path} retornou 200. ${isCrit ? 'CRÍTICO: contém credenciais/dados sensíveis.' : 'Pode vazar metadados/config.'} Preview: ${body.slice(0, 120).replace(/\s+/g, ' ')}`,
+      description: `GET /${path} retornou 200. ${isCrit ? 'CRÍTICO: provável credencial/dado sensível — verifique manualmente no alvo.' : 'Pode vazar metadados/config.'} (conteúdo não incluído no relatório por segurança)`,
       suggested_fix_category: isCrit ? 'runtime-secrets' : 'network-security',
     });
   }

@@ -71,13 +71,19 @@ fi
 # Trivy pra container (se Dockerfile presente)
 if has_file "Dockerfile" && command -v trivy >/dev/null 2>&1; then
   log_info "Detectado Dockerfile — trivy fs"
-  if trivy fs --severity HIGH,CRITICAL --exit-code 1 --format json --output /tmp/trivy.json . 2>/dev/null; then
+  # mktemp em vez de /tmp/trivy.json fixo: um caminho previsível num dir
+  # world-writable deixava um symlink pré-plantado redirecionar a escrita do
+  # trivy, ou um `{"Results":[]}` plantado zerar a contagem (auditoria de deps
+  # passando com CVEs reais).
+  TRIVY_OUT=$(mktemp)
+  if trivy fs --severity HIGH,CRITICAL --exit-code 1 --format json --output "$TRIVY_OUT" . 2>/dev/null; then
     log_pass "Zero vulns no filesystem (trivy)"
   else
-    COUNT=$(jq '[.Results[]?.Vulnerabilities[]?] | length' /tmp/trivy.json 2>/dev/null || echo 0)
+    COUNT=$(jq '[.Results[]?.Vulnerabilities[]?] | length' "$TRIVY_OUT" 2>/dev/null || echo 0)
     add_finding "high" "$COUNT vulnerabilidade(s) trivy (HIGH+CRIT)" "Dockerfile" ""
     FAIL=1
   fi
+  rm -f "$TRIVY_OUT"
 fi
 
 if [ "$FAIL" -eq 1 ]; then

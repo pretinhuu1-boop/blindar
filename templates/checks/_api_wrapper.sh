@@ -128,12 +128,16 @@ blindar_api_check() {
   fi
 
   # 9. Chama API
+  # API key via --config (stdin), NÃO em -H no argv: o argv é legível por qualquer
+  # processo local (`ps`, /proc/<pid>/cmdline) — num runner de CI compartilhado um
+  # co-tenant capturava a chave. Demais headers/payload não são segredo.
   local response
-  response=$(curl -sS --max-time 120 https://api.anthropic.com/v1/messages \
-    -H "x-api-key: $ANTHROPIC_API_KEY" \
-    -H "anthropic-version: 2023-06-01" \
-    -H "content-type: application/json" \
-    -d "$payload" 2>/dev/null)
+  response=$(printf 'header = "x-api-key: %s"\n' "$ANTHROPIC_API_KEY" \
+    | curl -sS --max-time 120 --config - \
+      -H "anthropic-version: 2023-06-01" \
+      -H "content-type: application/json" \
+      -d "$payload" \
+      https://api.anthropic.com/v1/messages 2>/dev/null)
 
   if [ -z "$response" ]; then
     log_warn "API call falhou (sem resposta)"
