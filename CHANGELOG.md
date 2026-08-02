@@ -3,10 +3,15 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
-## [Não lançado]
+## [0.49.0] — 2026-08-02
 
-Módulo de ciclo de vida do log **em disco** — pasta por dia UTC, rotação, um
-arquivo por processo, retenção escalonada com guardas de exclusão.
+Duas frentes: o módulo de ciclo de vida do log em disco, e o conserto da
+camada de detecção — que estava reportando `passed` sem varrer arquivo, com a
+CI vermelha havia sete semanas.
+
+Mais o modo **fatiado**: rodar o blindar um módulo por vez, com relatório
+persistente entre sessões, e guardas que transformam ferramenta ausente em
+buraco declarado em vez de aprovação silenciosa.
 
 ### Novo agente `log-ops-retention` (módulo 6)
 
@@ -115,6 +120,55 @@ A regra expôs o que a lista escondia:
 
 Pendência registrada: outros 9 checks usam `jq` sem guarda e degradam para
 no-op silencioso quando ele falta.
+
+### Modo fatiado — `docs/PROMPTS-POR-FASE.md`
+
+Rodar o blindar um módulo por vez em vez do pipeline inteiro numa sessão só.
+Diff menor, auditoria mais profunda por módulo, ponto de decisão entre fases.
+
+15 fases principais na ordem de dependência (segurança core cedo, pentest por
+último porque audita as correções das outras) + 3 opcionais separadas, cada
+uma com "pule se" e critério de pronto. Nomes de agente validados contra o
+`MODULE-MAP.json`.
+
+Cada prompt de hardening carrega o **ciclo** dentro dele: roda o check,
+corrige na causa raiz, **re-roda o mesmo check para provar que o achado
+sumiu**, roda a suíte, repete. Mais a condição de parada — duas rodadas sem
+reduzir crit+high e ele para e explica, em vez de insistir. As 4 fases de
+diagnóstico não têm ciclo: não corrigem nada.
+
+### Relatório de fases — `scripts/blindar-report.mjs`
+
+Cada fase roda numa sessão limpa, sem contexto da anterior: a fase 15 não sabe
+o que a fase 2 fez. `blindar/RELATORIO.md` é essa memória.
+
+- `init` cria se não existir e **não** sobrescreve; `status` mostra o estado e
+  a próxima fase; `verificar --fase N` mostra a evidência sem alterar nada.
+- Cinco estados (✅ passou, ⚠️ com pendências, ❌ bloqueada, ⏭️ não se aplica,
+  ⬜ não rodada). Pendência e bloqueio caem numa seção "Fases que precisam
+  voltar" — fase fechada com pendência não conta como fechada.
+- Markdown legível com bloco JSON em comentário HTML: humano lê a tabela,
+  máquina lê o JSON.
+- Pasta `blindar/` é **versionada** (artefato de auditoria), ao contrário de
+  `.blindar/`, que é transitória e ignorada pelo git.
+- **Não acredita no que é digitado**: escopo por fase lido do MODULE-MAP, e
+  `set --estado ok` é recusado se `.blindar/results/` daquela fase tiver
+  crit/high aberto ou check com status `failed`.
+
+### Ferramenta ausente ≠ aprovação
+
+O `check-termination.sh` — o script que decide "release liberada" — contava os
+findings com `jq` sem guarda. Sem `jq` as contagens vinham vazias, a comparação
+numérica falhava em silêncio, e ele imprimia TERMINATION ATINGIDA independente
+do que existia. Agora bloqueia com **exit 5**.
+
+- `require_tool` (fatal, quando a ferramenta gateia o check inteiro) e
+  `have_tool` (não-fatal, mata só o bloco e deixa o resto rodar) no `_lib.sh`.
+  Aplicado no `check-i18n-tz`, onde `jq` gateia apenas a paridade de locales.
+- `emit_result` grava `missing_tool` no result — skip por falta de ferramenta
+  é ausência de cobertura, não "não se aplica". `have_tool` também marca,
+  senão um check aprovado **com** buraco ficaria indistinguível de um aprovado
+  com cobertura completa. Campo declarado no `check-result.schema.json`.
 
 ## [0.48.0] — 2026-07-11
 
