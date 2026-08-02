@@ -2,6 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; font-src data:; connect-src 'self'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>blindar — dashboard local</title>
 <style>
@@ -55,6 +56,12 @@
 </footer>
 
 <script>
+// Dados vêm de report.json (blindar check --json sobre o projeto NÃO-confiável):
+// message/file/agent carregam trechos do código auditado. Sem escapar, `<img
+// src=x onerror=...>` num arquivo escaneado executava no browser do operador.
+const SEV = new Set(['crit','high','med','low']);
+const STATUS = new Set(['passed','failed','skipped','deferred','errored']);
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 async function load(){
   try {
     const r = await fetch('./report.json');
@@ -62,7 +69,7 @@ async function load(){
     const data = await r.json();
     render(data);
   } catch(e) {
-    document.body.innerHTML = '<div class="empty">⚠ '+e.message+'<br><br>Rode: <code>npx blindar check --json &gt; .blindar/report.json</code></div>';
+    document.body.innerHTML = '<div class="empty">⚠ '+esc(e.message)+'<br><br>Rode: <code>npx blindar check --json &gt; .blindar/report.json</code></div>';
   }
 }
 function render(d){
@@ -86,7 +93,7 @@ function render(d){
 
   const tbR = document.querySelector('#results tbody');
   tbR.innerHTML = (d.results||[]).map(r =>
-    `<tr><td>${r.agent}</td><td><span class="badge ${r.status}">${r.status}</span></td><td>${(r.findings||[]).length}</td></tr>`
+    `<tr><td>${esc(r.agent)}</td><td><span class="badge ${STATUS.has(r.status)?r.status:''}">${esc(r.status)}</span></td><td>${(r.findings||[]).length}</td></tr>`
   ).join('') || '<tr><td colspan="3" class="empty">sem resultados</td></tr>';
 
   const tbF = document.querySelector('#findings tbody');
@@ -95,7 +102,7 @@ function render(d){
   const order = {crit:0,high:1,med:2,low:3};
   all.sort((a,b)=>(order[a.severity]??9)-(order[b.severity]??9));
   tbF.innerHTML = all.map(f =>
-    `<tr><td><span class="badge ${f.severity}">${f.severity}</span></td><td>${f.agent}</td><td>${f.message}</td><td class="file">${f.file||''}${f.line?':'+f.line:''}</td></tr>`
+    `<tr><td><span class="badge ${SEV.has(f.severity)?f.severity:''}">${esc(f.severity)}</span></td><td>${esc(f.agent)}</td><td>${esc(f.message)}</td><td class="file">${esc(f.file||'')}${f.line?':'+esc(f.line):''}</td></tr>`
   ).join('') || '<tr><td colspan="4" class="empty">nenhum finding 🎉</td></tr>';
 }
 load();
