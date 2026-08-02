@@ -226,6 +226,16 @@ TOTAL_START=$(date +%s)
 run_one_check() {
   local module_id="$1"
   local agent="$2"
+  # O nome do agente vem do MODULE-MAP; no layout instalado o MODULE-MAP fica
+  # DENTRO do projeto-alvo (não-confiável). Um nome com `../` ou metachars
+  # montaria "$CHECKS_DIR/check-<agent>.sh" apontando pra fora e executaria um
+  # script arbitrário. Só aceita [a-z0-9-].
+  case "$agent" in
+    ''|*[!a-z0-9-]*)
+      [ "$JSON_ONLY" -eq 0 ] && echo "${Y}⏭${RST}  '$agent' — nome de agente inválido, ignorado" >&2
+      echo "$module_id|$agent|invalid|skipped|0"
+      return 0 ;;
+  esac
   local det="$CHECKS_DIR/check-${agent}.sh"
   local api="$CHECKS_DIR/check-${agent}.api.sh"
   local result_json="$RESULTS_DIR/check-${agent}.json"
@@ -304,6 +314,10 @@ line="$1"
 module_id="${line%%:*}"
 agent="${line#*:}"
 [ -z "$agent" ] && exit 0
+# Mesma validação do modo serial: nome de agente do MODULE-MAP (que no layout
+# instalado vive no projeto-alvo) com `../`/metachars montaria um path fora de
+# CHECKS_DIR. Só aceita [a-z0-9-].
+case "$agent" in ''|*[!a-z0-9-]*) echo "$module_id|$agent|invalid|skipped|0"; exit 0 ;; esac
 
 det="$CHECKS_DIR/check-${agent}.sh"
 api="$CHECKS_DIR/check-${agent}.api.sh"
