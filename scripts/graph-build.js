@@ -66,7 +66,13 @@ function isInternalPath(p) {
 
 // ─── Extração por arquivo de código ───
 const IMPORT_RE = [
-  /import\s+(?:[^'"]*?\s+from\s+)?['"]([^'"]+)['"]/g, // ES import
+  // ReDoS-safe: `[^'"]*?\s+from\s+` fazia backtracking catastrófico (o `[^'"]*?`
+  // e o `\s+` disputavam a mesma corrida de espaços) — um único arquivo com
+  // `import` + alguns KB de espaços travava o discovery inteiro (grafo é reusado
+  // por todos os agentes): 3 KB = 11 s, 8 KB não terminava. `\bfrom` remove a
+  // sobreposição de espaço e o `{0,300}` limita o backtracking. Captura idêntica.
+  /import\s+(?:[^'"]{0,300}?\bfrom\s+)?['"]([^'"]+)['"]/g, // ES import
+
   /require\(\s*['"]([^'"]+)['"]\s*\)/g,               // CJS require
   /^\s*from\s+([\w.]+)\s+import\b/gm,                 // Python from x import
   /^\s*import\s+([\w.]+)/gm,                          // Python import x

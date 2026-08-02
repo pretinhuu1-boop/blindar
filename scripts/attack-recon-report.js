@@ -129,8 +129,12 @@ function checkCt(dir, url, findings) {
   if (!existsSync(p)) return;
   let arr = [];
   try { arr = JSON.parse(readFileSync(p, 'utf8')); } catch { return; }
+  // crt.json vem de um alvo externo não-confiável: um payload de erro do crt.sh
+  // (objeto em vez de array) faria `for..of` estourar e abortar o recon inteiro,
+  // perdendo todos os outros findings. Guarda de forma.
+  if (!Array.isArray(arr)) return;
   const subs = new Set();
-  for (const e of arr) String(e.name_value || '').split('\n').forEach((s) => subs.add(s.toLowerCase()));
+  for (const e of arr) String((e && e.name_value) || '').split('\n').forEach((s) => subs.add(s.toLowerCase()));
   const flagged = [...subs].filter((s) => /(stg|staging|dev|admin|internal|preprod|test)\./i.test(s));
   if (flagged.length) {
     findings.push({
