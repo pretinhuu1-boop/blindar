@@ -57,7 +57,8 @@ runs:
       shell: bash
       run: |
         if ! command -v gitleaks >/dev/null 2>&1; then
-          curl -sSfL https://raw.githubusercontent.com/gitleaks/gitleaks/master/install.sh | sh -s -- -b /usr/local/bin
+          # Pin de versão (não `master` mutável): fixa script instalador + binário.
+          curl -sSfL https://raw.githubusercontent.com/gitleaks/gitleaks/v8.18.4/install.sh | sh -s -- -b /usr/local/bin v8.18.4
         fi
         if ! command -v rg >/dev/null 2>&1; then
           sudo apt-get update && sudo apt-get install -y ripgrep jq bc
@@ -67,15 +68,23 @@ runs:
       shell: bash
       run: |
         if ! command -v blindar >/dev/null 2>&1; then
-          npm install -g blindar
+          # --ignore-scripts: não roda lifecycle scripts de blindar nem de deps
+          # transitivas na instalação (blindar é JS puro, sem build step).
+          npm install -g blindar --ignore-scripts
         fi
 
     - name: Run blindar checks
       id: blindar
       shell: bash
+      # Inputs via env, não interpolados direto no `run:` — um consumidor que
+      # ligasse `fail-on: ${{ github.event.pull_request.title }}` criaria um sink
+      # de script injection (CWE-94). Referenciados como variáveis de shell.
+      env:
+        INPUT_MODE: ${{ inputs.mode }}
+        INPUT_FAIL_ON: ${{ inputs.fail-on }}
       run: |
         # Roda npx blindar check com mode
-        if [ "${{ inputs.mode }}" = "fast" ]; then
+        if [ "$INPUT_MODE" = "fast" ]; then
           npx blindar check --fast --json > /tmp/blindar.json || true
         else
           npx blindar check --json > /tmp/blindar.json || true
@@ -87,7 +96,7 @@ runs:
         HIGHS=$(jq '.findings_by_severity.high // 0' /tmp/blindar.json 2>/dev/null || echo 0)
         MEDS=$(jq '.findings_by_severity.med // 0' /tmp/blindar.json 2>/dev/null || echo 0)
 
-        FAIL_ON="${{ inputs.fail-on }}"
+        FAIL_ON="$INPUT_FAIL_ON"
         if [ "$FAIL_ON" = "crit" ] && [ "$CRITS" -gt 0 ]; then STATUS="failed"; fi
         if [ "$FAIL_ON" = "high" ] && [ "$((CRITS + HIGHS))" -gt 0 ]; then STATUS="failed"; fi
         if [ "$FAIL_ON" = "med" ] && [ "$((CRITS + HIGHS + MEDS))" -gt 0 ]; then STATUS="failed"; fi

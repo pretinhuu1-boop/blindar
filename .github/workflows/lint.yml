@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [main]
 
+# Least-privilege: só leitura. Sem isto o GITHUB_TOKEN herda o default do repo
+# (pode ser read/write-all em repos antigos) num workflow que só valida.
+permissions:
+  contents: read
+
 jobs:
   validate-schemas:
     runs-on: ubuntu-latest

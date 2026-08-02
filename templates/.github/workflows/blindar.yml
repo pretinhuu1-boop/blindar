@@ -45,7 +45,10 @@ jobs:
 
       - name: Install gitleaks
         run: |
-          curl -sSfL https://raw.githubusercontent.com/gitleaks/gitleaks/master/install.sh | sh -s -- -b /usr/local/bin
+          # Pin de versão (não `master`, que é mutável): fixa o SCRIPT instalador
+          # e o BINÁRIO. `master` = qualquer commit no repo do gitleaks executaria
+          # em toda CI downstream. Bump manual e revisável quando quiser subir.
+          curl -sSfL https://raw.githubusercontent.com/gitleaks/gitleaks/v8.18.4/install.sh | sh -s -- -b /usr/local/bin v8.18.4
 
       - name: Install ripgrep + jq + bc
         run: sudo apt-get update && sudo apt-get install -y ripgrep jq bc
