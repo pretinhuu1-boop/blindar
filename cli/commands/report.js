@@ -61,15 +61,27 @@ export default async function report({ skillRoot }) {
     }],
   };
 
-  const payloadJson = JSON.stringify(payload, null, 2);
+  // Escape para contexto <script>: JSON.stringify NAO escapa "</script>". Uma
+  // mensagem de finding com "</script><img src=x onerror=...>" (o finding carrega
+  // trechos do codigo auditado) fecharia o bloco em tempo de PARSE, antes do
+  // esc() de render do template rodar, injetando markup vivo no browser de quem
+  // abre o relatorio (client-report.html e feito pra ser compartilhado). O "<"
+  // vira <; os separadores de linha U+2028/U+2029 tambem viram escapes.
+  // Segue sendo JSON valido (\uXXXX decodifica de volta ao caractere).
+  const payloadJson = JSON.stringify(payload, null, 2)
+    .replace(/</g, '\\u003c')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
 
   for (const tpl of TEMPLATES) {
     const file = join(cwd, tpl);
     if (!existsSync(file)) continue;
     const html = readFileSync(file, 'utf8');
+    // Replacer como FUNÇÃO: como string, `$&`/`$1`/`$'` presentes no JSON seriam
+    // reinterpretados por String.replace e corromperiam/duplicariam a saída.
     const updated = html.replace(
       /<script id="blindar-data" type="application\/json">[\s\S]*?<\/script>/,
-      `<script id="blindar-data" type="application/json">\n${payloadJson}\n</script>`
+      () => `<script id="blindar-data" type="application/json">\n${payloadJson}\n</script>`
     );
     writeFileSync(file, updated);
     console.log(kleur.green(`✓ Atualizado bloco de dados: ${tpl}`));

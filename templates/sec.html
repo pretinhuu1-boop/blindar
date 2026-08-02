@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="pt-BR"><head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; font-src data:; connect-src 'self'; base-uri 'none'; form-action 'none'">
 <title>sec — {project_name}</title>
 <style>
   body { font-family: system-ui, sans-serif; max-width: 1200px; margin: 0 auto;
@@ -52,6 +53,11 @@
 <div id="metrics" class="panel"><pre id="metrics-data"></pre></div>
 
 <script>
+// Arrays reescritos a cada round com dado do projeto-alvo (títulos de ATK, paths
+// de endpoint, notas). Sem escapar, um valor com <img onerror> executava no
+// browser do operador. esc() em toda interpolação (as classes sev-/cov- ficam
+// em atributos entre aspas, então escapar o " já barra o breakout).
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 // ─── DATA — atualizado a cada round ─────────────────────────────
 const ATKS = [];
 const MATRIX = [];
@@ -65,7 +71,7 @@ function renderMatrix() {
     const t = Math.max(c.total, 1);
     const pC = (c.covered/t)*100, pP = (c.partial/t)*100, pG = (c.gap/t)*100;
     return `<div class="matrix-row">
-      <div>${c.label} (${c.covered+c.partial}/${c.total})</div>
+      <div>${esc(c.label)} (${c.covered+c.partial}/${c.total})</div>
       <div class="bar">
         <div class="bar-covered" style="width:${pC}%"></div>
         <div class="bar-partial" style="width:${pP}%"></div>
@@ -77,26 +83,26 @@ function renderMatrix() {
 }
 function renderAtks() {
   document.getElementById('atks-rows').innerHTML = ATKS.map(a => `
-    <tr><td><b>${a.id}</b></td><td>${a.cat}</td>
-        <td class="sev-${a.sev}">${a.sev}</td>
-        <td class="cov-${a.cov}">${a.cov}</td>
-        <td>${a.title}</td>
-        <td style="color:#999;font-size:11px">${a.coveredBy || '—'}</td></tr>
+    <tr><td><b>${esc(a.id)}</b></td><td>${esc(a.cat)}</td>
+        <td class="sev-${esc(a.sev)}">${esc(a.sev)}</td>
+        <td class="cov-${esc(a.cov)}">${esc(a.cov)}</td>
+        <td>${esc(a.title)}</td>
+        <td style="color:#999;font-size:11px">${esc(a.coveredBy || '—')}</td></tr>
   `).join('');
 }
 function renderRounds() {
   document.getElementById('rounds-list').innerHTML = NEXT_ROUNDS.map(r => `
     <div style="background:#1a1a1a;padding:12px;margin-bottom:8px;border-radius:4px">
-      <b style="color:#fbbf24">${r.id}</b> ${r.title}
+      <b style="color:#fbbf24">${esc(r.id)}</b> ${esc(r.title)}
       <div style="color:#999;font-size:12px;margin-top:4px">
-        target: ${r.target} · covers: ${(r.gaps_covered||[]).join(', ')}
+        target: ${esc(r.target)} · covers: ${esc((r.gaps_covered||[]).join(', '))}
       </div></div>`).join('');
 }
 function renderEndpoints() {
   document.getElementById('endpoints-rows').innerHTML = ENDPOINTS.map(e => `
-    <tr><td><b>${e.method}</b></td><td><code>${e.path}</code></td>
-        <td>${e.auth}</td>
-        <td style="color:#999;font-size:12px">${e.notes||''}</td></tr>`).join('');
+    <tr><td><b>${esc(e.method)}</b></td><td><code>${esc(e.path)}</code></td>
+        <td>${esc(e.auth)}</td>
+        <td style="color:#999;font-size:12px">${esc(e.notes||'')}</td></tr>`).join('');
 }
 function renderMetrics() {
   document.getElementById('metrics-data').textContent = JSON.stringify(METRICS, null, 2);
