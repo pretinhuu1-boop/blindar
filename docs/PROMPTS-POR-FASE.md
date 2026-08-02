@@ -11,6 +11,13 @@ diff menor, e você decide entre um e outro se vale continuar.
 diff, commite, passe para a próxima. Pule as fases que não se aplicam — cada
 uma diz quando pular.
 
+Cada prompt de correção carrega um **ciclo** dentro dele: roda o check,
+corrige, **re-roda o mesmo check para provar que o achado sumiu**, e repete
+até fechar. Ele também carrega a condição de parada — se duas rodadas seguidas
+não reduzirem a contagem de crit+high, ele para e explica o que travou, em vez
+de insistir. As fases de diagnóstico (baseline, product evolution, recon,
+pentest ativo) não têm ciclo porque não corrigem nada.
+
 ---
 
 ## Fase 0 — Pré-requisitos (uma vez por máquina)
@@ -97,6 +104,25 @@ para ficar verde; se um achado for falso-positivo, diga por que e adicione a
 supressão em .blindar/intelligence.yml com o motivo escrito.
 
 Ao final: quantos crit/high/med, quais foram corrigidos, quais ficaram e por quê.
+
+CICLO — repita até fechar:
+1. Rode os checks desta fase e liste os achados por severidade.
+2. Corrija um grupo por vez, na causa raiz.
+3. RODE O MESMO CHECK DE NOVO e prove que o achado sumiu. Não confie na
+   correção sem re-verificar — corrigir e assumir que funcionou é como o
+   blindar ficou 7 semanas reportando "passed" sem varrer arquivo.
+4. Rode a suíte completa. Verde antes de commitar.
+5. Sobrou achado? Volte ao passo 2.
+
+Feche a fase quando: 0 crit, e cada high restante registrado em
+accept-risk.md com justificativa escrita.
+
+Pare ANTES disso se duas rodadas seguidas não reduzirem a contagem de
+crit+high — nesse caso me diga o que está travando, em vez de seguir
+tentando. Progresso zero repetido é sinal de que o problema é outro.
+
+Nunca feche a fase suprimindo achado no .blindar/intelligence.yml sem motivo
+escrito, nem afrouxando o check.
 ```
 
 **Pronto quando:** 0 crit. Highs restantes precisam estar em `accept-risk.md`
@@ -124,6 +150,29 @@ Foco:
 
 Corrija, teste cada correção com um caso real de request, e rode a suíte.
 Me diga também o que você NÃO conseguiu testar sem ambiente de homolog.
+
+Critério extra desta fase: a superfície externa tem que bater com o que o
+.blindar/graph.json diz que deveria ser pública, e TODA listagem tem que
+paginar. Confira os dois explicitamente antes de fechar.
+
+CICLO — repita até fechar:
+1. Rode os checks desta fase e liste os achados por severidade.
+2. Corrija um grupo por vez, na causa raiz.
+3. RODE O MESMO CHECK DE NOVO e prove que o achado sumiu. Não confie na
+   correção sem re-verificar — corrigir e assumir que funcionou é como o
+   blindar ficou 7 semanas reportando "passed" sem varrer arquivo.
+4. Rode a suíte completa. Verde antes de commitar.
+5. Sobrou achado? Volte ao passo 2.
+
+Feche a fase quando: 0 crit, e cada high restante registrado em
+accept-risk.md com justificativa escrita.
+
+Pare ANTES disso se duas rodadas seguidas não reduzirem a contagem de
+crit+high — nesse caso me diga o que está travando, em vez de seguir
+tentando. Progresso zero repetido é sinal de que o problema é outro.
+
+Nunca feche a fase suprimindo achado no .blindar/intelligence.yml sem motivo
+escrito, nem afrouxando o check.
 ```
 
 **Pronto quando:** superfície externa bate com o que o grafo diz que deveria
@@ -149,6 +198,25 @@ precisar de unsafe-inline para funcionar hoje, diga isso explicitamente e
 proponha o caminho para remover.
 
 Corrija, teste, rode a suíte.
+
+CICLO — repita até fechar:
+1. Rode os checks desta fase e liste os achados por severidade.
+2. Corrija um grupo por vez, na causa raiz.
+3. RODE O MESMO CHECK DE NOVO e prove que o achado sumiu. Não confie na
+   correção sem re-verificar — corrigir e assumir que funcionou é como o
+   blindar ficou 7 semanas reportando "passed" sem varrer arquivo.
+4. Rode a suíte completa. Verde antes de commitar.
+5. Sobrou achado? Volte ao passo 2.
+
+Feche a fase quando: 0 crit, e cada high restante registrado em
+accept-risk.md com justificativa escrita.
+
+Pare ANTES disso se duas rodadas seguidas não reduzirem a contagem de
+crit+high — nesse caso me diga o que está travando, em vez de seguir
+tentando. Progresso zero repetido é sinal de que o problema é outro.
+
+Nunca feche a fase suprimindo achado no .blindar/intelligence.yml sem motivo
+escrito, nem afrouxando o check.
 ```
 
 ---
@@ -169,6 +237,25 @@ dependência abandonada, typosquatting, script de postinstall, e geração de SB
 Ao corrigir: separe o que é bump seguro do que é breaking change. Não faça
 upgrade major junto com hardening — isso vira um diff impossível de revisar.
 Liste os majors como trabalho separado.
+
+CICLO — repita até fechar:
+1. Rode os checks desta fase e liste os achados por severidade.
+2. Corrija um grupo por vez, na causa raiz.
+3. RODE O MESMO CHECK DE NOVO e prove que o achado sumiu. Não confie na
+   correção sem re-verificar — corrigir e assumir que funcionou é como o
+   blindar ficou 7 semanas reportando "passed" sem varrer arquivo.
+4. Rode a suíte completa. Verde antes de commitar.
+5. Sobrou achado? Volte ao passo 2.
+
+Feche a fase quando: 0 crit, e cada high restante registrado em
+accept-risk.md com justificativa escrita.
+
+Pare ANTES disso se duas rodadas seguidas não reduzirem a contagem de
+crit+high — nesse caso me diga o que está travando, em vez de seguir
+tentando. Progresso zero repetido é sinal de que o problema é outro.
+
+Nunca feche a fase suprimindo achado no .blindar/intelligence.yml sem motivo
+escrito, nem afrouxando o check.
 ```
 
 ---
@@ -194,6 +281,25 @@ Foco:
 - RPO e RTO declarados
 
 Corrija o que é seguro corrigir. Migration destrutiva: proponha, NÃO execute.
+
+CICLO — repita até fechar:
+1. Rode os checks desta fase e liste os achados por severidade.
+2. Corrija um grupo por vez, na causa raiz.
+3. RODE O MESMO CHECK DE NOVO e prove que o achado sumiu. Não confie na
+   correção sem re-verificar — corrigir e assumir que funcionou é como o
+   blindar ficou 7 semanas reportando "passed" sem varrer arquivo.
+4. Rode a suíte completa. Verde antes de commitar.
+5. Sobrou achado? Volte ao passo 2.
+
+Feche a fase quando: 0 crit, e cada high restante registrado em
+accept-risk.md com justificativa escrita.
+
+Pare ANTES disso se duas rodadas seguidas não reduzirem a contagem de
+crit+high — nesse caso me diga o que está travando, em vez de seguir
+tentando. Progresso zero repetido é sinal de que o problema é outro.
+
+Nunca feche a fase suprimindo achado no .blindar/intelligence.yml sem motivo
+escrito, nem afrouxando o check.
 ```
 
 ---
@@ -230,6 +336,28 @@ operacional e NÃO são a trilha de auditoria.
 Teste obrigatório: um fluxo real que grava log, depois LÊ os arquivos
 produzidos e falha se encontrar token, cookie, header de autorização, corpo de
 request, CPF, cartão ou nome. Redação sem teste é promessa.
+
+Critério extra desta fase: esse teste tem que EXISTIR e PASSAR. Sem ele a
+fase não fecha, mesmo com 0 crit.
+
+CICLO — repita até fechar:
+1. Rode os checks desta fase e liste os achados por severidade.
+2. Corrija um grupo por vez, na causa raiz.
+3. RODE O MESMO CHECK DE NOVO e prove que o achado sumiu. Não confie na
+   correção sem re-verificar — corrigir e assumir que funcionou é como o
+   blindar ficou 7 semanas reportando "passed" sem varrer arquivo.
+4. Rode a suíte completa. Verde antes de commitar.
+5. Sobrou achado? Volte ao passo 2.
+
+Feche a fase quando: 0 crit, e cada high restante registrado em
+accept-risk.md com justificativa escrita.
+
+Pare ANTES disso se duas rodadas seguidas não reduzirem a contagem de
+crit+high — nesse caso me diga o que está travando, em vez de seguir
+tentando. Progresso zero repetido é sinal de que o problema é outro.
+
+Nunca feche a fase suprimindo achado no .blindar/intelligence.yml sem motivo
+escrito, nem afrouxando o check.
 ```
 
 **Pronto quando:** o teste de dado sensível existe e passa.
@@ -255,6 +383,25 @@ e trilha de auditoria imutável separada do log operacional.
 Me diga claramente o que é lacuna TÉCNICA (posso corrigir) e o que é lacuna
 JURÍDICA/PROCESSUAL (precisa de decisão humana). Não escreva política de
 privacidade — isso não é trabalho de código.
+
+CICLO — repita até fechar:
+1. Rode os checks desta fase e liste os achados por severidade.
+2. Corrija um grupo por vez, na causa raiz.
+3. RODE O MESMO CHECK DE NOVO e prove que o achado sumiu. Não confie na
+   correção sem re-verificar — corrigir e assumir que funcionou é como o
+   blindar ficou 7 semanas reportando "passed" sem varrer arquivo.
+4. Rode a suíte completa. Verde antes de commitar.
+5. Sobrou achado? Volte ao passo 2.
+
+Feche a fase quando: 0 crit, e cada high restante registrado em
+accept-risk.md com justificativa escrita.
+
+Pare ANTES disso se duas rodadas seguidas não reduzirem a contagem de
+crit+high — nesse caso me diga o que está travando, em vez de seguir
+tentando. Progresso zero repetido é sinal de que o problema é outro.
+
+Nunca feche a fase suprimindo achado no .blindar/intelligence.yml sem motivo
+escrito, nem afrouxando o check.
 ```
 
 ---
@@ -277,6 +424,25 @@ para estático, e connection pool mal dimensionado.
 
 Para cada otimização, mostre o antes e o depois com número. Se não melhorou,
 reverta — complexidade sem ganho é dívida.
+
+CICLO — repita até fechar:
+1. Rode os checks desta fase e liste os achados por severidade.
+2. Corrija um grupo por vez, na causa raiz.
+3. RODE O MESMO CHECK DE NOVO e prove que o achado sumiu. Não confie na
+   correção sem re-verificar — corrigir e assumir que funcionou é como o
+   blindar ficou 7 semanas reportando "passed" sem varrer arquivo.
+4. Rode a suíte completa. Verde antes de commitar.
+5. Sobrou achado? Volte ao passo 2.
+
+Feche a fase quando: 0 crit, e cada high restante registrado em
+accept-risk.md com justificativa escrita.
+
+Pare ANTES disso se duas rodadas seguidas não reduzirem a contagem de
+crit+high — nesse caso me diga o que está travando, em vez de seguir
+tentando. Progresso zero repetido é sinal de que o problema é outro.
+
+Nunca feche a fase suprimindo achado no .blindar/intelligence.yml sem motivo
+escrito, nem afrouxando o check.
 ```
 
 ---
@@ -302,6 +468,25 @@ Em acessibilidade não aceite "tem aria-label" como prova. Teste navegação rea
 por teclado e a ordem de foco.
 
 Corrija, meça o antes/depois dos Web Vitals, rode a suíte.
+
+CICLO — repita até fechar:
+1. Rode os checks desta fase e liste os achados por severidade.
+2. Corrija um grupo por vez, na causa raiz.
+3. RODE O MESMO CHECK DE NOVO e prove que o achado sumiu. Não confie na
+   correção sem re-verificar — corrigir e assumir que funcionou é como o
+   blindar ficou 7 semanas reportando "passed" sem varrer arquivo.
+4. Rode a suíte completa. Verde antes de commitar.
+5. Sobrou achado? Volte ao passo 2.
+
+Feche a fase quando: 0 crit, e cada high restante registrado em
+accept-risk.md com justificativa escrita.
+
+Pare ANTES disso se duas rodadas seguidas não reduzirem a contagem de
+crit+high — nesse caso me diga o que está travando, em vez de seguir
+tentando. Progresso zero repetido é sinal de que o problema é outro.
+
+Nunca feche a fase suprimindo achado no .blindar/intelligence.yml sem motivo
+escrito, nem afrouxando o check.
 ```
 
 ---
@@ -324,6 +509,25 @@ idempotência em consumidor de evento.
 
 Teste de verdade: derrube a dependência e prove que a degradação é graciosa.
 Se não der para testar sem ambiente, diga — não afirme que funciona sem provar.
+
+CICLO — repita até fechar:
+1. Rode os checks desta fase e liste os achados por severidade.
+2. Corrija um grupo por vez, na causa raiz.
+3. RODE O MESMO CHECK DE NOVO e prove que o achado sumiu. Não confie na
+   correção sem re-verificar — corrigir e assumir que funcionou é como o
+   blindar ficou 7 semanas reportando "passed" sem varrer arquivo.
+4. Rode a suíte completa. Verde antes de commitar.
+5. Sobrou achado? Volte ao passo 2.
+
+Feche a fase quando: 0 crit, e cada high restante registrado em
+accept-risk.md com justificativa escrita.
+
+Pare ANTES disso se duas rodadas seguidas não reduzirem a contagem de
+crit+high — nesse caso me diga o que está travando, em vez de seguir
+tentando. Progresso zero repetido é sinal de que o problema é outro.
+
+Nunca feche a fase suprimindo achado no .blindar/intelligence.yml sem motivo
+escrito, nem afrouxando o check.
 ```
 
 ---
@@ -344,6 +548,25 @@ usuário com erro de gramática ou tom inconsistente.
 
 Cada mock removido precisa da implementação real OU de uma feature flag
 explícita que o desabilite em produção. Não troque mock por outro mock.
+
+CICLO — repita até fechar:
+1. Rode os checks desta fase e liste os achados por severidade.
+2. Corrija um grupo por vez, na causa raiz.
+3. RODE O MESMO CHECK DE NOVO e prove que o achado sumiu. Não confie na
+   correção sem re-verificar — corrigir e assumir que funcionou é como o
+   blindar ficou 7 semanas reportando "passed" sem varrer arquivo.
+4. Rode a suíte completa. Verde antes de commitar.
+5. Sobrou achado? Volte ao passo 2.
+
+Feche a fase quando: 0 crit, e cada high restante registrado em
+accept-risk.md com justificativa escrita.
+
+Pare ANTES disso se duas rodadas seguidas não reduzirem a contagem de
+crit+high — nesse caso me diga o que está travando, em vez de seguir
+tentando. Progresso zero repetido é sinal de que o problema é outro.
+
+Nunca feche a fase suprimindo achado no .blindar/intelligence.yml sem motivo
+escrito, nem afrouxando o check.
 ```
 
 ---
@@ -365,6 +588,25 @@ corrigido, e E2E dos fluxos principais.
 Antes de escrever teste novo: rode a suíte atual e me diga quantos testes
 existem, quantos passam, e quais são flaky. Suíte já vermelha vira minha
 prioridade antes de qualquer adição.
+
+CICLO — repita até fechar:
+1. Rode os checks desta fase e liste os achados por severidade.
+2. Corrija um grupo por vez, na causa raiz.
+3. RODE O MESMO CHECK DE NOVO e prove que o achado sumiu. Não confie na
+   correção sem re-verificar — corrigir e assumir que funcionou é como o
+   blindar ficou 7 semanas reportando "passed" sem varrer arquivo.
+4. Rode a suíte completa. Verde antes de commitar.
+5. Sobrou achado? Volte ao passo 2.
+
+Feche a fase quando: 0 crit, e cada high restante registrado em
+accept-risk.md com justificativa escrita.
+
+Pare ANTES disso se duas rodadas seguidas não reduzirem a contagem de
+crit+high — nesse caso me diga o que está travando, em vez de seguir
+tentando. Progresso zero repetido é sinal de que o problema é outro.
+
+Nunca feche a fase suprimindo achado no .blindar/intelligence.yml sem motivo
+escrito, nem afrouxando o check.
 ```
 
 ---
@@ -387,6 +629,25 @@ feature flags com dono e data de remoção, e deliverabilidade de e-mail
 
 Teste o README literalmente: siga os passos num diretório limpo e me diga onde
 travou.
+
+CICLO — repita até fechar:
+1. Rode os checks desta fase e liste os achados por severidade.
+2. Corrija um grupo por vez, na causa raiz.
+3. RODE O MESMO CHECK DE NOVO e prove que o achado sumiu. Não confie na
+   correção sem re-verificar — corrigir e assumir que funcionou é como o
+   blindar ficou 7 semanas reportando "passed" sem varrer arquivo.
+4. Rode a suíte completa. Verde antes de commitar.
+5. Sobrou achado? Volte ao passo 2.
+
+Feche a fase quando: 0 crit, e cada high restante registrado em
+accept-risk.md com justificativa escrita.
+
+Pare ANTES disso se duas rodadas seguidas não reduzirem a contagem de
+crit+high — nesse caso me diga o que está travando, em vez de seguir
+tentando. Progresso zero repetido é sinal de que o problema é outro.
+
+Nunca feche a fase suprimindo achado no .blindar/intelligence.yml sem motivo
+escrito, nem afrouxando o check.
 ```
 
 ---
@@ -413,6 +674,29 @@ real.
 
 Ao final rode o check-termination e me diga se o projeto está pronto:
 0 crit e no máximo 2 high aceitos e assinados.
+
+Critério extra desta fase: o check-termination tem que sair com GO. Antes de
+confiar nesse resultado, confirme que `jq` está instalado — sem ele o
+check conta os findings como vazio e diz GO independente do que existe.
+
+CICLO — repita até fechar:
+1. Rode os checks desta fase e liste os achados por severidade.
+2. Corrija um grupo por vez, na causa raiz.
+3. RODE O MESMO CHECK DE NOVO e prove que o achado sumiu. Não confie na
+   correção sem re-verificar — corrigir e assumir que funcionou é como o
+   blindar ficou 7 semanas reportando "passed" sem varrer arquivo.
+4. Rode a suíte completa. Verde antes de commitar.
+5. Sobrou achado? Volte ao passo 2.
+
+Feche a fase quando: 0 crit, e cada high restante registrado em
+accept-risk.md com justificativa escrita.
+
+Pare ANTES disso se duas rodadas seguidas não reduzirem a contagem de
+crit+high — nesse caso me diga o que está travando, em vez de seguir
+tentando. Progresso zero repetido é sinal de que o problema é outro.
+
+Nunca feche a fase suprimindo achado no .blindar/intelligence.yml sem motivo
+escrito, nem afrouxando o check.
 ```
 
 **Pronto quando:** `check-termination.sh` sai com GO. Confira que `jq` está
