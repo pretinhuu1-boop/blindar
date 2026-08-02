@@ -35,6 +35,13 @@ done
 NAME=$(echo "$NAME" | tr '[:upper:] _' '[:lower:]--' | sed 's/[^a-z0-9-]//g; s/--*/-/g; s/^-//; s/-$//')
 [ -z "$NAME" ] && { echo "ERRO: nome inválido" >&2; exit 64; }
 [ -z "$DESC" ] && DESC="TODO: descrever o que este check detecta"
+# DESC entra num heredoc NÃO-quotado (<<CHECKEOF) e é expandido no script gerado,
+# inclusive em `add_finding "$SEV" "$DESC"`. Sem sanitizar, `--desc '"; id; #'`
+# viraria código executado quando o check gerado rodar (injeção de 2ª ordem, num
+# gate que roda em todo projeto futuro). Remove o que quebra pra fora da string
+# de aspas duplas — é uma descrição, não código.
+DESC="${DESC//\"/}"; DESC="${DESC//\`/}"; DESC="${DESC//\$/}"; DESC="${DESC//\\/}"
+DESC="${DESC//$'\n'/ }"; DESC="${DESC//$'\r'/ }"
 case "$SEV" in crit|high|med|low) ;; *) echo "ERRO: --sev deve ser crit|high|med|low" >&2; exit 64 ;; esac
 
 CHECK="$CHECKS/check-$NAME.sh"

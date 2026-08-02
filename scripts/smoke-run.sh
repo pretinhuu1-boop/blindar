@@ -109,10 +109,27 @@ log_pass "health OK em ${URL}${HEALTHY}"
 
 # ─── Fluxo crítico ───
 FAIL=0
-if [ "$FLOW" != "none" ] && [ -f ".blindar/smoke-flow.sh" ]; then
-  log_info "Rodando fluxo crítico custom: .blindar/smoke-flow.sh"
-  if ! SMOKE_URL="$URL" bash .blindar/smoke-flow.sh; then
-    add_finding "high" "fluxo crítico custom (.blindar/smoke-flow.sh) falhou" "" ""
+FLOW_SCRIPT=".blindar/smoke-flow.sh"
+# CONFIANÇA: este script roda com `bash` no HOST. `.blindar/` fica no working dir
+# do projeto-alvo (não-confiável). Um repo hostil que COMMITA smoke-flow.sh teria
+# RCE no host do operador quando o smoke roda. O fluxo legítimo é criado
+# localmente pelo operador (`.blindar/` é gitignorado por convenção), logo NÃO é
+# rastreado pelo git. Recusa rodar um flow-script versionado, salvo opt-in
+# explícito via BLINDAR_ALLOW_FLOW_SCRIPT=1.
+RUN_FLOW=0
+if [ "$FLOW" != "none" ] && [ -f "$FLOW_SCRIPT" ]; then
+  if [ "${BLINDAR_ALLOW_FLOW_SCRIPT:-0}" != "1" ] && git ls-files --error-unmatch "$FLOW_SCRIPT" >/dev/null 2>&1; then
+    log_warn "Ignorando $FLOW_SCRIPT: versionado no git do projeto (executaria código do repo no host)."
+    log_warn "Se confia neste repo e é intencional, rode com BLINDAR_ALLOW_FLOW_SCRIPT=1."
+    add_finding "med" "Fluxo custom de smoke versionado IGNORADO por segurança (execução de código do repo no host); rode com BLINDAR_ALLOW_FLOW_SCRIPT=1 se confiar" "$FLOW_SCRIPT" ""
+  else
+    RUN_FLOW=1
+  fi
+fi
+if [ "$RUN_FLOW" -eq 1 ]; then
+  log_info "Rodando fluxo crítico custom: $FLOW_SCRIPT"
+  if ! SMOKE_URL="$URL" bash "$FLOW_SCRIPT"; then
+    add_finding "high" "fluxo crítico custom ($FLOW_SCRIPT) falhou" "" ""
     FAIL=1
   fi
 elif [ "$FLOW" != "none" ] && [ -f "$GRAPH" ] && command -v node >/dev/null 2>&1; then

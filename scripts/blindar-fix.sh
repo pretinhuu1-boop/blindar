@@ -169,7 +169,11 @@ read_file_window() {
   local total
   total=$(wc -l < "$file" 2>/dev/null | tr -d ' ')
   [ -z "$total" ] && total=0
-  if [ -z "$line" ] || [ "$line" = "0" ] || [ "$line" = "null" ]; then
+  # `line` vem de results/*.json — dado derivado do alvo, que às vezes guarda um
+  # snippet em vez de número. `$((line-100))` REAVALIA o conteúdo em bash, então
+  # um valor como `a[$(cmd)]` executaria comando. Só faz aritmética se `line` for
+  # inteiro puro; qualquer outra coisa cai no dump (comportamento de "sem linha").
+  if [ -z "$line" ] || [ "$line" = "0" ] || [ "$line" = "null" ] || ! [[ "$line" =~ ^[0-9]+$ ]]; then
     head -c 20000 "$file"
     return
   fi
