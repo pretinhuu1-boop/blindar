@@ -18,6 +18,13 @@ não reduzirem a contagem de crit+high, ele para e explica o que travou, em vez
 de insistir. As fases de diagnóstico (baseline, product evolution, recon,
 pentest ativo) não têm ciclo porque não corrigem nada.
 
+**O relatório é a memória.** Cada fase roda numa sessão limpa, sem contexto da
+anterior — a fase 15 não sabe o que a fase 2 fez. Por isso todo prompt começa
+lendo `blindar/RELATORIO.md` e termina escrevendo nele. Se a fase já estiver
+✅, ele diz e para. Se estiver ⚠️, retoma pelas pendências em vez de recomeçar.
+Fase marcada com pendência **volta para a lista do fim do relatório** e não
+conta como fechada.
+
 ---
 
 ## Fase 0 — Pré-requisitos (uma vez por máquina)
@@ -47,6 +54,20 @@ bash ~/.claude/skills/blindar/scripts/install-deterministic-checks.sh
 > em `scripts/blindar/` fica congelada na versão do dia da instalação e não
 > recebe correções automaticamente.
 
+Por último, crie o relatório — é o estado que liga uma fase à outra:
+
+```bash
+node ~/.claude/skills/blindar/scripts/blindar-report.mjs init
+```
+
+Isso cria `blindar/RELATORIO.md` no projeto. Se já existir, o comando não
+sobrescreve — ele avisa e sai.
+
+**Duas pastas, propósitos opostos.** `.blindar/` é transitória: resultados de
+check, ignorada pelo git, some a cada rodada. `blindar/` é durável: o
+relatório, **versionado e commitado junto com as correções**. Confundir as
+duas é perder o histórico do hardening no primeiro `git clean`.
+
 ---
 
 ## Fase 1 — Baseline: mapa e prova de que a app sobe
@@ -55,6 +76,14 @@ Módulos 1 e 18. Sem isso as fases seguintes auditam no escuro.
 
 ```
 Use o blindar, módulos 1 e 18 apenas.
+
+ANTES DE QUALQUER COISA — leia o estado do hardening:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs status
+
+Se a fase 1 já estiver ✅, me diga isso e PARE — não refaça trabalho.
+Se estiver ⚠️ com pendências, continue de onde parou usando as pendências
+listadas; não recomece do zero. Se não existir relatório, rode:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs init
 
 1. Rode o graph-builder e monte o grafo do projeto em .blindar/graph.json:
    endpoints, superfície externa vs interna, arestas entre módulos.
@@ -69,6 +98,18 @@ Use o blindar, módulos 1 e 18 apenas.
 Ao final me entregue: a stack detectada, o inventário de superfície externa, e
 a lista de módulos do blindar que se aplicam a ESTE projeto (com justificativa
 de quais não se aplicam). Não corrija nada ainda — esta fase é diagnóstico.
+
+AO TERMINAR — registre no relatório, sempre:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs set --fase 1 \
+    --estado ok|pendencias|bloqueada|pulada \
+    --resumo "o que foi feito, em uma ou duas frases" \
+    --achado "crit: <o que era> — <como foi corrigido>" \
+    --pendencia "<o que ficou faltando e por quê>"
+
+Use --estado ok SÓ se não sobrou nada. Sobrou qualquer coisa → pendencias.
+Não conseguiu nem rodar (falta ferramenta, app não sobe) → bloqueada.
+Não se aplica a este projeto → pulada, com o motivo no resumo.
+Registrar "ok" com pendência aberta é mentir pro próximo que abrir o projeto.
 ```
 
 **Pronto quando:** existe `.blindar/graph.json`, a app comprovadamente sobe, e
@@ -82,6 +123,14 @@ Módulo 2, o maior (19 agentes). **Nunca pule.**
 
 ```
 Use o blindar, módulo 2 apenas (segurança aplicacional core).
+
+ANTES DE QUALQUER COISA — leia o estado do hardening:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs status
+
+Se a fase 2 já estiver ✅, me diga isso e PARE — não refaça trabalho.
+Se estiver ⚠️ com pendências, continue de onde parou usando as pendências
+listadas; não recomece do zero. Se não existir relatório, rode:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs init
 
 Audite com os agentes: access-control, cryptography, business-logic,
 runtime-secrets, security, auth-premium, prototype-pollution, file-uploads,
@@ -123,6 +172,18 @@ tentando. Progresso zero repetido é sinal de que o problema é outro.
 
 Nunca feche a fase suprimindo achado no .blindar/intelligence.yml sem motivo
 escrito, nem afrouxando o check.
+
+AO TERMINAR — registre no relatório, sempre:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs set --fase 2 \
+    --estado ok|pendencias|bloqueada|pulada \
+    --resumo "o que foi feito, em uma ou duas frases" \
+    --achado "crit: <o que era> — <como foi corrigido>" \
+    --pendencia "<o que ficou faltando e por quê>"
+
+Use --estado ok SÓ se não sobrou nada. Sobrou qualquer coisa → pendencias.
+Não conseguiu nem rodar (falta ferramenta, app não sobe) → bloqueada.
+Não se aplica a este projeto → pulada, com o motivo no resumo.
+Registrar "ok" com pendência aberta é mentir pro próximo que abrir o projeto.
 ```
 
 **Pronto quando:** 0 crit. Highs restantes precisam estar em `accept-risk.md`
@@ -136,6 +197,14 @@ Módulo 4. **Pule se** o projeto não expõe API.
 
 ```
 Use o blindar, módulo 4 apenas (rede & API).
+
+ANTES DE QUALQUER COISA — leia o estado do hardening:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs status
+
+Se a fase 3 já estiver ✅, me diga isso e PARE — não refaça trabalho.
+Se estiver ⚠️ com pendências, continue de onde parou usando as pendências
+listadas; não recomece do zero. Se não existir relatório, rode:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs init
 
 Agentes: network-security, api-design, api-surface-isolation. Inclua payments
 se houver cobrança, realtime se houver WebSocket/SSE, api-gateway se houver
@@ -173,6 +242,18 @@ tentando. Progresso zero repetido é sinal de que o problema é outro.
 
 Nunca feche a fase suprimindo achado no .blindar/intelligence.yml sem motivo
 escrito, nem afrouxando o check.
+
+AO TERMINAR — registre no relatório, sempre:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs set --fase 3 \
+    --estado ok|pendencias|bloqueada|pulada \
+    --resumo "o que foi feito, em uma ou duas frases" \
+    --achado "crit: <o que era> — <como foi corrigido>" \
+    --pendencia "<o que ficou faltando e por quê>"
+
+Use --estado ok SÓ se não sobrou nada. Sobrou qualquer coisa → pendencias.
+Não conseguiu nem rodar (falta ferramenta, app não sobe) → bloqueada.
+Não se aplica a este projeto → pulada, com o motivo no resumo.
+Registrar "ok" com pendência aberta é mentir pro próximo que abrir o projeto.
 ```
 
 **Pronto quando:** superfície externa bate com o que o grafo diz que deveria
@@ -186,6 +267,14 @@ Módulo 3. **Pule se** não há UI.
 
 ```
 Use o blindar, módulo 3 apenas (frontend hardening).
+
+ANTES DE QUALQUER COISA — leia o estado do hardening:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs status
+
+Se a fase 4 já estiver ✅, me diga isso e PARE — não refaça trabalho.
+Se estiver ⚠️ com pendências, continue de onde parou usando as pendências
+listadas; não recomece do zero. Se não existir relatório, rode:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs init
 
 Agentes: frontend, client-open-redirect.
 
@@ -217,6 +306,18 @@ tentando. Progresso zero repetido é sinal de que o problema é outro.
 
 Nunca feche a fase suprimindo achado no .blindar/intelligence.yml sem motivo
 escrito, nem afrouxando o check.
+
+AO TERMINAR — registre no relatório, sempre:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs set --fase 4 \
+    --estado ok|pendencias|bloqueada|pulada \
+    --resumo "o que foi feito, em uma ou duas frases" \
+    --achado "crit: <o que era> — <como foi corrigido>" \
+    --pendencia "<o que ficou faltando e por quê>"
+
+Use --estado ok SÓ se não sobrou nada. Sobrou qualquer coisa → pendencias.
+Não conseguiu nem rodar (falta ferramenta, app não sobe) → bloqueada.
+Não se aplica a este projeto → pulada, com o motivo no resumo.
+Registrar "ok" com pendência aberta é mentir pro próximo que abrir o projeto.
 ```
 
 ---
@@ -227,6 +328,14 @@ Módulo 5. Roda em qualquer projeto.
 
 ```
 Use o blindar, módulo 5 apenas (supply chain).
+
+ANTES DE QUALQUER COISA — leia o estado do hardening:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs status
+
+Se a fase 5 já estiver ✅, me diga isso e PARE — não refaça trabalho.
+Se estiver ⚠️ com pendências, continue de onde parou usando as pendências
+listadas; não recomece do zero. Se não existir relatório, rode:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs init
 
 Agentes: supply-chain, patch-management, sbom-slsa. Rode osv-scanner e trivy se
 estiverem instalados; se não estiverem, diga isso em vez de pular em silêncio.
@@ -256,6 +365,18 @@ tentando. Progresso zero repetido é sinal de que o problema é outro.
 
 Nunca feche a fase suprimindo achado no .blindar/intelligence.yml sem motivo
 escrito, nem afrouxando o check.
+
+AO TERMINAR — registre no relatório, sempre:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs set --fase 5 \
+    --estado ok|pendencias|bloqueada|pulada \
+    --resumo "o que foi feito, em uma ou duas frases" \
+    --achado "crit: <o que era> — <como foi corrigido>" \
+    --pendencia "<o que ficou faltando e por quê>"
+
+Use --estado ok SÓ se não sobrou nada. Sobrou qualquer coisa → pendencias.
+Não conseguiu nem rodar (falta ferramenta, app não sobe) → bloqueada.
+Não se aplica a este projeto → pulada, com o motivo no resumo.
+Registrar "ok" com pendência aberta é mentir pro próximo que abrir o projeto.
 ```
 
 ---
@@ -266,6 +387,14 @@ Módulo 7. **Pule se** não há banco.
 
 ```
 Use o blindar, módulo 7 apenas (dados).
+
+ANTES DE QUALQUER COISA — leia o estado do hardening:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs status
+
+Se a fase 6 já estiver ✅, me diga isso e PARE — não refaça trabalho.
+Se estiver ⚠️ com pendências, continue de onde parou usando as pendências
+listadas; não recomece do zero. Se não existir relatório, rode:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs init
 
 Agentes: db-architect, backup-recovery. Inclua multi-region se houver mais de
 uma região, data-warehouse-etl se houver pipeline analítico.
@@ -300,6 +429,18 @@ tentando. Progresso zero repetido é sinal de que o problema é outro.
 
 Nunca feche a fase suprimindo achado no .blindar/intelligence.yml sem motivo
 escrito, nem afrouxando o check.
+
+AO TERMINAR — registre no relatório, sempre:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs set --fase 6 \
+    --estado ok|pendencias|bloqueada|pulada \
+    --resumo "o que foi feito, em uma ou duas frases" \
+    --achado "crit: <o que era> — <como foi corrigido>" \
+    --pendencia "<o que ficou faltando e por quê>"
+
+Use --estado ok SÓ se não sobrou nada. Sobrou qualquer coisa → pendencias.
+Não conseguiu nem rodar (falta ferramenta, app não sobe) → bloqueada.
+Não se aplica a este projeto → pulada, com o motivo no resumo.
+Registrar "ok" com pendência aberta é mentir pro próximo que abrir o projeto.
 ```
 
 ---
@@ -310,6 +451,14 @@ Módulo 6. Duas metades distintas — não confunda.
 
 ```
 Use o blindar, módulo 6 apenas.
+
+ANTES DE QUALQUER COISA — leia o estado do hardening:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs status
+
+Se a fase 7 já estiver ✅, me diga isso e PARE — não refaça trabalho.
+Se estiver ⚠️ com pendências, continue de onde parou usando as pendências
+listadas; não recomece do zero. Se não existir relatório, rode:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs init
 
 PARTE A — observability (conteúdo do log):
 Log estruturado JSON, correlation_id propagado até os jobs de background,
@@ -358,6 +507,18 @@ tentando. Progresso zero repetido é sinal de que o problema é outro.
 
 Nunca feche a fase suprimindo achado no .blindar/intelligence.yml sem motivo
 escrito, nem afrouxando o check.
+
+AO TERMINAR — registre no relatório, sempre:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs set --fase 7 \
+    --estado ok|pendencias|bloqueada|pulada \
+    --resumo "o que foi feito, em uma ou duas frases" \
+    --achado "crit: <o que era> — <como foi corrigido>" \
+    --pendencia "<o que ficou faltando e por quê>"
+
+Use --estado ok SÓ se não sobrou nada. Sobrou qualquer coisa → pendencias.
+Não conseguiu nem rodar (falta ferramenta, app não sobe) → bloqueada.
+Não se aplica a este projeto → pulada, com o motivo no resumo.
+Registrar "ok" com pendência aberta é mentir pro próximo que abrir o projeto.
 ```
 
 **Pronto quando:** o teste de dado sensível existe e passa.
@@ -370,6 +531,14 @@ Módulo 8. **Pule se** não há dado pessoal nem obrigação regulatória.
 
 ```
 Use o blindar, módulo 8 apenas (compliance).
+
+ANTES DE QUALQUER COISA — leia o estado do hardening:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs status
+
+Se a fase 8 já estiver ✅, me diga isso e PARE — não refaça trabalho.
+Se estiver ⚠️ com pendências, continue de onde parou usando as pendências
+listadas; não recomece do zero. Se não existir relatório, rode:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs init
 
 Escolha os agentes pelo que se aplica: compliance-lgpd-br (Brasil),
 compliance-gdpr (UE), compliance-hipaa (saúde EUA), compliance-pci-deep
@@ -402,6 +571,18 @@ tentando. Progresso zero repetido é sinal de que o problema é outro.
 
 Nunca feche a fase suprimindo achado no .blindar/intelligence.yml sem motivo
 escrito, nem afrouxando o check.
+
+AO TERMINAR — registre no relatório, sempre:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs set --fase 8 \
+    --estado ok|pendencias|bloqueada|pulada \
+    --resumo "o que foi feito, em uma ou duas frases" \
+    --achado "crit: <o que era> — <como foi corrigido>" \
+    --pendencia "<o que ficou faltando e por quê>"
+
+Use --estado ok SÓ se não sobrou nada. Sobrou qualquer coisa → pendencias.
+Não conseguiu nem rodar (falta ferramenta, app não sobe) → bloqueada.
+Não se aplica a este projeto → pulada, com o motivo no resumo.
+Registrar "ok" com pendência aberta é mentir pro próximo que abrir o projeto.
 ```
 
 ---
@@ -412,6 +593,14 @@ Módulo 9. **Pule se** ainda não há tráfego real ou meta de latência.
 
 ```
 Use o blindar, módulo 9 apenas (performance).
+
+ANTES DE QUALQUER COISA — leia o estado do hardening:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs status
+
+Se a fase 9 já estiver ✅, me diga isso e PARE — não refaça trabalho.
+Se estiver ⚠️ com pendências, continue de onde parou usando as pendências
+listadas; não recomece do zero. Se não existir relatório, rode:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs init
 
 Agentes: performance, db-architect, cdn-strategy, redis-patterns.
 
@@ -443,6 +632,18 @@ tentando. Progresso zero repetido é sinal de que o problema é outro.
 
 Nunca feche a fase suprimindo achado no .blindar/intelligence.yml sem motivo
 escrito, nem afrouxando o check.
+
+AO TERMINAR — registre no relatório, sempre:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs set --fase 9 \
+    --estado ok|pendencias|bloqueada|pulada \
+    --resumo "o que foi feito, em uma ou duas frases" \
+    --achado "crit: <o que era> — <como foi corrigido>" \
+    --pendencia "<o que ficou faltando e por quê>"
+
+Use --estado ok SÓ se não sobrou nada. Sobrou qualquer coisa → pendencias.
+Não conseguiu nem rodar (falta ferramenta, app não sobe) → bloqueada.
+Não se aplica a este projeto → pulada, com o motivo no resumo.
+Registrar "ok" com pendência aberta é mentir pro próximo que abrir o projeto.
 ```
 
 ---
@@ -454,6 +655,14 @@ rodar em dois prompts.
 
 ```
 Use o blindar, módulo 10 apenas. Rode em duas partes.
+
+ANTES DE QUALQUER COISA — leia o estado do hardening:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs status
+
+Se a fase 10 já estiver ✅, me diga isso e PARE — não refaça trabalho.
+Se estiver ⚠️ com pendências, continue de onde parou usando as pendências
+listadas; não recomece do zero. Se não existir relatório, rode:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs init
 
 PARTE 1 — o que quebra a experiência:
 frontend-performance (Core Web Vitals: LCP, INP, CLS), responsive-a11y (WCAG
@@ -487,6 +696,18 @@ tentando. Progresso zero repetido é sinal de que o problema é outro.
 
 Nunca feche a fase suprimindo achado no .blindar/intelligence.yml sem motivo
 escrito, nem afrouxando o check.
+
+AO TERMINAR — registre no relatório, sempre:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs set --fase 10 \
+    --estado ok|pendencias|bloqueada|pulada \
+    --resumo "o que foi feito, em uma ou duas frases" \
+    --achado "crit: <o que era> — <como foi corrigido>" \
+    --pendencia "<o que ficou faltando e por quê>"
+
+Use --estado ok SÓ se não sobrou nada. Sobrou qualquer coisa → pendencias.
+Não conseguiu nem rodar (falta ferramenta, app não sobe) → bloqueada.
+Não se aplica a este projeto → pulada, com o motivo no resumo.
+Registrar "ok" com pendência aberta é mentir pro próximo que abrir o projeto.
 ```
 
 ---
@@ -497,6 +718,14 @@ Módulo 13. **Pule se** o projeto ainda não está em produção.
 
 ```
 Use o blindar, módulo 13 apenas (resiliência).
+
+ANTES DE QUALQUER COISA — leia o estado do hardening:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs status
+
+Se a fase 11 já estiver ✅, me diga isso e PARE — não refaça trabalho.
+Se estiver ⚠️ com pendências, continue de onde parou usando as pendências
+listadas; não recomece do zero. Se não existir relatório, rode:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs init
 
 Agentes: resilience, scalability, process-resilience, scheduled-jobs,
 queue-management, fallback-resilience, event-driven. Inclua chaos-engineering
@@ -528,6 +757,18 @@ tentando. Progresso zero repetido é sinal de que o problema é outro.
 
 Nunca feche a fase suprimindo achado no .blindar/intelligence.yml sem motivo
 escrito, nem afrouxando o check.
+
+AO TERMINAR — registre no relatório, sempre:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs set --fase 11 \
+    --estado ok|pendencias|bloqueada|pulada \
+    --resumo "o que foi feito, em uma ou duas frases" \
+    --achado "crit: <o que era> — <como foi corrigido>" \
+    --pendencia "<o que ficou faltando e por quê>"
+
+Use --estado ok SÓ se não sobrou nada. Sobrou qualquer coisa → pendencias.
+Não conseguiu nem rodar (falta ferramenta, app não sobe) → bloqueada.
+Não se aplica a este projeto → pulada, com o motivo no resumo.
+Registrar "ok" com pendência aberta é mentir pro próximo que abrir o projeto.
 ```
 
 ---
@@ -538,6 +779,14 @@ Módulo 12. **Nunca pule.** É o que separa protótipo de produção.
 
 ```
 Use o blindar, módulo 12 apenas.
+
+ANTES DE QUALQUER COISA — leia o estado do hardening:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs status
+
+Se a fase 12 já estiver ✅, me diga isso e PARE — não refaça trabalho.
+Se estiver ⚠️ com pendências, continue de onde parou usando as pendências
+listadas; não recomece do zero. Se não existir relatório, rode:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs init
 
 Agentes: mock-killer, config-externalization, content-quality.
 
@@ -567,6 +816,18 @@ tentando. Progresso zero repetido é sinal de que o problema é outro.
 
 Nunca feche a fase suprimindo achado no .blindar/intelligence.yml sem motivo
 escrito, nem afrouxando o check.
+
+AO TERMINAR — registre no relatório, sempre:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs set --fase 12 \
+    --estado ok|pendencias|bloqueada|pulada \
+    --resumo "o que foi feito, em uma ou duas frases" \
+    --achado "crit: <o que era> — <como foi corrigido>" \
+    --pendencia "<o que ficou faltando e por quê>"
+
+Use --estado ok SÓ se não sobrou nada. Sobrou qualquer coisa → pendencias.
+Não conseguiu nem rodar (falta ferramenta, app não sobe) → bloqueada.
+Não se aplica a este projeto → pulada, com o motivo no resumo.
+Registrar "ok" com pendência aberta é mentir pro próximo que abrir o projeto.
 ```
 
 ---
@@ -577,6 +838,14 @@ Módulo 11. **Nunca pule.**
 
 ```
 Use o blindar, módulo 11 apenas (testes).
+
+ANTES DE QUALQUER COISA — leia o estado do hardening:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs status
+
+Se a fase 13 já estiver ✅, me diga isso e PARE — não refaça trabalho.
+Se estiver ⚠️ com pendências, continue de onde parou usando as pendências
+listadas; não recomece do zero. Se não existir relatório, rode:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs init
 
 Agentes: testing-strategy, functional-e2e, visual-regression.
 
@@ -607,6 +876,18 @@ tentando. Progresso zero repetido é sinal de que o problema é outro.
 
 Nunca feche a fase suprimindo achado no .blindar/intelligence.yml sem motivo
 escrito, nem afrouxando o check.
+
+AO TERMINAR — registre no relatório, sempre:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs set --fase 13 \
+    --estado ok|pendencias|bloqueada|pulada \
+    --resumo "o que foi feito, em uma ou duas frases" \
+    --achado "crit: <o que era> — <como foi corrigido>" \
+    --pendencia "<o que ficou faltando e por quê>"
+
+Use --estado ok SÓ se não sobrou nada. Sobrou qualquer coisa → pendencias.
+Não conseguiu nem rodar (falta ferramenta, app não sobe) → bloqueada.
+Não se aplica a este projeto → pulada, com o motivo no resumo.
+Registrar "ok" com pendência aberta é mentir pro próximo que abrir o projeto.
 ```
 
 ---
@@ -617,6 +898,14 @@ Módulo 14. Deixe para o fim — é o que consolida.
 
 ```
 Use o blindar, módulo 14 apenas.
+
+ANTES DE QUALQUER COISA — leia o estado do hardening:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs status
+
+Se a fase 14 já estiver ✅, me diga isso e PARE — não refaça trabalho.
+Se estiver ⚠️ com pendências, continue de onde parou usando as pendências
+listadas; não recomece do zero. Se não existir relatório, rode:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs init
 
 Agentes: devops, documentation-live, feature-flags, email-deliverability,
 architect, delivery-bundle, execution-report.
@@ -648,6 +937,18 @@ tentando. Progresso zero repetido é sinal de que o problema é outro.
 
 Nunca feche a fase suprimindo achado no .blindar/intelligence.yml sem motivo
 escrito, nem afrouxando o check.
+
+AO TERMINAR — registre no relatório, sempre:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs set --fase 14 \
+    --estado ok|pendencias|bloqueada|pulada \
+    --resumo "o que foi feito, em uma ou duas frases" \
+    --achado "crit: <o que era> — <como foi corrigido>" \
+    --pendencia "<o que ficou faltando e por quê>"
+
+Use --estado ok SÓ se não sobrou nada. Sobrou qualquer coisa → pendencias.
+Não conseguiu nem rodar (falta ferramenta, app não sobe) → bloqueada.
+Não se aplica a este projeto → pulada, com o motivo no resumo.
+Registrar "ok" com pendência aberta é mentir pro próximo que abrir o projeto.
 ```
 
 ---
@@ -658,6 +959,14 @@ Módulo 15. **Rode por último**, depois de tudo corrigido.
 
 ```
 Use o blindar, módulo 15 apenas (pentest + adversarial).
+
+ANTES DE QUALQUER COISA — leia o estado do hardening:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs status
+
+Se a fase 15 já estiver ✅, me diga isso e PARE — não refaça trabalho.
+Se estiver ⚠️ com pendências, continue de onde parou usando as pendências
+listadas; não recomece do zero. Se não existir relatório, rode:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs init
 
 Agentes: pentest, adversarial-reviewer, proactive-analysis.
 
@@ -697,6 +1006,18 @@ tentando. Progresso zero repetido é sinal de que o problema é outro.
 
 Nunca feche a fase suprimindo achado no .blindar/intelligence.yml sem motivo
 escrito, nem afrouxando o check.
+
+AO TERMINAR — registre no relatório, sempre:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs set --fase 15 \
+    --estado ok|pendencias|bloqueada|pulada \
+    --resumo "o que foi feito, em uma ou duas frases" \
+    --achado "crit: <o que era> — <como foi corrigido>" \
+    --pendencia "<o que ficou faltando e por quê>"
+
+Use --estado ok SÓ se não sobrou nada. Sobrou qualquer coisa → pendencias.
+Não conseguiu nem rodar (falta ferramenta, app não sobe) → bloqueada.
+Não se aplica a este projeto → pulada, com o motivo no resumo.
+Registrar "ok" com pendência aberta é mentir pro próximo que abrir o projeto.
 ```
 
 **Pronto quando:** `check-termination.sh` sai com GO. Confira que `jq` está
@@ -713,6 +1034,14 @@ Escopo separado do hardening. Não misture com as fases acima.
 ```
 Use o blindar, módulo 16 apenas (product evolution).
 
+ANTES DE QUALQUER COISA — leia o estado do hardening:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs status
+
+Se a fase 16 já estiver ✅, me diga isso e PARE — não refaça trabalho.
+Se estiver ⚠️ com pendências, continue de onde parou usando as pendências
+listadas; não recomece do zero. Se não existir relatório, rode:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs init
+
 Agentes: api-frontend-coverage, user-journey-simulator, feature-gap-analyzer,
 growth-opportunities, product-critic.
 
@@ -720,6 +1049,18 @@ Isto NÃO é hardening — é análise de produto. Não corrija segurança aqui.
 Me diga: endpoints que o frontend nunca consome, jornadas que quebram na
 prática, lacunas em relação ao que o usuário esperaria, e onde o produto perde
 gente. Entregue como lista priorizada com esforço estimado, não como código.
+
+AO TERMINAR — registre no relatório, sempre:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs set --fase 16 \
+    --estado ok|pendencias|bloqueada|pulada \
+    --resumo "o que foi feito, em uma ou duas frases" \
+    --achado "crit: <o que era> — <como foi corrigido>" \
+    --pendencia "<o que ficou faltando e por quê>"
+
+Use --estado ok SÓ se não sobrou nada. Sobrou qualquer coisa → pendencias.
+Não conseguiu nem rodar (falta ferramenta, app não sobe) → bloqueada.
+Não se aplica a este projeto → pulada, com o motivo no resumo.
+Registrar "ok" com pendência aberta é mentir pro próximo que abrir o projeto.
 ```
 
 ### Módulo 17 — Recon passivo externo
@@ -729,11 +1070,31 @@ Precisa de URL pública. Só reconhecimento, sem tocar no alvo.
 ```
 Use o blindar, módulo 17 (attack-recon) contra <URL>.
 
+ANTES DE QUALQUER COISA — leia o estado do hardening:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs status
+
+Se a fase 17 já estiver ✅, me diga isso e PARE — não refaça trabalho.
+Se estiver ⚠️ com pendências, continue de onde parou usando as pendências
+listadas; não recomece do zero. Se não existir relatório, rode:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs init
+
 Somente recon PASSIVO: headers, tecnologias expostas, subdomínios, certificados,
 arquivos esquecidos em caminho previsível, metadados. Não envie payload, não
 teste vulnerabilidade, não faça brute force.
 
 Me diga o que um atacante descobre sobre este alvo sem tocar nele.
+
+AO TERMINAR — registre no relatório, sempre:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs set --fase 17 \
+    --estado ok|pendencias|bloqueada|pulada \
+    --resumo "o que foi feito, em uma ou duas frases" \
+    --achado "crit: <o que era> — <como foi corrigido>" \
+    --pendencia "<o que ficou faltando e por quê>"
+
+Use --estado ok SÓ se não sobrou nada. Sobrou qualquer coisa → pendencias.
+Não conseguiu nem rodar (falta ferramenta, app não sobe) → bloqueada.
+Não se aplica a este projeto → pulada, com o motivo no resumo.
+Registrar "ok" com pendência aberta é mentir pro próximo que abrir o projeto.
 ```
 
 ### Módulo 19 — Pentest ativo
@@ -743,10 +1104,30 @@ permissão documentada.
 
 ```
 Use o blindar, módulo 19 (pentest-active) contra <URL>.
+
+ANTES DE QUALQUER COISA — leia o estado do hardening:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs status
+
+Se a fase 19 já estiver ✅, me diga isso e PARE — não refaça trabalho.
+Se estiver ⚠️ com pendências, continue de onde parou usando as pendências
+listadas; não recomece do zero. Se não existir relatório, rode:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs init
 Autorização: <arquivo ou referência da autorização>.
 
 Payloads reais contra o alvo autorizado. Pare imediatamente se qualquer
 resposta indicar que o alvo não é o esperado.
+
+AO TERMINAR — registre no relatório, sempre:
+  node ~/.claude/skills/blindar/scripts/blindar-report.mjs set --fase 19 \
+    --estado ok|pendencias|bloqueada|pulada \
+    --resumo "o que foi feito, em uma ou duas frases" \
+    --achado "crit: <o que era> — <como foi corrigido>" \
+    --pendencia "<o que ficou faltando e por quê>"
+
+Use --estado ok SÓ se não sobrou nada. Sobrou qualquer coisa → pendencias.
+Não conseguiu nem rodar (falta ferramenta, app não sobe) → bloqueada.
+Não se aplica a este projeto → pulada, com o motivo no resumo.
+Registrar "ok" com pendência aberta é mentir pro próximo que abrir o projeto.
 ```
 
 ---
@@ -780,6 +1161,112 @@ Cole junto com qualquer prompt se quiser reforçar:
 - Se não conseguir provar que uma correção funciona, diga isso em vez de afirmar.
 - Ao final, liste o que ficou de fora e por quê.
 ```
+
+---
+
+## Automação — o que roda sozinho depois
+
+As fases acima são trabalho manual guiado. O que segura o resultado ao longo do
+tempo é o que roda sem você pedir. Em ordem de retorno pelo esforço:
+
+### 1. Gate na CI (o de maior retorno)
+
+O blindar tem uma **GitHub Action pronta** (`action.yml`). Roda os checks no PR,
+comenta os achados, e falha conforme o limiar:
+
+```yaml
+- uses: pretinhuu1-boop/blindar@main
+  with:
+    fail-on: crit        # crit | high | never
+    post-comment: true
+```
+
+Some com o "esqueci de rodar". Ligue **branch protection** exigindo esse job —
+sem isso o gate é sugestão, não gate. Foi exatamente o que faltava no próprio
+blindar: o `SKILL.md` proibia mergear com CI vermelha, e mesmo assim cinco
+releases saíram por cima de vermelho porque nada impedia mecanicamente.
+
+### 2. Pre-commit — o subconjunto rápido
+
+Rode só o que é instantâneo, nos arquivos em stage. Check lento no pre-commit
+vira `--no-verify` em duas semanas:
+
+```bash
+# .git/hooks/pre-commit
+bash scripts/blindar/check-secrets.sh || exit 1
+bash scripts/blindar/check-mock-killer.sh || exit 1
+```
+
+Secret e mock são os certos: baratos e catastróficos se passarem.
+
+### 3. Detecção de deriva — re-rodar sozinho
+
+Código muda, achado volta. Um agendamento semanal que roda o pipeline e abre
+issue **só quando aparece coisa nova** contra o baseline:
+
+```yaml
+on:
+  schedule: [{ cron: '0 6 * * 1' }]   # segunda, 06:00 UTC
+```
+
+A regra que faz isso funcionar: comparar contra o baseline anterior e alertar no
+delta. Alertar em tudo toda semana treina todo mundo a ignorar o alerta.
+
+### 4. Camada de aprendizado — o bug vira check
+
+`scripts/blindar-learn.sh` transforma um incidente real em check permanente,
+com par de fixture e entrada no gate:
+
+```bash
+bash ~/.claude/skills/blindar/scripts/blindar-learn.sh \
+  --name idor-orders --sev high --desc "IDOR em /api/orders"
+```
+
+Isto é o que torna o esquema **inteligente** em vez de só repetitivo: cada bug
+encontrado uma vez fica impossível de repetir. Vale para bug de produção também,
+não só achado do blindar — foi assim que a regressão vira teste.
+
+### 5. Supressão com memória — `.blindar/intelligence.yml`
+
+Falso-positivo suprimido **com o motivo escrito** faz o ruído cair rodada a
+rodada. Sem o motivo, vira lixo que ninguém ousa remover.
+
+```yaml
+ignore_globs:
+  check-mock-killer:
+    - legacy/**      # migração legada, sai no Q3 — issue #142
+```
+
+Regra: supressão sem motivo e sem data de revisão é dívida disfarçada de
+configuração.
+
+### 6. Dependências em piloto automático
+
+Dependabot ou Renovate para os bumps, mais `osv-scanner` na CI para CVE. Separe
+patch/minor (merge automático se a suíte passar) de major (sempre manual) —
+misturar upgrade major com hardening gera diff que ninguém revisa.
+
+### 7. Relatório como painel
+
+`blindar/RELATORIO.md` está versionado, então o histórico do hardening vive no
+`git log`. Duas leituras úteis:
+
+```bash
+# quais fases voltaram atrás ao longo do tempo
+git log --oneline -- blindar/RELATORIO.md
+
+# estado atual sem abrir o arquivo
+node ~/.claude/skills/blindar/scripts/blindar-report.mjs status
+```
+
+Fase marcada ✅ há muitos meses não é garantia — é fase que ninguém reviu. Vale
+tratar como vencida e re-rodar.
+
+### O que NÃO automatizar
+
+Pentest ativo (módulo 19) exige autorização por execução. Decisão de aceitar
+risco é humana e assinada. E migration destrutiva se propõe, não se aplica
+sozinha.
 
 ---
 
