@@ -67,7 +67,10 @@ if [ -n "$LOCALE_DIRS" ]; then
       # Compara chaves entre primeiro e segundo idioma
       FIRST=$(echo "$LANGS" | head -1)
       SECOND=$(echo "$LANGS" | sed -n '2p')
-      if [ -n "$FIRST" ] && [ -n "$SECOND" ]; then
+      # Sem jq, os dois contadores viravam 0, DIFF virava 0 e a detecção nunca
+      # disparava — locale desincronizado passava batido. Guarda só este bloco:
+      # o resto do check (formato de data, TZ, moeda) não depende de jq.
+      if [ -n "$FIRST" ] && [ -n "$SECOND" ] && have_tool jq "paridade de chaves entre locales"; then
         FIRST_KEYS=$(find "$dir/$FIRST" -name "*.json" -exec jq -r 'keys[]' {} \; 2>/dev/null | sort -u | wc -l || echo 0)
         SECOND_KEYS=$(find "$dir/$SECOND" -name "*.json" -exec jq -r 'keys[]' {} \; 2>/dev/null | sort -u | wc -l || echo 0)
         DIFF=$((FIRST_KEYS - SECOND_KEYS))

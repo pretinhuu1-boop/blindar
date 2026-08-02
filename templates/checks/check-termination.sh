@@ -14,12 +14,26 @@
 #   2 = high > 2 sem accept-risk (bloqueia)
 #   3 = cobertura insuficiente
 #   4 = CI streak insuficiente
+#   5 = jq ausente — não dá pra contar, então não dá pra liberar
 
 set -euo pipefail
 
 BLINDAR_DIR="${BLINDAR_DIR:-.blindar}"
 AGGREGATE="$BLINDAR_DIR/results/aggregate.json"
 ACCEPT_RISK="$BLINDAR_DIR/accept-risk.md"
+
+# jq é OBRIGATÓRIO aqui, não conveniência. As contagens abaixo saem dele; sem
+# jq elas vêm como string vazia, a comparação numérica falha silenciosamente e
+# este script declara "release LIBERADA" independente do que foi encontrado.
+# Faltar instrumentação é NO-GO — nunca aprovação.
+if ! command -v jq >/dev/null 2>&1; then
+  echo "❌ 'jq' não está instalado — impossível contar os findings." >&2
+  echo "   Sem jq este script leria as contagens como vazio e diria GO" >&2
+  echo "   independente do que existe. Release BLOQUEADA por falta de" >&2
+  echo "   instrumentação, NÃO por aprovação." >&2
+  echo "   Instale: winget install jqlang.jq | apt install jq | brew install jq" >&2
+  exit 5
+fi
 
 if [ ! -f "$AGGREGATE" ]; then
   echo "❌ $AGGREGATE não encontrado. Rode: bash scripts/blindar/run-all.sh primeiro." >&2
