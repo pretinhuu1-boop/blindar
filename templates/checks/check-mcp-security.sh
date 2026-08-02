@@ -82,7 +82,10 @@ for cfg in "${MCP_CONFIGS[@]}"; do
 
     # 3. HIGH — não está na whitelist
     if [ -n "$CATALOG" ]; then
-      if ! grep -qiE "name:\s*[\"']?.*${mcp_name}" "$CATALOG" 2>/dev/null; then
+      # mcp_name vem do config MCP do projeto-alvo. Interpolado numa ERE, um nome
+      # como `x|` ou `.*` casava QUALQUER catálogo → bypass da whitelist de um
+      # check de segurança. Filtra linhas `name:` e casa o nome como STRING FIXA.
+      if ! grep -iE "name:" "$CATALOG" 2>/dev/null | grep -qiF "$mcp_name"; then
         NOT_WHITELISTED=$((NOT_WHITELISTED+1))
         add_finding "high" "MCP '$mcp_name' não está em mcp-catalog.yml (review manual)" "$cfg" ""
       fi

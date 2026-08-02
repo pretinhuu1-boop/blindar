@@ -199,24 +199,28 @@ blindar_api_check() {
 
   # 14. Parse findings e adiciona via add_finding (1× node call, não N×)
   local findings_csv
+  # Delimitador TAB, não '||': abaixo `IFS='||'` era um CONJUNTO {|}, então o
+  # campo vazio entre os dois pipes deslocava tudo — TODOS os findings de API
+  # saíam com msg vazia e file/line corrompidos. TAB é um char só; removido dos
+  # campos aqui pra não colidir.
   findings_csv=$(node -e "
     try {
       const r = JSON.parse(process.argv[1]);
+      const clean = (s) => String(s == null ? '' : s).replace(/[\t\r\n]/g, ' ');
       (r.findings || []).forEach(f => {
-        const sev = (f.severity || 'low').replace(/[,\n]/g, ' ');
-        const msg = (f.message || '').replace(/[,\n]/g, ' ');
-        const file = (f.file || '').replace(/[,\n]/g, ' ');
-        const line = String(f.line || '').replace(/[,\n]/g, ' ');
-        console.log([sev, msg, file, line].join('||'));
+        console.log([clean(f.severity || 'low'), clean(f.message), clean(f.file), clean(f.line)].join('\t'));
       });
     } catch(e) {}
   " "$result_json" 2>/dev/null)
 
   local has_crit_or_high=0
-  while IFS='||' read -r sev msg file line; do
+  while IFS=$'\t' read -r sev msg file line; do
     [ -z "$sev" ] && continue
+    # sev vem do modelo (prompt-injetável via código do alvo enviado como
+    # evidência) e vira chave no JSON do result — força pro enum antes.
+    case "$sev" in crit|high|med|low) ;; *) sev="low" ;; esac
     add_finding "$sev" "[AI] $msg" "$file" "$line"
-    [ "$sev" = "crit" ] || [ "$sev" = "high" ] && has_crit_or_high=1
+    { [ "$sev" = "crit" ] || [ "$sev" = "high" ]; } && has_crit_or_high=1
   done <<< "$findings_csv"
 
   if [ "$has_crit_or_high" -eq 1 ]; then
