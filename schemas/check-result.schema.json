@@ -37,6 +37,10 @@
       "type": "integer",
       "description": "Exit code retornado pelo script do check."
     },
+    "missing_tool": {
+      "type": ["string", "null"],
+      "description": "Ferramenta ausente que impediu o check de rodar (ex: 'jq'). Quando preenchido, status='skipped' significa AUSÊNCIA DE COBERTURA, não aprovação — quem consome o result precisa distinguir isso de um skip por não-aplicabilidade."
+    },
     "duration_sec": {
       "type": "integer",
       "minimum": 0

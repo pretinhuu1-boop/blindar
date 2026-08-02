@@ -14,7 +14,7 @@
 //   node blindar-report.mjs set --fase 2 --estado ok --resumo "..." \
 //        [--pendencia "..."] [--achado "crit: ..."]
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const DIR = 'blindar';
@@ -52,6 +52,47 @@ const ESTADOS = {
   bloqueada:  { icone: '❌', rotulo: 'bloqueada',   revisitar: true },
   pulada:     { icone: '⏭️', rotulo: 'não se aplica', revisitar: false },
 };
+
+// Fase → módulos do MODULE-MAP. É o que permite conferir SÓ a etapa escolhida:
+// rodar a fase 2 e ser cobrado por achado da fase 10 seria ruído.
+const FASE_MODULOS = {
+  0: [], 1: [1, 18], 2: [2], 3: [4], 4: [3], 5: [5], 6: [7], 7: [6], 8: [8],
+  9: [9], 10: [10], 11: [13], 12: [12], 13: [11], 14: [14], 15: [15],
+  16: [16], 17: [17], 19: [19],
+};
+
+// Agentes de uma fase, lidos do MODULE-MAP (fonte da verdade, não lista fixa).
+function agentesDaFase(n) {
+  try {
+    const mapa = JSON.parse(readFileSync(new URL('../pipeline/MODULE-MAP.json', import.meta.url), 'utf8'));
+    return (FASE_MODULOS[n] || []).flatMap((m) => mapa.modules[String(m)]?.agents || []);
+  } catch { return []; }
+}
+
+// Evidência real no disco para a fase — o relatório não acredita no que foi
+// digitado, ele confere contra .blindar/results/.
+function evidencias(n) {
+  const dir = join('.blindar', 'results');
+  const r = { lidos: 0, crit: 0, high: 0, semCobertura: [], falharam: [] };
+  if (!existsSync(dir)) return r;
+  const agentes = new Set(agentesDaFase(n).map((a) => `check-${a}`));
+  let arquivos = [];
+  try { arquivos = readdirSync(dir).filter((f) => f.endsWith('.json')); } catch { return r; }
+  for (const f of arquivos) {
+    const nome = f.replace(/\.json$/, '');
+    if (agentes.size && !agentes.has(nome)) continue;   // só a etapa escolhida
+    let j;
+    try { j = JSON.parse(readFileSync(join(dir, f), 'utf8')); } catch { continue; }
+    r.lidos++;
+    if (j.missing_tool) r.semCobertura.push(`${nome} (falta ${j.missing_tool})`);
+    if (j.status === 'failed') r.falharam.push(nome);
+    for (const a of j.findings || []) {
+      if (a.severity === 'crit') r.crit++;
+      else if (a.severity === 'high') r.high++;
+    }
+  }
+  return r;
+}
 
 const vazio = () => ({
   projeto: process.cwd().split(/[\\/]/).pop(),
@@ -207,6 +248,32 @@ if (cmd === 'init') {
   const n = String(parseInt(o.fase, 10));
   if (!FASES.some((f) => String(f.n) === n)) { console.error(`fase inválida: ${o.fase}`); process.exit(1); }
   if (!ESTADOS[o.estado]) { console.error(`estado inválido: ${o.estado} (use ${Object.keys(ESTADOS).join('|')})`); process.exit(1); }
+
+  // Confere o que foi digitado contra a evidência em .blindar/results/.
+  // Marcar "ok" com crit aberto no disco é o tipo de erro que só aparece
+  // semanas depois, quando alguém confia no relatório.
+  if (o.estado === 'ok') {
+    const ev = evidencias(parseInt(n, 10));
+    const problemas = [];
+    if (ev.crit) problemas.push(`${ev.crit} finding(s) crit`);
+    if (ev.high) problemas.push(`${ev.high} finding(s) high`);
+    if (ev.falharam.length) problemas.push(`check(s) com status failed: ${ev.falharam.join(', ')}`);
+    if (problemas.length && o.forcar !== 'true') {
+      console.error(`RECUSADO: fase ${n} não pode ser "ok" — ${problemas.join('; ')}`);
+      console.error(`   evidência: ${ev.lidos} result(s) em .blindar/results/ para esta fase`);
+      console.error('   use --estado pendencias com --pendencia "...", ou --forcar se a');
+      console.error('   evidência estiver obsoleta (re-rode os checks antes de forçar).');
+      process.exit(1);
+    }
+    if (ev.semCobertura.length) {
+      console.warn(`AVISO: sem cobertura em ${ev.semCobertura.length} check(s) — ${ev.semCobertura.join(', ')}`);
+      console.warn('   ferramenta ausente não é aprovação. Instale e re-rode antes de confiar neste "ok".');
+    }
+    if (!ev.lidos && FASE_MODULOS[parseInt(n, 10)]?.length) {
+      console.warn(`AVISO: nenhum result encontrado em .blindar/results/ para a fase ${n}.`);
+      console.warn('   Marcando "ok" sem evidência de que os checks rodaram.');
+    }
+  }
   s.fases[n] = {
     estado: o.estado,
     resumo: o.resumo || s.fases[n]?.resumo || '',
@@ -217,7 +284,33 @@ if (cmd === 'init') {
   if (o.estado === 'ok' && !o.pendencia.length) s.fases[n].pendencias = [];
   salvar(s);
   console.log(`fase ${n} → ${ESTADOS[o.estado].icone} ${ESTADOS[o.estado].rotulo}`);
+} else if (cmd === 'verificar') {
+  // Confere a evidência de uma fase SEM alterar o relatório. Use antes de
+  // decidir qual --estado registrar.
+  const o = args();
+  const n = parseInt(o.fase, 10);
+  if (!FASES.some((f) => f.n === n)) { console.error(`fase inválida: ${o.fase}`); process.exit(1); }
+  const ag = agentesDaFase(n);
+  const ev = evidencias(n);
+  console.log(`fase ${n} — ${FASES.find((f) => f.n === n).nome}`);
+  console.log(`  agentes da fase : ${ag.length ? ag.join(', ') : '(sem checks determinísticos)'}`);
+  console.log(`  results lidos   : ${ev.lidos}`);
+  console.log(`  crit / high     : ${ev.crit} / ${ev.high}`);
+  if (ev.falharam.length) console.log(`  status failed   : ${ev.falharam.join(', ')}`);
+  if (ev.semCobertura.length) console.log(`  SEM COBERTURA   : ${ev.semCobertura.join(', ')}`);
+  console.log('');
+  if (ev.crit || ev.high || ev.falharam.length) console.log('→ registre como "pendencias" (há achado aberto)');
+  else if (!ev.lidos && ag.length) console.log('→ sem evidência: os checks desta fase parecem não ter rodado');
+  else if (ev.semCobertura.length) console.log('→ pode registrar "ok", mas há buraco de cobertura — instale a ferramenta e re-rode');
+  else console.log('→ pode registrar "ok"');
 } else {
-  console.log('uso: blindar-report.mjs init | status | set --fase N --estado ok|pendencias|bloqueada|pulada --resumo "..." [--pendencia "..."] [--achado "..."]');
+  console.log('uso: blindar-report.mjs <comando>');
+  console.log('  init                      cria blindar/RELATORIO.md se não existir');
+  console.log('  status                    estado das fases, o que precisa voltar, próxima');
+  console.log('  verificar --fase N        confere a evidência da fase sem alterar nada');
+  console.log('  set --fase N --estado ok|pendencias|bloqueada|pulada --resumo "..."');
+  console.log('      [--pendencia "..."] [--achado "..."] [--forcar]');
+  console.log('');
+  console.log('  "ok" é RECUSADO se .blindar/results/ da fase tiver crit/high aberto.');
   process.exit(1);
 }

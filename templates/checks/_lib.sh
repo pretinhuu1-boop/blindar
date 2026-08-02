@@ -61,6 +61,12 @@ emit_result() {
   local sha=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
   local findings_json="["$(IFS=,; echo "${FINDINGS[*]:-}")"]"
 
+  # skipped por falta de ferramenta é DIFERENTE de skipped por não se aplicar.
+  # O primeiro é ausência de cobertura e não pode ser lido como aprovação —
+  # quem consome o result precisa conseguir distinguir os dois.
+  local skip_json="null"
+  [ -n "${BLINDAR_MISSING_TOOL:-}" ] && skip_json="\"$(escape_json "$BLINDAR_MISSING_TOOL")\""
+
   local out="$RESULTS_DIR/${agent}.json"
   cat > "$out" <<EOF
 {
@@ -71,6 +77,7 @@ emit_result() {
   "status": "$status",
   "exit_code": $exit_code,
   "duration_sec": $duration,
+  "missing_tool": $skip_json,
   "findings_count": ${#FINDINGS[@]},
   "findings": $findings_json
 }
@@ -255,6 +262,55 @@ if ! type -P rg >/dev/null 2>&1; then
 fi
 
 # ─── Detecção de stack ───
+# ─── Guarda de ferramenta obrigatória ───
+# Ferramenta ausente NÃO pode virar "passed". Antes disto, um check que
+# dependia de jq simplesmente não validava nada e reportava aprovado — e o
+# check-termination chegava a declarar release-ready contando findings como
+# string vazia. Aqui o check para, se marca como skipped POR FALTA DE
+# FERRAMENTA (distinguível no JSON), e diz o que você perde e como resolver.
+#
+# Uso:  require_tool jq "validação do manifest e contagem de findings"
+require_tool() {
+  local tool="$1" perde="${2:-as validações deste check}"
+  command -v "$tool" >/dev/null 2>&1 && return 0
+
+  local hint
+  case "$tool" in
+    jq)   hint="winget install jqlang.jq   |   apt install jq   |   brew install jq" ;;
+    rg)   hint="winget install BurntSushi.ripgrep.MSVC   |   apt install ripgrep   |   brew install ripgrep" ;;
+    node) hint="https://nodejs.org (>=20)" ;;
+    *)    hint="instale '$tool' e rode de novo" ;;
+  esac
+
+  log_fail "'$tool' não está instalado — SEM COBERTURA em: $perde"
+  log_warn "instale com:  $hint"
+  log_warn "este check NÃO reprovou; ele não conseguiu rodar. Não leia como aprovado."
+
+  BLINDAR_MISSING_TOOL="$tool"
+  emit_result "$BLINDAR_AGENT" "skipped" 0
+  exit 0
+}
+
+# Variante NÃO-fatal: use quando a ferramenta gateia só UM bloco do check, não
+# o check inteiro. Mata o bloco, registra o buraco como achado, e deixa o resto
+# rodar. Abortar a etapa toda por causa de um bloco perde cobertura que existe.
+#
+# Uso:  if have_tool jq "paridade de chaves entre locales"; then ... fi
+have_tool() {
+  local tool="$1" perde="${2:-uma verificação deste check}"
+  command -v "$tool" >/dev/null 2>&1 && return 0
+  log_warn "'$tool' ausente — pulando: $perde (o resto do check continua)"
+  add_finding "med" "Sem cobertura em '$perde': ferramenta '$tool' não instalada — isto é buraco de verificação, não aprovação" "" ""
+  # Marca no result mesmo quando o check termina "passed": aprovado COM buraco
+  # não pode ficar indistinguível de aprovado com cobertura completa. Acumula
+  # se mais de uma ferramenta faltar.
+  case ",${BLINDAR_MISSING_TOOL:-}," in
+    *",$tool,"*) ;;
+    *) BLINDAR_MISSING_TOOL="${BLINDAR_MISSING_TOOL:+$BLINDAR_MISSING_TOOL,}$tool" ;;
+  esac
+  return 1
+}
+
 has_file() { [ -f "$1" ]; }
 has_dir()  { [ -d "$1" ]; }
 
