@@ -42,7 +42,16 @@ export function createLogger(opts = {}) {
     now = () => new Date(),
     diskFree = defaultDiskFree,
     minFreeBytes = 1024 * 1024 * 1024,
-    minFreeRatio = 0.10,
+    // Reserva PROPORCIONAL, desligada por default (0 = ignora).
+    // "Cabe continuar escrevendo?" é pergunta ABSOLUTA — depende de maxBytes e
+    // da retenção, não da fração do disco. Como reserva proporcional, a razão
+    // só aperta em disco GRANDE, que é exatamente onde apertar menos se
+    // justifica: com 0.10, um disco de 240 GB exigiria 24 GB livres e desligava
+    // o sink de arquivo com 12 GB sobrando — folga de sobra para qualquer
+    // rotação. Em disco pequeno ela nunca chega a valer, porque o piso absoluto
+    // de 1 GiB já é maior. Ou seja: o critério só agia onde não devia.
+    // Quem tem volume com cota compartilhada pode religar passando um valor.
+    minFreeRatio = 0,
     stdout = (line) => process.stdout.write(line + '\n'),
     compress = true,
     maxQueue = 10000,
@@ -97,7 +106,8 @@ export function createLogger(opts = {}) {
   function checkDisk() {
     const info = diskFree(dir);
     if (!info) return;
-    const low = info.free < minFreeBytes || (info.total > 0 && info.free / info.total < minFreeRatio);
+    const low = info.free < minFreeBytes
+      || (minFreeRatio > 0 && info.total > 0 && info.free / info.total < minFreeRatio);
     if (low && fileSink) {
       fileSink = false;
       if (!diskWarned) {
