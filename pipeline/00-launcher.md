@@ -3,28 +3,37 @@ phase: 00-launcher
 title: Launcher interativo — perguntas + menu de módulos
 duration_estimate: 30s–2min
 output: .blindar/config.yml (modo + módulos selecionados)
+runs_after: 00-mode-select.md
 runs_before: 00-strategic-scan.md
 ---
 
 # Fase 00 — Launcher
 
-Este é o **ponto de entrada** do `blindar`. Roda ANTES de qualquer outra fase.
-Substitui o comportamento "100% autônomo desde a primeira linha" por um
-**onboarding curto e objetivo** (≤4 perguntas) que define modo de execução e
-módulos a rodar.
+Roda logo após [`00-mode-select.md`](00-mode-select.md), que já definiu o
+`operation_mode` (GREENFIELD / HARDEN / EVOLVE / RECOVERY). Este launcher
+define **como** rodar dentro do modo escolhido: rigor, sensibilidade e quais
+módulos entram.
+
+> **Só chega aqui em HARDEN e EVOLVE.** GREENFIELD segue por
+> [`GREENFIELD.md`](GREENFIELD.md) e RECOVERY por [`RECOVERY.md`](RECOVERY.md)
+> — ambos voltam para cá depois, quando o projeto vira um alvo normal de
+> hardening.
 
 > **Quando pular:** se `.blindar/config.yml` já existir com `mode` e
 > `selected_modules` definidos (ex: retomada de execução), o launcher é
 > pulado e vai direto pra Fase 0 (Strategic Scan).
 
+**Se `operation_mode = evolve`**: force `mode: supervised` na Pergunta 3 e
+avise o operador — sistema em produção não roda com autonomia total.
+
 ---
 
-## Passo 1 — 4 perguntas objetivas
+## Passo 1 — 5 perguntas objetivas
 
-Faça as 4 perguntas abaixo em sequência, **sem rodeios**. Aceite respostas
+Faça as 5 perguntas abaixo em sequência, **sem rodeios**. Aceite respostas
 curtas (número, palavra). Não explique opções a menos que o usuário peça.
 
-### Pergunta 1/4 — Tipo de projeto
+### Pergunta 1/5 — Tipo de projeto
 
 ```
 Qual o tipo do projeto?
@@ -39,7 +48,7 @@ Qual o tipo do projeto?
 Responda com o número.
 ```
 
-### Pergunta 2/4 — Sensibilidade de dados (LGPD)
+### Pergunta 2/5 — Sensibilidade de dados (LGPD)
 
 ```
 Sensibilidade dos dados que o sistema processa?
@@ -49,7 +58,7 @@ Sensibilidade dos dados que o sistema processa?
 Responda A / M / B.
 ```
 
-### Pergunta 3/4 — Modo de execução
+### Pergunta 3/5 — Modo de execução
 
 ```
 Como devo rodar?
@@ -88,7 +97,7 @@ Sem key: avisa e segue como A (hardening puro).
 ## Passo 2 — Menu de módulos
 
 Exiba **exatamente** a tabela abaixo. Sempre mostre os 19 módulos (independente
-das respostas das perguntas 1–4 — elas só ajustam defaults). Módulos 16–19 são
+das respostas das perguntas 1–5 — elas só ajustam defaults). Módulos 16–19 são
 de escopo especial (evolução de produto e ataque) e só ligam sob condição
 explícita — ver "Resolução dos defaults".
 
@@ -104,7 +113,7 @@ explícita — ver "Resolução dos defaults".
   4   Rede & proxy (WAF/rate-limit/headers)               [saas/ecom/api]
   5   Supply chain & patch (lockfile/SHA-pin/Renovate)     ✓ ON
   6   Observabilidade & audit (logs estruturados)         [saas/ecom/api]
-  7   Backup & DR (cifrado + restore testado)              [tem-DB]
+  7   Banco: backup/DR + migração de engine + paridade     [tem-DB]
   8   LGPD/ANPD + compliance (consent/export/deletion)     [sens=A/M]
   9   Performance backend (N+1, cache, índices)           [saas/ecom/api]
  10   Fluidez + a11y + responsivo (CWV, WCAG AA, mobile)  [ui-only]
@@ -170,6 +179,7 @@ Antes de gravar config e seguir, mostre o **resumo** e peça 1 confirmação:
 ═══════════════════════════════════════════════════════════════════
                        RESUMO DA EXECUÇÃO
 ═══════════════════════════════════════════════════════════════════
+  Modo de operação   : HARDEN (detectado: suite verde, sem sinal de produção)
   Tipo de projeto    : SaaS / Produção
   Sensibilidade      : ALTA (LGPD forte)
   Modo               : AUTO (sem pausar)
@@ -196,6 +206,9 @@ Crie o arquivo (sobrescreve se existir) com este conteúdo:
 ```yaml
 # .blindar/config.yml — gerado pelo launcher
 schema: blindar/config@v0.8
+operation_mode: harden  # greenfield | harden | evolve | recovery (Fase 00-mode-select)
+operation_mode_source: detected
+operation_mode_evidence: "suite verde (42 testes), sem marcadores de produção"
 mode: auto              # auto | supervised | chosen
 selected_modules:       # números do menu (1..19)
   - 1

@@ -3,6 +3,100 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.53.0] — 2026-08-15
+
+Primeiras três fases do plano EOS ([`docs/PLANO-EOS.md`](docs/PLANO-EOS.md)):
+o `blindar` deixa de ter um único caminho (projeto existente e saudável) e
+passa a distinguir a natureza do trabalho, a provar que uma migração de engine
+de banco chegou ao runtime, e a decidir release por dimensão em vez de por
+contagem de severidade.
+
+As três fases foram planejadas como releases separadas (v0.51/v0.52/v0.53) mas
+saem juntas porque são interdependentes: os gates da Fase 3 consomem os checks
+da Fase 2, que por sua vez mudam de comportamento conforme o modo da Fase 1.
+
+### Fase 1 — modos de operação (planejado como v0.51)
+
+Antes: um pipeline só, que abortava em suite vermelha e não tinha o que fazer
+num diretório vazio. Agora `operation_mode` ∈ `greenfield|harden|evolve|recovery`,
+detectado e confirmado antes do launcher.
+
+- **`pipeline/00-mode-select.md`**: detecção determinística com precedência
+  `recovery > greenfield > evolve > harden`, confirmação com a evidência que a
+  produziu, e tabela do que cada modo altera (gates, tamanho de round, o que é
+  permitido mudar).
+- **`pipeline/GREENFIELD.md`**: G1–G10, das perguntas de requisito até entregar
+  o projeto ao modo `harden`. PostgreSQL default, `tenant_id` e soft delete
+  desde a primeira migration, dado simulado no **banco** e não no código.
+- **`pipeline/RECOVERY.md`**: R1–R7. Preserva evidência antes de corrigir, uma
+  correção por vez, migration destrutiva proibida, e só sai do modo com teste de
+  regressão que reproduz a falha.
+- **`pipeline/01-baseline.md`**: o gate de suite vermelha ganha exceção por
+  modo — em `recovery` ele é a condição de entrada, não o abort. Gate pulado por
+  modo tem de aparecer no relatório: gate pulado em silêncio é indistinguível de
+  gate aprovado.
+- **`00-launcher.md`**: numeração das perguntas corrigida (dizia "4 perguntas" e
+  tinha 5, com rótulos `/4` e `/5` misturados); `evolve` força `supervised`.
+
+### Fase 2 — migração de engine e paridade de ambientes (planejado como v0.52)
+
+Origem: pedir "migra de SQLite pra PostgreSQL no container" e receber compose
+com Postgres + código que continua abrindo SQLite.
+
+- **`check-db-engine-consistency.sh`** (novo, **crit**): compara a engine
+  DECLARADA na infra com a USADA no caminho de runtime. Postgres no
+  `docker-compose.yml` não é evidência de que a aplicação usa Postgres. Par de
+  fixtures `project-dbdrift-bad`/`-good`.
+- **`check-environment-parity.sh`** (novo, **high**): engine divergente entre
+  ambientes (`.env*`) — o caso DEV=Postgres, TEST=SQLite, PROD=Postgres, em que
+  a suite fica verde porque o SQLite aceita o que o Postgres recusa. Também
+  reporta deriva de versão maior do Postgres entre composes (**med**). Sem
+  `declare -A` (bash 3.2 do macOS). Par `project-envparity-bad`/`-good`.
+- **`agents/db-migration-guardian.md`** (novo): cadeia DETECT → PLAN → EXECUTE →
+  **PROVE**. A prova é de runtime: conexão vista pelo lado do servidor, escrita
+  que sobrevive a restart, e nenhum arquivo `.db` tocado durante o exercício.
+- **`agents/environment-parity.md`** (novo): ENVIRONMENT DRIFT REPORT sobre 8
+  dimensões, cada divergência com veredito explícito de aceitável ou a corrigir.
+- Módulo 7 do `MODULE-MAP.json` passa de 4 para 6 agentes.
+
+### Fase 3 — release gates (planejado como v0.53)
+
+Antes: `0 crit + ≤2 high`. Isso mede o que os checks **acharam**, não o que
+ficou por verificar — e aprovava projeto com SQLite em produção, sem backup
+restaurável e sem rollback.
+
+- **`check-release-gates.sh`** (novo): agrega `.blindar/results/*.json` em 11
+  dimensões independentes e emite `.blindar/gates.json` com veredito
+  **GO / CONDITIONAL GO / NO-GO**. Não chama `emit_result` — é decisor de
+  release, como o `check-termination.sh`, e por isso fica fora do denominador de
+  cobertura de fixtures pelo critério que já existia.
+- **`NOT VERIFIED` ≠ `PASS`**: dimensão sem check executado conta como warning,
+  nunca como aprovação. Achado durante o desenvolvimento: a primeira versão
+  dava `GO` com as 11 dimensões vazias — "nada rodou" lido como "tudo passou",
+  exatamente o modo de falha que a fase existe pra eliminar.
+- **Zero checks com resultado ⇒ NO-GO.** Sem medição não há veredito.
+- **Provas positivas**: `BACKUP_RECOVERY` exige evidência de **restore**, não de
+  backup; `DEPLOYMENT` exige **rollback**. Backup que ninguém restaurou é
+  hipótese.
+- Leitor de JSON com Node primeiro (1 processo pro diretório inteiro) e `jq`
+  como alternativa — sem nenhum dos dois é NO-GO por falta de instrumentação.
+- **`pipeline/06b-release-gates.md`** e **`schemas/gates.schema.json`** (novos).
+- Termination passa a ter duas condições: a contagem é **necessária, não
+  suficiente**.
+
+### Correções de honestidade
+
+- `SKILL.md` declarava "118 agentes / 81 checks determinísticos". Real,
+  verificado por `ls`: **111 agentes / 84 checks**. Os números tinham derivado.
+
+### Fora do repo
+
+- `modelo_agente_tarefa_cloude.md` (63KB, untracked na raiz) era o blueprint do
+  padrão *agentic-harness* — o `blindar` generalizado em molde para criar outras
+  skills. Não é runtime do `blindar` e inflava a skill instalada. Extraído para
+  skill própria em `~/.claude/skills/agentic-harness/`, com `SKILL.md` enxuto e
+  o conteúdo pesado em `reference/` sob progressive disclosure.
+
 ## [0.50.0] — 2026-08-02
 
 Blindagem da própria skill. Auditoria completa (8 varreduras independentes) e

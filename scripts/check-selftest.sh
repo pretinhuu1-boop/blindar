@@ -88,6 +88,8 @@ PAIRS=(
   "check-pii-encryption.sh       | project-pii-bad         | project-pii-good"
   "check-log-ops.sh              | project-logops-bad      | project-logops-good"
   "check-pwa-installable.sh      | project-pwa-bad         | project-pwa-good"
+  "check-db-engine-consistency.sh | project-dbdrift-bad    | project-dbdrift-good"
+  "check-environment-parity.sh   | project-envparity-bad   | project-envparity-good"
   # blindar-learn:insert (mantenha — scripts/blindar-learn.sh insere novos pares acima desta linha)
 )
 

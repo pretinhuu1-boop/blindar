@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/pretinhuu1-boop/blindar/blob/main/schemas/gates.schema.json",
+  "title": "blindar release gates",
+  "description": "Veredito de release em 11 dimensões independentes, gerado por templates/checks/check-release-gates.sh em .blindar/gates.json. Substitui a decisão puramente por severidade (0 crit + <=2 high), que aprovava projeto com SQLite em produção, sem backup restaurável e sem rollback desde que nenhum check achasse crit. v0.53.0+.",
+  "type": "object",
+  "required": ["schema", "verdict", "gates"],
+  "properties": {
+    "schema": {
+      "const": "blindar/gates@v1"
+    },
+    "generated_at": {
+      "type": "string",
+      "description": "ISO-8601 UTC."
+    },
+    "verdict": {
+      "type": "string",
+      "enum": ["GO", "CONDITIONAL GO", "NO-GO"],
+      "description": "GO = nenhum gate BLOCKED nem warning. CONDITIONAL GO = nenhum BLOCKED, >=1 warning, cada um exigindo aceite assinado em .accept-risk.md. NO-GO = >=1 gate BLOCKED, OU nenhum check produziu resultado (sem medição não há aprovação)."
+    },
+    "blocked_gates": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "warning_gates": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "gates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["gate", "status"],
+        "properties": {
+          "gate": {
+            "type": "string",
+            "enum": [
+              "SECURITY", "ARCHITECTURE", "DATABASE", "RUNTIME", "RESILIENCE",
+              "OBSERVABILITY", "PRIVACY", "QUALITY", "DEPLOYMENT",
+              "BACKUP_RECOVERY", "DOCUMENTATION"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["PASS", "PASS WITH WARNINGS", "NOT VERIFIED", "BLOCKED"],
+            "description": "NOT VERIFIED é distinto de PASS: nenhum check da dimensão executou. 'Não rodou' e 'não se aplica' são estados diferentes e só o operador distingue — por isso NOT VERIFIED conta como warning e é dispensável por aceite assinado, nunca por default."
+          },
+          "checks": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Quantos checks alimentaram esta dimensão."
+          },
+          "evidence": {
+            "type": "string",
+            "description": "Por que o gate tem este status. Gate sem evidência é opinião — o relatório final cita este campo."
+          }
+        }
+      }
+    }
+  }
+}

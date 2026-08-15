@@ -1,7 +1,7 @@
 {
   "$schema": "https://github.com/pretinhuu1-boop/blindar/blob/main/schemas/module-map.schema.json",
-  "version": "0.45.0",
-  "description": "Mapa estruturado dos 18 módulos do launcher → agentes ativados → fases onde rodam. Consumido pelas Fases 02 (discovery), 04 (rounds-loop) e 06 (production-checklist) pra filtrar agentes pelo array config.selected_modules. v0.45: +graph-builder (m1), +módulo 18 (smoke/runtime truth + homolog-only).",
+  "version": "0.52.0",
+  "description": "Mapa estruturado dos 19 módulos do launcher → agentes ativados → fases onde rodam. Consumido pelas Fases 02 (discovery), 04 (rounds-loop) e 06 (production-checklist) pra filtrar agentes pelo array config.selected_modules. v0.45: +graph-builder (m1), +módulo 18 (smoke/runtime truth + homolog-only). v0.52: +db-migration-guardian e +environment-parity (m7) — prova de que migração de engine chegou ao runtime e que os ambientes não divergem.",
   "modules": {
     "1": {
       "name": "Baseline & Discovery",
@@ -118,7 +118,7 @@
       ]
     },
     "7": {
-      "name": "Banco de dados + Backup & DR + Multi-region + Data Warehouse/ETL",
+      "name": "Banco de dados + Backup & DR + Migração de engine + Paridade de ambientes + Multi-region + Data Warehouse/ETL",
       "mandatory": false,
       "default_on_when": [
         "db_detected"
@@ -126,6 +126,8 @@
       "agents": [
         "backup-recovery",
         "db-architect",
+        "db-migration-guardian",
+        "environment-parity",
         "multi-region",
         "data-warehouse-etl"
       ],

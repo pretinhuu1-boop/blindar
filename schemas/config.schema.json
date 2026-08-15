@@ -9,7 +9,23 @@
       "type": "string",
       "enum": ["auto", "supervised", "chosen"],
       "default": "auto",
-      "description": "Modo de execução escolhido no launcher (Fase 00). v0.8.0+."
+      "description": "Modo de EXECUÇÃO escolhido no launcher (Fase 00) — quanto o blindar pausa. Ortogonal a operation_mode. v0.8.0+."
+    },
+    "operation_mode": {
+      "type": "string",
+      "enum": ["greenfield", "harden", "evolve", "recovery"],
+      "default": "harden",
+      "description": "Modo de OPERAÇÃO — a natureza do trabalho, definido na Fase 00-mode-select. 'greenfield' constrói do zero (pipeline/GREENFIELD.md); 'harden' audita projeto existente (pipeline padrão); 'evolve' atua sobre sistema em produção (incremental, reversível, supervised forçado); 'recovery' estabiliza sistema quebrado antes de blindar (pipeline/RECOVERY.md). Altera gates da Fase 1, tamanho de round e o que é permitido alterar. v0.51.0+."
+    },
+    "operation_mode_source": {
+      "type": "string",
+      "enum": ["detected", "operator"],
+      "default": "detected",
+      "description": "Se o operation_mode veio da detecção automática ou de escolha explícita do operador. v0.51.0+."
+    },
+    "operation_mode_evidence": {
+      "type": "string",
+      "description": "Evidência textual que justificou o operation_mode detectado (ex: 'suite vermelha: 12 falhas em npm test'). Obrigatório no relatório final — sem isso não há como auditar por que o pipeline se comportou de determinada forma. v0.51.0+."
     },
     "selected_modules": {
       "type": "array",
@@ -88,7 +104,8 @@
           "adversarial-reviewer",
           "mock-killer", "functional-e2e", "responsive-a11y",
           "auth-premium", "pwa-installable",
-          "db-architect", "config-externalization", "api-design", "i18n-tz",
+          "db-architect", "db-migration-guardian", "environment-parity",
+          "config-externalization", "api-design", "i18n-tz",
           "state-cache-data", "onboarding-ux", "feature-flags",
           "cost-observability", "ai-llm-safety", "backoffice-admin",
           "process-resilience",
