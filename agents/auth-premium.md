@@ -3,6 +3,8 @@ name: auth-premium
 category: security
 module: 2
 priority: P0
+lead: security-lead
+authority: implement
 description: |
   Stack de autenticação premium: WebAuthn (FaceID/TouchID/Windows Hello),
   refresh token com rotação + reuse detection, idle timeout configurável

@@ -3,6 +3,8 @@ name: seo-marketing-meta
 category: frontend
 module: 10
 priority: P1
+lead: frontend-lead
+authority: implement
 description: |
   Site/landing/SaaS sem SEO correto = não aparece em busca = não vende.
   Cobre: sitemap.xml + robots.txt, structured data JSON-LD por tipo de

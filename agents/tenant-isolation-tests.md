@@ -3,6 +3,8 @@ name: tenant-isolation-tests
 category: security
 module: 2
 priority: P0
+lead: security-lead
+authority: implement
 description: |
   Multi-tenant sem testes explícitos de isolamento é uma bomba relógio.
   Este agente gera testes automatizados que PROVAM: tenant A não vê

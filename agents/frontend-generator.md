@@ -3,6 +3,8 @@ name: frontend-generator
 category: scaffolding
 module: 10
 priority: P1
+lead: frontend-lead
+authority: implement
 description: |
   Gera ou refaz frontend lendo o backend: OpenAPI (api-design), schema do
   banco (db-architect), hierarquia de roles (role-hierarchy template),

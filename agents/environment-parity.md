@@ -3,6 +3,8 @@ name: environment-parity
 category: data
 module: 7
 priority: P1
+lead: data-lead
+authority: implement
 description: |
   Compara dev × test × staging × produção e reporta divergências que produzem falso-verde. O caso clássico: TEST em SQLite e PROD em PostgreSQL — a suite passa porque SQLite aceita o que o Postgres recusa. Emite ENVIRONMENT DRIFT REPORT.
 ---

@@ -3,6 +3,8 @@ name: wave-guardian
 category: meta
 module: 15
 priority: P0
+lead: runtime-lead
+authority: gate
 description: |
   Gate obrigatório no final de cada onda do rounds-loop. Roda o orquestrador
   determinístico contra os módulos da onda, lê run-report.json, valida

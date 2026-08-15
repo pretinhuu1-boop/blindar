@@ -3,6 +3,8 @@ name: frontend-performance
 category: frontend
 module: 10
 priority: P1
+lead: frontend-lead
+authority: implement
 description: |
   Web Vitals: LCP < 2.5s, CLS < 0.1, INP < 200ms. Lighthouse ≥ 90 em 4 pilares. Bundle size budget ≤ 400KB JS gzipped. Image optimization, prefetch, RSC default em Next.js.
 ---

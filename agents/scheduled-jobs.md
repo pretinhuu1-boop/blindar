@@ -3,6 +3,8 @@ name: scheduled-jobs
 category: ops
 module: 13
 priority: P0
+lead: sre-lead
+authority: implement
 description: |
   Cron robusto em produção: distributed lock (Redlock) pra exactly-once
   em multi-instance, observability de jobs atrasados, retry com jitter,

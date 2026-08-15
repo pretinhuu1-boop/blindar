@@ -3,6 +3,8 @@ name: business-logic
 category: security
 module: 2
 priority: P0
+lead: security-lead
+authority: implement
 description: |
   OWASP ASVS V11 (Business Logic). Validation de regras (preço, desconto, comissão, estoque) — ninguém burla pelo navegador, replays, race conditions em operações financeiras.
 ---

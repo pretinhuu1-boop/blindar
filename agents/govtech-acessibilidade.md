@@ -3,6 +3,8 @@ name: govtech-acessibilidade
 category: vertical
 module: 10
 priority: P1
+lead: frontend-lead
+authority: implement
 description: |
   Govtech BR: eMAG (Modelo de Acessibilidade em Governo Eletrônico),
   ePING (interoperabilidade), gov.br SSO (login único cidadão), LAI

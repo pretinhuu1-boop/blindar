@@ -3,6 +3,8 @@ name: sbom-slsa
 category: supply-chain
 module: 5
 priority: P1
+lead: security-lead
+authority: implement
 description: |
   Software Bill of Materials (SBOM) em CycloneDX/SPDX a cada build,
   SLSA build provenance níveis 1-3, signing de artefatos via Sigstore

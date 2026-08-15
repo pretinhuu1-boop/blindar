@@ -3,6 +3,8 @@ name: api-gateway
 category: api
 module: 4
 priority: P2
+lead: chief-architect
+authority: implement
 description: |
   Kong/Tyk/AWS API Gateway/Apigee: routing, rate limit per consumer,
   API keys/JWT validation no gateway (não no app), plans + quotas,

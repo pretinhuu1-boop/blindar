@@ -3,6 +3,8 @@ name: mock-killer
 category: cleanup
 module: 12
 priority: P1
+lead: chief-architect
+authority: implement
 description: |
   Caça e elimina dados mocados, placeholders, console.log de debug, TODOs,
   FIXMEs e stubs que vazaram pra fora de testes. Substitui por implementação

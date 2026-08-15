@@ -3,6 +3,8 @@ name: embedded-analytics
 category: frontend
 module: 10
 priority: P2
+lead: frontend-lead
+authority: implement
 description: |
   Dashboards de analytics dentro da app pra cliente final (B2B SaaS):
   Metabase/Cube/Apache Superset/embed Looker, RLS por tenant em queries

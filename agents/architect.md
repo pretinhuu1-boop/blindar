@@ -3,6 +3,8 @@ name: architect
 category: dx
 module: 14
 priority: P1
+lead: chief-architect
+authority: plan
 description: |
   Cuida da estrutura: pastas, arquivos, naming, fronteiras entre módulos,
   detecção de ciclos, dead code, arquivos gigantes, "utils.ts" canivete

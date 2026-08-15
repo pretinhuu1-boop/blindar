@@ -3,6 +3,8 @@ name: ecom-checkout-conversion
 category: vertical
 module: 8
 priority: P1
+lead: product-lead
+authority: implement
 description: |
   Checkout/conversão e-commerce. Cobre cart abandonment (persist, retry,
   recovery), 3DS2 (Strong Customer Authentication acima de R$ 500),

@@ -3,6 +3,8 @@ name: decision-log
 category: meta
 module: 14
 priority: P1
+lead: chief-architect
+authority: implement
 description: |
   Registra decisões arquiteturais em docs/decisions.md (versionado, append-only) com problema, alternativas, decisão, motivo e consequências. Existe porque decisão sem motivo escrito é refeita — e desfeita — a cada sessão nova.
 ---

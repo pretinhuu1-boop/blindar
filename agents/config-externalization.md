@@ -3,6 +3,8 @@ name: config-externalization
 category: cleanup
 module: 12
 priority: P1
+lead: chief-architect
+authority: implement
 description: |
   Nada de regra de negócio, copy, URL, limite, layout ou config no código.
   Tudo vai pra DB (mutável em runtime), arquivo de config (mutável em

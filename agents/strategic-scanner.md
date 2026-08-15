@@ -3,6 +3,8 @@ name: strategic-scanner
 category: scaffolding
 module: 1
 priority: P0
+lead: chief-architect
+authority: plan
 description: |
   Fase 0: varre projeto antes do hardening, lista oportunidades numeradas por severidade, pergunta ao operador quais aplicar, planeja paralelismo baseado em hardware (cores, RAM). Read-only, não modifica nada.
 ---

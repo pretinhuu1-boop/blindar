@@ -3,6 +3,8 @@ name: compliance-pci-deep
 category: compliance
 module: 8
 priority: P2
+lead: privacy-lead
+authority: implement
 description: |
   PCI-DSS v4 quando NÃO usa Stripe Elements / hosted form (atravessa CDE).
   12 requirements, SAQ tipo certo, network segmentation, key management

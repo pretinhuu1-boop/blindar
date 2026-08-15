@@ -3,6 +3,8 @@ name: api-frontend-coverage
 category: evolution
 module: 16
 priority: P1
+lead: product-lead
+authority: implement
 description: |
   Mapeia endpoints REST/GraphQL/tRPC do back-end e cruza com chamadas
   do front-end. Identifica APIs órfãs (existem no servidor mas nenhum

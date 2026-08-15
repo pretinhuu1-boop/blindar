@@ -3,6 +3,8 @@ name: infra-runtime
 category: core
 module: 18
 priority: P0
+lead: platform-lead
+authority: implement
 description: |
   Guarda-chuva dos 8 checks determinísticos de infra/runtime que pegam bugs que
   quebram o boot ou geram 500 — nascidos de incidentes reais (ver

@@ -3,6 +3,8 @@ name: compliance-lgpd-br
 category: compliance
 module: 8
 priority: P0
+lead: privacy-lead
+authority: implement
 description: |
   LGPD/ANPD (Brasil). Consent gates, 6 endpoints Art. 18 (acesso/correção/exclusão/portabilidade/anonimização/oposição), runbook ANPD 72h, cookie banner real (opt-in), gate Art. 14 (menores), DPO designado.
 ---

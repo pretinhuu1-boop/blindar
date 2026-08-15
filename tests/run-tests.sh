@@ -157,6 +157,15 @@ if command -v node >/dev/null 2>&1; then
   fi
 
   echo ""
+  echo "${BOLD}── registro de agentes (frontmatter / leads / MODULE-MAP) ──${RESET}"
+  if node "$SCRIPT_DIR/agents-registry.test.mjs"; then
+    PASS_COUNT=$((PASS_COUNT+1))
+  else
+    FAIL_COUNT=$((FAIL_COUNT+1))
+    FAIL_LIST+=("tests/agents-registry.test.mjs")
+  fi
+
+  echo ""
   echo "${BOLD}── módulo 17 (blindar ataque — recon passivo) ──${RESET}"
   if node "$SCRIPT_DIR/attack-recon.test.js"; then
     PASS_COUNT=$((PASS_COUNT+1))

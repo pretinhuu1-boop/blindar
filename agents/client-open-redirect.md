@@ -3,6 +3,8 @@ name: client-open-redirect
 category: security
 module: 3
 priority: P1
+lead: security-lead
+authority: implement
 description: |
   Detecta open redirect no lado cliente — window.location/.href/.assign/
   window.open recebendo valor derivado de location.search/query/param sem

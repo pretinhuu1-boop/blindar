@@ -3,6 +3,8 @@ name: pwa-installable
 category: frontend
 module: 10
 priority: P2
+lead: frontend-lead
+authority: implement
 description: |
   Torna o projeto instalável como app no celular (iOS/Android) e no
   desktop (Windows/macOS/Linux) via PWA (Progressive Web App).

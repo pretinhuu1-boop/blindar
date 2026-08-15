@@ -3,6 +3,8 @@ name: delivery-bundle
 category: delivery
 module: 14
 priority: P1
+lead: release-lead
+authority: gate
 description: |
   Ao final de tudo (Fase 07), monta a pasta `release/` no projeto-alvo com
   TUDO que precisa pra entregar: guia de implantação (DEPLOY.md), manual

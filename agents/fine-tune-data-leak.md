@@ -3,6 +3,8 @@ name: fine-tune-data-leak
 category: core
 module: 2
 priority: P1
+lead: ai-lead
+authority: implement
 description: |
   Avalia risco de vazamento de dados em fine-tuning (HF transformers,
   OpenAI fine-tune, Anthropic, Cohere, Vertex): PII em training set

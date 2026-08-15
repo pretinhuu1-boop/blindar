@@ -3,6 +3,8 @@ name: scalability
 category: resilience
 module: 13
 priority: P2
+lead: sre-lead
+authority: implement
 description: |
   Escalabilidade: load test (k6/Artillery) em 10x a carga atual, horizontal scaling, stateless workers, sticky sessions só se necessário, cache strategy multi-layer, sharding quando aplicável. (Marcado stub no autor — desenvolver conforme uso.)
 ---

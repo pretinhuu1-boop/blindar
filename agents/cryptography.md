@@ -3,6 +3,8 @@ name: cryptography
 category: security
 module: 2
 priority: P0
+lead: security-lead
+authority: implement
 description: |
   Criptografia: TLS 1.3, at-rest AES-256, key management (KMS), secrets rotation, cipher suites permitidos, certificate pinning. Cobre técnica #2 do baseline.
 ---

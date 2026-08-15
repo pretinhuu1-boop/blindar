@@ -3,6 +3,8 @@ name: graphql
 category: api
 module: 4
 priority: P2
+lead: chief-architect
+authority: implement
 description: |
   GraphQL profundo (Apollo Federation, subscriptions, persisted queries,
   DataLoader, depth/complexity limits, field-level auth). Resolve

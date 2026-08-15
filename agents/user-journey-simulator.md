@@ -3,6 +3,8 @@ name: user-journey-simulator
 category: evolution
 module: 16
 priority: P1
+lead: product-lead
+authority: implement
 description: |
   Simula cenários de uso real por perfil de usuário (cliente, operador,
   admin, profissional, etc.). Identifica fricções, gargalos e funcionalidades

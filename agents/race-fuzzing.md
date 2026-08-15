@@ -1,3 +1,14 @@
+---
+name: race-fuzzing
+category: security
+module: 15
+priority: P2
+lead: runtime-lead
+authority: adversary
+description: |
+  Testes ATIVOS de concorrência. Vai além da lens `races` do adversarial review, que analisa: este roda harness real contra o serviço.
+---
+
 # Agente: Race-fuzzing (ROADMAP #4 — testes ativos de concorrência)
 
 > Vai além do adversarial review (lens `races`, que **analisa**). Este

@@ -3,6 +3,8 @@ name: fallback-resilience
 category: core
 module: 13
 priority: P1
+lead: sre-lead
+authority: implement
 description: |
   Se caiu, como volta? Timeout em toda I/O de rede, circuit breaker, retry com
   backoff e degradação graciosa. Health/readiness pro orquestrador reiniciar.

@@ -3,6 +3,8 @@ name: cdn-strategy
 category: performance
 module: 9
 priority: P1
+lead: sre-lead
+authority: implement
 description: |
   Estratégia de cache em camadas: browser → CDN → app → DB. Cache hit
   rate > 80%, immutable assets com hash, signed URLs com expiração,

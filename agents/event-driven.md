@@ -3,6 +3,8 @@ name: event-driven
 category: architecture
 module: 13
 priority: P2
+lead: sre-lead
+authority: implement
 description: |
   Arquitetura event-driven: Kafka/RabbitMQ/NATS/SQS, outbox pattern pra
   publish reliability, CQRS quando justifica, Event Sourcing com cuidado,

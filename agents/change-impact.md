@@ -3,6 +3,8 @@ name: change-impact
 category: meta
 module: 14
 priority: P1
+lead: chief-architect
+authority: plan
 description: |
   Antes de alterações estruturais, mapeia o raio de alcance: arquivos, módulos, contratos de API, banco, migrations, testes, infra, observabilidade, docs e deploy. Existe porque a mudança que quebra o sistema quase nunca é a que foi editada.
 ---

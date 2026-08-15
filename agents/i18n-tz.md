@@ -3,6 +3,8 @@ name: i18n-tz
 category: frontend
 module: 10
 priority: P1
+lead: frontend-lead
+authority: implement
 description: |
   Internacionalização e timezones corretos desde o dia 1. Tudo em UTC no
   banco (TIMESTAMPTZ), currency em cents (BIGINT), timezone IANA por

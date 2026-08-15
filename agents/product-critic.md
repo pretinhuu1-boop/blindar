@@ -3,6 +3,8 @@ name: product-critic
 category: evolution
 module: 16
 priority: P1
+lead: product-lead
+authority: adversary
 description: |
   Agente adversarial sobre PRODUTO (não código). Questiona fluxos mal
   definidos, regras inconsistentes, telas órfãs, APIs sem uso, lacunas

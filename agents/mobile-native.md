@@ -3,6 +3,8 @@ name: mobile-native
 category: frontend
 module: 10
 priority: P2
+lead: frontend-lead
+authority: implement
 description: |
   Mobile além de PWA: React Native + Expo (SDK 52+) ou Flutter. Cobre
   deep links + universal links, push nativo (FCM/APNs), app shortcuts,

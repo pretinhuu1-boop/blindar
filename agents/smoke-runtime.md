@@ -3,6 +3,8 @@ name: smoke-runtime
 category: core
 module: 18
 priority: P0
+lead: runtime-lead
+authority: validate
 description: |
   Prova que a app SOBE e responde (verdade de runtime). Sobe o stack em homolog
   (mock no banco, espelho de produção — nunca dev), espera health e roda 1 fluxo

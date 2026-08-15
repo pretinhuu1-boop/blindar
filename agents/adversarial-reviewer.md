@@ -3,6 +3,8 @@ name: adversarial-reviewer
 category: security
 module: 15
 priority: P0
+lead: runtime-lead
+authority: adversary
 description: |
   Workflow de revisão adversarial executado na Fase 5: 4 lentes paralelas (security, races, failmodes, regression) + verify por finding (default refute). Confirma apenas findings reais antes de virar rounds.
 ---

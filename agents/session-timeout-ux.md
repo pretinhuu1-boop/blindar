@@ -3,6 +3,8 @@ name: session-timeout-ux
 category: core
 module: 10
 priority: P2
+lead: frontend-lead
+authority: implement
 description: |
   Timeout de inatividade configurável pelo adm; ao expirar, popup com fundo
   em blur (proteção) + opção de refresh/resume sem perder estado; timeout-limite

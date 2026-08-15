@@ -3,6 +3,8 @@ name: email-deliverability
 category: ops
 module: 14
 priority: P1
+lead: platform-lead
+authority: implement
 description: |
   Email mandado é email que CHEGA na caixa de entrada (não no spam). Cobre:
   DKIM/SPF/DMARC obrigatórios + monitorados, bounce/complaint handling

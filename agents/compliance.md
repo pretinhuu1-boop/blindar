@@ -3,6 +3,8 @@ name: compliance
 category: compliance
 module: 8
 priority: P1
+lead: privacy-lead
+authority: implement
 description: |
   Compliance genérico — audit chain Merkle, retention policies, redaction PII em logs. Base pra frameworks (ISO27001/NIST/SOC2/CIS) sem ser Brasil/EU específico.
 ---

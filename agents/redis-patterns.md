@@ -3,6 +3,8 @@ name: redis-patterns
 category: performance
 module: 9
 priority: P1
+lead: data-lead
+authority: implement
 description: |
   Redis/Valkey correto em produção: chaves sempre com TTL, multi-tenant
   via prefix, eviction policy adequada, persistence (RDB+AOF), Redlock

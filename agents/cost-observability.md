@@ -3,6 +3,8 @@ name: cost-observability
 category: ops
 module: 6
 priority: P2
+lead: sre-lead
+authority: implement
 description: |
   Visibilidade de custo em runtime: cloud (AWS/GCP/Vercel), DB (queries
   caras), 3rd-party (LLM, payment gateway, SMS, storage), com alertas

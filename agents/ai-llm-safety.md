@@ -3,6 +3,8 @@ name: ai-llm-safety
 category: security
 module: 2
 priority: P0
+lead: ai-lead
+authority: implement
 description: |
   Apps que usam LLM (OpenAI/Anthropic/Gemini) têm superfície de ataque
   nova: prompt injection (indireta via tool inputs), jailbreak, PII leak

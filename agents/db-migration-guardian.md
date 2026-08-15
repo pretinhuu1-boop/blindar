@@ -3,6 +3,8 @@ name: db-migration-guardian
 category: data
 module: 7
 priority: P0
+lead: data-lead
+authority: implement
 description: |
   Prova que uma migração de engine de banco (tipicamente SQLite → PostgreSQL) aconteceu no PROCESSO, não só no docker-compose. Detecta → planeja → executa → prova em runtime. Postgres no compose não é evidência de que a aplicação usa Postgres.
 ---
