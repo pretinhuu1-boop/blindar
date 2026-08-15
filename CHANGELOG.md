@@ -3,6 +3,53 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.56.0] — 2026-08-15
+
+Fase 6 do plano EOS: alvo de deploy. O `blindar` passa a definir **estado
+desejado** e emitir isso como artefato — sem executar deploy e sem chamar
+executor.
+
+### Correção de rumo em relação à proposta original
+
+A proposta externa que originou o plano tratava o `ancorar` como *deployment
+provider* consumido pelo `blindar` ("blindar define, ancorar executa"). Isso
+inverteria a seta e violaria o contrato de isolamento que o próprio `ancorar`
+declara inegociável: ele escreve só em `.ancorar/`, nunca em `.blindar/`, não
+edita `~/.claude/skills/blindar/**`, e o único código do `blindar` que invoca é
+`scripts/smoke-run.sh --url`, read-only.
+
+A dependência é **ancorar → blindar**, e continua sendo. O `blindar` publica
+`.blindar/deployment-plan.json` como artefato **passivo**: fica disponível, e
+quem quiser lê. Nenhum adaptador foi criado.
+
+Consequência registrada: `scripts/smoke-run.sh` é **API pública** consumida por
+outra skill — mudar sua assinatura é breaking change e vai para o decision log.
+
+### Novidades
+
+- **`pipeline/10-deployment-target.md`** (novo): alvo `vps | docker-compose |
+  k8s | cloud`, detectado pelo que existe no repo. Sete blocos obrigatórios no
+  plano, sendo o mais importante **volta** — que separa três perguntas
+  normalmente tratadas como uma: reverter o código, reverter o schema, e o que
+  acontece com o dado escrito entre o deploy e o rollback. A terceira é a que
+  decide se o rollback é possível.
+- **`agents/deployment-readiness.md`** (novo): produz a especificação e para aí.
+- **`check-vps-readiness.sh`** (novo): porta de banco publicada no host
+  (**high**) — o bind default do Docker é `0.0.0.0` e a regra publicada
+  **atravessa o firewall de host**, que segue "ativo" sem proteger; banco sem
+  volume (**high**); imagem sem tag fixa, ausência de `restart:` e de
+  `healthcheck` (**med**). Par `project-vps-bad`/`-good`.
+
+O que só se prova **no host** — firewall ativo, certificado válido, backup
+fresco, DNS, vizinhos de container — ficou deliberadamente de fora: é do
+`ancorar`, que roda contra o servidor por SSH. Duplicar aqui seria manter duas
+verdades sobre o mesmo servidor.
+
+### Outros
+
+- Módulo 14: 15 → 16 agentes. O check novo entra no gate `DEPLOYMENT`.
+- `SKILL.md`: 116 agentes / 103 `check-*.sh` (89 determinísticos + 14 API).
+
 ## [0.55.0] — 2026-08-15
 
 Fase 5 do plano EOS: camada adversarial de runtime. A pergunta muda de "a
