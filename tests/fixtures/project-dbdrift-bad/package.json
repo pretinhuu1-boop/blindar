@@ -1,0 +1,1 @@
+{ "name": "dbdrift-bad", "dependencies": { "better-sqlite3": "^11.0.0" } }

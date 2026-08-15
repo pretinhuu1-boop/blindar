@@ -28,6 +28,20 @@ Casos que também param a execução:
 
 Em todos: 1 reporte claro do que falta, sem tentar adivinhar.
 
+### Exceção por `operation_mode` (v0.51+)
+
+Este gate pressupõe `operation_mode = harden|evolve`. Nos outros dois modos ele
+seria contraditório:
+
+| `operation_mode` | Comportamento do gate |
+|---|---|
+| `harden` / `evolve` | como acima — PARA |
+| `recovery` | **não para.** Suite vermelha/build quebrado é a condição de entrada do modo, não motivo de abortar. Repo sujo também é tolerado (a correção em andamento pode estar no working tree). Siga por [`RECOVERY.md`](RECOVERY.md). |
+| `greenfield` | **não se aplica.** Não há suite nem CI para avaliar ainda; ambas nascem em G8/G7 de [`GREENFIELD.md`](GREENFIELD.md). |
+
+Se o gate for pulado por modo, **registre no relatório** qual gate foi pulado e
+sob qual modo. Gate pulado em silêncio é indistinguível de gate aprovado.
+
 ## Saída
 
 Snapshot do baseline gravado pra comparação no relatório final (Fase 6):

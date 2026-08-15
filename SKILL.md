@@ -1,14 +1,19 @@
 ---
 name: blindar
 description: |
-  Audita, blinda, otimiza e prepara o projeto para produção. Pipeline:
-  launcher interativo (4 perguntas + menu de 19 módulos) → baseline →
-  discovery → bootstrap sec.html → rounds pequenos (1 PR cada) →
-  adversarial review → production checklist → relatório. Mantém sec.html
-  como dashboard vivo. Termina quando: 0 crit + ≤2 high após adversarial.
-  Modos: AUTO (sem pausar), SUPERVISIONADO (pausa por módulo), ESCOLHIDOS
-  (só módulos selecionados). Cobre segurança, escalabilidade, fluidez,
-  LGPD, a11y, responsividade e elimina mocks/console.log/TODOs.
+  Audita, blinda, otimiza e prepara o projeto para produção. Detecta primeiro a
+  natureza do trabalho — GREENFIELD (criar do zero), HARDEN (blindar existente),
+  EVOLVE (já em produção, incremental e reversível) ou RECOVERY (quebrado,
+  estabilizar antes) — e só então roda o pipeline: launcher (5 perguntas + menu
+  de 19 módulos) → baseline → discovery → sec.html → rounds pequenos (1 PR cada)
+  → adversarial review → production checklist → release gates → relatório.
+  Mantém sec.html como dashboard vivo. Release decidida por 11 gates
+  independentes com veredito GO / CONDITIONAL GO / NO-GO — dimensão sem check
+  executado conta como NOT VERIFIED, nunca como aprovação. Modos de execução:
+  AUTO, SUPERVISIONADO, ESCOLHIDOS. Cobre segurança, arquitetura, banco
+  (inclusive provar que a migração SQLite→PostgreSQL chegou ao runtime),
+  paridade de ambientes, resiliência, observabilidade, LGPD, a11y,
+  responsividade, e elimina mocks/console.log/TODOs.
 
 triggers:
   - "blindar"
@@ -16,6 +21,9 @@ triggers:
   - "deixa pronto pra produção"
   - "production ready"
   - "harden this project"
+  - "cria do zero já blindado"
+  - "o projeto quebrou"
+  - "migra pra postgres"
 ---
 
 # blindar — orquestrador
@@ -117,10 +125,29 @@ nunca um prompt monolítico. Ver [`MULTI-AI.md`](MULTI-AI.md).
 Em Claude Code: paralelo real via Workflow API.
 Em outras AIs: role-play sequencial, contexto isolado por turno.
 
+## Modos de operação (⭐ v0.51)
+
+Antes do launcher, a Fase [`00-mode-select`](pipeline/00-mode-select.md)
+detecta **a natureza do trabalho** e confirma com o operador. O modo altera
+gates, tamanho de round e o que é permitido alterar — não é rótulo de
+relatório.
+
+| Modo | Quando | Pipeline | Trava principal |
+|---|---|---|---|
+| `greenfield` | não há o que blindar | [`GREENFIELD.md`](pipeline/GREENFIELD.md) | constrói já dentro das regras; termina entregando ao `harden` |
+| `harden` | projeto existente e saudável (**default**) | 00 → 09 | comportamento clássico |
+| `evolve` | já está em produção | 00 → 09 | `supervised` forçado, round ≤40 LOC, migration destrutiva proibida |
+| `recovery` | sistema quebrado | [`RECOVERY.md`](pipeline/RECOVERY.md) | suite vermelha é a **entrada**, não o abort; uma correção por vez |
+
+Precedência da detecção: `recovery` > `greenfield` > `evolve` > `harden`. Não
+se blinda escombro, não se audita o vazio, não se experimenta em produção.
+
+Configurado em `operation_mode` (ortogonal a `mode`, que é auto/supervised/chosen).
+
 ## Comportamento
 
-Invocado → roda **launcher curto** (4 perguntas + menu) → depois executa o
-que foi escolhido conforme o modo:
+Invocado → detecta **modo de operação** → roda **launcher curto** (5 perguntas
++ menu) → depois executa o que foi escolhido conforme o modo:
 
 - **AUTO** → vai do início ao fim sem pedir confirmação (default sugerido)
 - **SUPERVISIONADO** → pausa entre módulos pra revisar
@@ -155,7 +182,7 @@ Grava `.blindar/config.yml` com as escolhas. Pula automaticamente em
 | 4 | Rede & API + Payments + Realtime + API Gateway + GraphQL + gRPC | tipo ∈ SaaS/E-com/API | [`network-security`](agents/network-security.md), [`api-design`](agents/api-design.md), [`payments`](agents/payments.md), [`realtime`](agents/realtime.md), [`api-gateway`](agents/api-gateway.md), [`graphql`](agents/graphql.md), [`grpc-internal`](agents/grpc-internal.md) |
 | 5 | Supply chain & patch + SBOM/SLSA (compliance 2026) | sempre | [`supply-chain`](agents/supply-chain.md), [`patch-management`](agents/patch-management.md), [`sbom-slsa`](agents/sbom-slsa.md) |
 | 6 | Observabilidade & audit + Log lifecycle/retenção + Cost monitoring | tipo ∈ SaaS/E-com/API | [`observability`](agents/observability.md), [`log-ops-retention`](agents/log-ops-retention.md), [`cost-observability`](agents/cost-observability.md) |
-| 7 | Banco de dados + Backup & DR + Multi-region + Data Warehouse/ETL | se DB detectado | [`backup-recovery`](agents/backup-recovery.md), [`db-architect`](agents/db-architect.md), [`multi-region`](agents/multi-region.md), [`data-warehouse-etl`](agents/data-warehouse-etl.md) |
+| 7 | Banco de dados + Backup & DR + **Migração de engine** + **Paridade de ambientes** + Multi-region + Data Warehouse/ETL | se DB detectado | [`backup-recovery`](agents/backup-recovery.md), [`db-architect`](agents/db-architect.md), [`db-migration-guardian`](agents/db-migration-guardian.md) ⭐, [`environment-parity`](agents/environment-parity.md) ⭐, [`multi-region`](agents/multi-region.md), [`data-warehouse-etl`](agents/data-warehouse-etl.md) |
 | 8 | Compliance: LGPD + GDPR + HIPAA + PCI-DSS + frameworks | sensibilidade ≠ Baixa OU compliance | [`compliance-lgpd-br`](agents/compliance-lgpd-br.md), [`compliance`](agents/compliance.md), [`compliance-gdpr`](agents/compliance-gdpr.md), [`compliance-hipaa`](agents/compliance-hipaa.md), [`compliance-pci-deep`](agents/compliance-pci-deep.md) |
 | 9 | Performance backend + Query + CDN strategy | tipo ∈ SaaS/E-com/API | [`performance`](agents/performance.md), [`db-architect`](agents/db-architect.md), [`cdn-strategy`](agents/cdn-strategy.md) |
 | 10 | Fluidez completa + SEO + Frontend gen + Search + Push + Mobile native + Analytics + Audio + Video | se UI detectada | [`frontend-performance`](agents/frontend-performance.md), [`responsive-a11y`](agents/responsive-a11y.md), [`pwa-installable`](agents/pwa-installable.md), [`i18n-tz`](agents/i18n-tz.md), [`state-cache-data`](agents/state-cache-data.md), [`onboarding-ux`](agents/onboarding-ux.md), [`seo-marketing-meta`](agents/seo-marketing-meta.md), [`frontend-generator`](agents/frontend-generator.md), [`search-quality`](agents/search-quality.md), [`push-notifications`](agents/push-notifications.md), [`mobile-native`](agents/mobile-native.md), [`embedded-analytics`](agents/embedded-analytics.md), [`audio-voice`](agents/audio-voice.md), [`video-streaming`](agents/video-streaming.md) |
@@ -169,7 +196,9 @@ Grava `.blindar/config.yml` com as escolhas. Pula automaticamente em
 | 18 | Smoke / Runtime Truth + checks de infra (prova que a app SOBE) | sempre (self-skip sem docker/URL) | [`smoke-runtime`](agents/smoke-runtime.md) + 9 checks de infra/runtime |
 | 19 | Pentest ATIVO — payloads reais (requer `.blindar/.accept-authorization`) | só com autorização | [`pentest-active`](agents/pentest-active.md) |
 
-> **Total**: 118 agentes em 19 módulos (81 checks determinísticos + 14 API-wrapped + playbooks).
+> **Total**: 111 agentes em 19 módulos (85 checks determinísticos + 14 API-wrapped = 99 `check-*.sh`, + playbooks).
+> Contagem verificada por `ls agents/*.md` e `ls templates/checks/check-*.sh` em v0.53 —
+> os números anteriores (118/81) tinham derivado do real.
 > Fonte da verdade: [`pipeline/MODULE-MAP.json`](pipeline/MODULE-MAP.json).
 
 **Módulos não-negociáveis** (sempre rodam, mesmo em "MVP"): **1, 2, 11, 12, 15** (+ 18, que self-skipa quando não há runtime pra subir).
@@ -226,6 +255,7 @@ crit não-confirmado) — não bypassa qualidade.
 
 | Fase | Arquivo | Duração |
 |---|---|---|
+| **00 — Mode select** ⭐ v0.51 | [`pipeline/00-mode-select.md`](pipeline/00-mode-select.md) | 20s–1min |
 | **00 — Launcher** ⭐ v0.8 | [`pipeline/00-launcher.md`](pipeline/00-launcher.md) | 30s–2min |
 | 0 — Strategic Scan & Planning | [`pipeline/00-strategic-scan.md`](pipeline/00-strategic-scan.md) | ~3 min |
 | 1 — Baseline | [`pipeline/01-baseline.md`](pipeline/01-baseline.md) | ~2 min |
@@ -234,9 +264,18 @@ crit não-confirmado) — não bypassa qualidade.
 | 4 — Loop de rounds | [`pipeline/04-rounds-loop.md`](pipeline/04-rounds-loop.md) | até termination |
 | 5 — Adversarial review | [`pipeline/05-adversarial-review.md`](pipeline/05-adversarial-review.md) | ~10 min (a cada 10 rounds) |
 | 6 — Production checklist | [`pipeline/06-production-checklist.md`](pipeline/06-production-checklist.md) | ~3 min |
+| **6b — Release gates** ⭐ v0.53 | [`pipeline/06b-release-gates.md`](pipeline/06b-release-gates.md) | ~1 min |
 | 7 — Relatório final | [`pipeline/07-final-report.md`](pipeline/07-final-report.md) | ~2 min |
 | 8 — **Maintenance** (opt-in, trimestral) | [`pipeline/08-maintenance.md`](pipeline/08-maintenance.md) | ~5 min |
 | 9 — **Drift detection** (subfase de 8) | [`pipeline/09-drift-detection.md`](pipeline/09-drift-detection.md) | ~3 min |
+
+Pipelines alternativos (não numerados — substituem o fluxo acima conforme o
+`operation_mode`):
+
+| Pipeline | Arquivo | Entra por |
+|---|---|---|
+| **GREENFIELD** ⭐ v0.51 | [`pipeline/GREENFIELD.md`](pipeline/GREENFIELD.md) | `operation_mode: greenfield` |
+| **RECOVERY** ⭐ v0.51 | [`pipeline/RECOVERY.md`](pipeline/RECOVERY.md) | `operation_mode: recovery` |
 
 ## Roster de agentes
 
@@ -423,7 +462,9 @@ ao rodar.
 
 ## Termination
 
-Para quando todas as condições são verdadeiras:
+Duas condições, ambas necessárias. A contagem é **necessária, não suficiente**.
+
+### 1. Contagem (`check-termination.sh`)
 
 - [ ] 0 confirmed crit no último adversarial
 - [ ] ≤ 2 confirmed high (em `.accept-risk.md`)
@@ -432,6 +473,31 @@ Para quando todas as condições são verdadeiras:
 - [ ] CI verde por 3 PRs consecutivos
 - [ ] Production checklist Fase 6 ✓
 - [ ] Coverage report do framework alvo (se declarado) gerado
+
+### 2. Release gates (⭐ v0.53 — [`check-release-gates.sh`](templates/checks/check-release-gates.sh))
+
+11 dimensões independentes, veredito **GO / CONDITIONAL GO / NO-GO**. Ver
+[`pipeline/06b-release-gates.md`](pipeline/06b-release-gates.md).
+
+`SECURITY` · `ARCHITECTURE` · `DATABASE` · `RUNTIME` · `RESILIENCE` ·
+`OBSERVABILITY` · `PRIVACY` · `QUALITY` · `DEPLOYMENT` · `BACKUP_RECOVERY` ·
+`DOCUMENTATION`
+
+Por que a contagem sozinha não bastava: um projeto com **0 crit e 0 high** pode
+rodar SQLite enquanto a infra declara PostgreSQL, não ter backup que alguém já
+tenha restaurado, e não ter rollback. Severidade agregada mede o que os checks
+**acharam** — não o que ficou por verificar.
+
+Três regras que decorrem disso:
+
+- Gate sem check executado é `NOT VERIFIED`, **não** `PASS`. Conta como warning
+  e só é dispensado por aceite assinado.
+- `BACKUP_RECOVERY` exige evidência de **restore**, não de backup.
+  `DEPLOYMENT` exige **rollback**.
+- Zero checks com resultado ⇒ `NO-GO`. Sem medição não há aprovação.
+
+A primeira pergunta é "achamos problema demais?". A segunda, "deixamos de olhar
+para alguma coisa?".
 
 ## Quando NÃO rodar
 
