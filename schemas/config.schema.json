@@ -114,7 +114,7 @@
           "documentation-live", "content-quality", "execution-report",
           "architect", "delivery-bundle",
           "project-bootstrap", "frontend-generator",
-          "risk-engine", "change-impact", "decision-log",
+          "risk-engine", "change-impact", "decision-log", "runtime-adversarial",
           "realtime", "search-quality", "push-notifications", "scheduled-jobs",
           "cdn-strategy", "chaos-engineering", "sbom-slsa",
           "mobile-native", "compliance-gdpr", "event-driven", "multi-region",
@@ -124,7 +124,7 @@
         ]
       },
       "default": [],
-      "description": "Agents que NÃO devem ser ativados (ex: projeto CLI-only pula 'frontend'). Lista alinhada com pipeline/MODULE-MAP.json (117 agentes em 19 módulos)."
+      "description": "Agents que NÃO devem ser ativados (ex: projeto CLI-only pula 'frontend'). Lista alinhada com pipeline/MODULE-MAP.json (115 agentes em 19 módulos)."
     },
     "branch": {
       "type": "string",

@@ -167,11 +167,12 @@ Incorpora conceitos do Sentinela — **conceito, não cópia de código**:
 - Testes vivos: SQLi, XSS, command injection, headers, CORS, cookies, `localStorage`/`sessionStorage`, exposição de config.
 - **Confronto**: para cada defesa que o SAST afirmou existir, o runtime confirma ou derruba. Divergência vira finding de severidade elevada — mentira do código é pior que ausência de defesa.
 
-**Arquivos**:
-- Novo `agents/runtime-adversarial.md`.
-- Estender `scripts/pentest-active.sh` com crawl autenticado (mantém o gate `.blindar/.accept-authorization`).
-- Novo `templates/checks/check-static-runtime-divergence.sh`.
-- `MODULE-MAP.json`: reforça módulos 18/19.
+**Arquivos** (entregue):
+- `agents/runtime-adversarial.md` — o confronto afirmação × prova.
+- `templates/checks/check-defense-theater.sh` — a metade **estática** do problema, que roda sem alvo: defesa desligada na própria declaração (`helmet({contentSecurityPolicy:false})`, `script-src 'unsafe-inline'`, `rejectUnauthorized:false`, JWT `alg:none`, CORS wildcard + credentials). Nomeado assim, e não `check-static-runtime-divergence`, porque não depende de runtime: divergência de runtime real é julgamento do agente, não de um grep.
+- `MODULE-MAP.json`: módulo 15 ganha `runtime-adversarial`.
+
+**Não feito, com motivo**: estender `scripts/pentest-active.sh` com crawling autenticado. Adicionar sessão autenticada a um script que dispara payloads aumenta o raio de alcance e exige os tokens do operador — é trabalho com humano no circuito, conduzido pelo agente, não algo para embutir num script que roda sem supervisão. Os quatro probes e os gates de autorização permanecem como estavam.
 
 **Trava**: nada disso roda contra host que não seja localhost/staging sem autorização explícita em arquivo. Mantém a política atual do módulo 19.
 
@@ -255,7 +256,7 @@ Só `chief-architect` é agente novo. Os demais são papéis atribuídos a agent
 | 2 DB Guardian + Parity | v0.52 | **Dor #1 do operador** | Baixo (aditivo) | 1 | ✅ entregue em v0.53.0 |
 | 3 Release Gates | v0.53 | "Pronto" sem estar pronto | Médio (muda termination) | 2 | ✅ entregue em v0.53.0 |
 | 4 Decision Log + Risk | v0.54 | Decisão desfeita / mudança cega | Baixo | 3 | ✅ entregue em v0.54.0 |
-| 5 Runtime/DAST | v0.55 | Código mente sobre defesa | Médio (falso positivo) | 3 | pendente |
+| 5 Runtime/DAST | v0.55 | Código mente sobre defesa | Médio (falso positivo) | 3 | ✅ entregue em v0.55.0 (crawling autenticado fora — ver nota) |
 | 6 Deployment/Ancorar | v0.56 | VPS implícita | Baixo | 3 | pendente |
 | 7 Hierarquia | v0.57 | Conflito sem árbitro | **Alto** (toca 111 arquivos) | 4 | pendente |
 | 8 Evidência/relatórios | v0.58 | Afirmação sem prova | Baixo | todas | pendente |
