@@ -26,10 +26,18 @@ const tmp = () => mkdtempSync(join(tmpdir(), 'logops-'));
 const jsonl = (dir, day) => readdirSync(join(dir, day)).filter((f) => f.endsWith('.jsonl'));
 const D = (s) => new Date(s);
 
+// Disco saudável INJETADO nos testes que exercitam escrita. Sem isto o teste lê
+// o disco da máquina: numa máquina quase cheia o guard de espaço desliga o sink
+// de arquivo, nada é escrito, e um teste de ROTAÇÃO falha com ENOENT — acusando
+// o código errado. Teste de rotação/redação não pode depender de quanto disco a
+// máquina tem sobrando. O caso de disco baixo tem seu próprio teste, que injeta
+// o valor baixo de propósito.
+const HEALTHY_DISK = () => ({ free: 64 * 1024 ** 3, total: 512 * 1024 ** 3 });
+
 // ── 1. rotação por tamanho ──────────────────────────────────────────────────
 {
   const dir = tmp();
-  const log = createLogger({ dir, service: 'api', maxBytes: 2000, compress: false, stdout: () => {}, now: () => D('2026-08-01T10:00:00Z') });
+  const log = createLogger({ dir, service: 'api', maxBytes: 2000, compress: false, stdout: () => {}, diskFree: HEALTHY_DISK, now: () => D('2026-08-01T10:00:00Z') });
   for (let i = 0; i < 120; i++) log('access', 'http.request.completed', { path: '/v1/orders', status: 200, i });
   log.flush();
   const files = jsonl(dir, '2026-08-01');
@@ -44,7 +52,7 @@ const D = (s) => new Date(s);
 {
   const dir = tmp();
   let clock = D('2026-08-01T23:59:59Z');
-  const log = createLogger({ dir, compress: false, stdout: () => {}, now: () => clock });
+  const log = createLogger({ dir, compress: false, stdout: () => {}, diskFree: HEALTHY_DISK, now: () => clock });
   log('app', 'order.created', { n: 1 });
   log.flush();
   clock = D('2026-08-02T00:00:01Z');
@@ -125,7 +133,7 @@ const D = (s) => new Date(s);
   const child = join(dir, 'child.mjs');
   writeFileSync(child, `
 import { createLogger } from ${JSON.stringify(pathToFileURL(LOGGER).href)};
-const log = createLogger({ dir: ${JSON.stringify(dir)}, compress: false, stdout: () => {}, now: () => new Date('2026-08-01T10:00:00Z') });
+const log = createLogger({ dir: ${JSON.stringify(dir)}, compress: false, stdout: () => {}, diskFree: () => ({ free: 64 * 1024 ** 3, total: 512 * 1024 ** 3 }), now: () => new Date('2026-08-01T10:00:00Z') });
 for (let i = 0; i < 200; i++) log('access', 'e', { i, pid: process.pid });
 log.flush();
 `);
@@ -152,7 +160,7 @@ log.flush();
   const ALLOW = new Set(['path', 'status', 'method', 'actor', 'ip_hash', 'ip_net', 'body_bytes', 'req_id']);
   const redact = (f) => Object.fromEntries(Object.entries(f).filter(([k]) => ALLOW.has(k)));
 
-  const log = createLogger({ dir, compress: false, redact, stdout: () => {}, now: () => D('2026-08-01T10:00:00Z') });
+  const log = createLogger({ dir, compress: false, redact, stdout: () => {}, diskFree: HEALTHY_DISK, now: () => D('2026-08-01T10:00:00Z') });
 
   // Fluxo real: request autenticada com header, body, cookie, CPF e cartão.
   const CPF = '529.982.247-25', CARD = '4111111111111111';
