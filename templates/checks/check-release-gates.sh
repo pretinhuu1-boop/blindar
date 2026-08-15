@@ -76,7 +76,8 @@ gate_of() {
     check-i18n-tz|check-datetime-tz|check-seo-marketing-meta|check-pwa-installable|\
     check-session-timeout-ux|check-lighthouse|check-bundle-size|check-govtech-acessibilidade)
       echo "QUALITY" ;;
-    check-environment-parity|check-deps-sync|check-cdn-strategy|check-patch-management)
+    check-environment-parity|check-deps-sync|check-cdn-strategy|check-patch-management|\
+    check-vps-readiness)
       echo "DEPLOYMENT" ;;
     check-backup-recovery)
       echo "BACKUP_RECOVERY" ;;

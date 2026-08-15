@@ -93,6 +93,7 @@ PAIRS=(
   "check-destructive-migration.sh | project-destrmig-bad   | project-destrmig-good"
   "check-decision-log.sh         | project-adr-bad         | project-adr-good"
   "check-defense-theater.sh      | project-theater-bad     | project-theater-good"
+  "check-vps-readiness.sh        | project-vps-bad         | project-vps-good"
   # blindar-learn:insert (mantenha — scripts/blindar-learn.sh insere novos pares acima desta linha)
 )
 

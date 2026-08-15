@@ -196,8 +196,8 @@ Grava `.blindar/config.yml` com as escolhas. Pula automaticamente em
 | 18 | Smoke / Runtime Truth + checks de infra (prova que a app SOBE) | sempre (self-skip sem docker/URL) | [`smoke-runtime`](agents/smoke-runtime.md) + 9 checks de infra/runtime |
 | 19 | Pentest ATIVO — payloads reais (requer `.blindar/.accept-authorization`) | só com autorização | [`pentest-active`](agents/pentest-active.md) |
 
-> **Total**: 115 agentes em 19 módulos (88 checks determinísticos + 14 API-wrapped = 102 `check-*.sh`, + playbooks).
-> Contagem verificada por `ls agents/*.md` e `ls templates/checks/check-*.sh` em v0.55 —
+> **Total**: 116 agentes em 19 módulos (89 checks determinísticos + 14 API-wrapped = 103 `check-*.sh`, + playbooks).
+> Contagem verificada por `ls agents/*.md` e `ls templates/checks/check-*.sh` em v0.56 —
 > os números anteriores (118/81) tinham derivado do real.
 > Fonte da verdade: [`pipeline/MODULE-MAP.json`](pipeline/MODULE-MAP.json).
 
@@ -265,6 +265,7 @@ crit não-confirmado) — não bypassa qualidade.
 | 5 — Adversarial review | [`pipeline/05-adversarial-review.md`](pipeline/05-adversarial-review.md) | ~10 min (a cada 10 rounds) |
 | 6 — Production checklist | [`pipeline/06-production-checklist.md`](pipeline/06-production-checklist.md) | ~3 min |
 | **6b — Release gates** ⭐ v0.53 | [`pipeline/06b-release-gates.md`](pipeline/06b-release-gates.md) | ~1 min |
+| **10 — Alvo de deploy** ⭐ v0.56 | [`pipeline/10-deployment-target.md`](pipeline/10-deployment-target.md) | ~2 min |
 | 7 — Relatório final | [`pipeline/07-final-report.md`](pipeline/07-final-report.md) | ~2 min |
 | 8 — **Maintenance** (opt-in, trimestral) | [`pipeline/08-maintenance.md`](pipeline/08-maintenance.md) | ~5 min |
 | 9 — **Drift detection** (subfase de 8) | [`pipeline/09-drift-detection.md`](pipeline/09-drift-detection.md) | ~3 min |

@@ -257,7 +257,7 @@ Só `chief-architect` é agente novo. Os demais são papéis atribuídos a agent
 | 3 Release Gates | v0.53 | "Pronto" sem estar pronto | Médio (muda termination) | 2 | ✅ entregue em v0.53.0 |
 | 4 Decision Log + Risk | v0.54 | Decisão desfeita / mudança cega | Baixo | 3 | ✅ entregue em v0.54.0 |
 | 5 Runtime/DAST | v0.55 | Código mente sobre defesa | Médio (falso positivo) | 3 | ✅ entregue em v0.55.0 (crawling autenticado fora — ver nota) |
-| 6 Deployment/Ancorar | v0.56 | VPS implícita | Baixo | 3 | pendente |
+| 6 Deployment/Ancorar | v0.56 | VPS implícita | Baixo | 3 | ✅ entregue em v0.56.0 |
 | 7 Hierarquia | v0.57 | Conflito sem árbitro | **Alto** (toca 111 arquivos) | 4 | pendente |
 | 8 Evidência/relatórios | v0.58 | Afirmação sem prova | Baixo | todas | pendente |
 
