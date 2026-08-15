@@ -3,6 +3,8 @@ name: deployment-readiness
 category: devops
 module: 14
 priority: P1
+lead: platform-lead
+authority: plan
 description: |
   Define o ESTADO DESEJADO de deploy e emite .blindar/deployment-plan.json como artefato passivo de handoff. Não executa deploy e não invoca provider — o blindar diz o que precisa estar verdadeiro; quem realiza é outra ferramenta.
 ---

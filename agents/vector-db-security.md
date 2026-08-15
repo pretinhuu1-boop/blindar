@@ -3,6 +3,8 @@ name: vector-db-security
 category: core
 module: 2
 priority: P0
+lead: ai-lead
+authority: implement
 description: |
   Avalia segurança de vector databases (chromadb, pinecone, weaviate,
   pgvector, qdrant, milvus): isolamento por tenant em embeddings, PII

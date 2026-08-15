@@ -3,6 +3,8 @@ name: feature-flags
 category: devops
 module: 14
 priority: P1
+lead: platform-lead
+authority: implement
 description: |
   Sistema de feature flags estruturado: rollout gradual (%), kill switch
   (desliga feature em prod em 5s), A/B testing, flags por tenant/role/

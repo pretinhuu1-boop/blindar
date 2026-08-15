@@ -3,6 +3,8 @@ name: api-surface-isolation
 category: core
 module: 4
 priority: P0
+lead: security-lead
+authority: implement
 description: |
   API interna NUNCA aceita chamada externa; API externa com proteção total.
   Usa o grafo (surface.external × surface.internal) pra classificar e cobrar

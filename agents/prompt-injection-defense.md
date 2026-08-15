@@ -3,6 +3,8 @@ name: prompt-injection-defense
 category: core
 module: 2
 priority: P0
+lead: ai-lead
+authority: implement
 description: |
   OWASP LLM01 — Prompt Injection. Detecta system prompts concatenados com
   user input sem delimitadores, falta de sanitização, ausência de

@@ -3,6 +3,8 @@ name: mcp-recommender
 category: dx
 module: 14
 priority: P2
+lead: platform-lead
+authority: read-only
 description: |
   Detecta stack do projeto e sugere MCPs (Model Context Protocol servers)
   alinhados com a stack + filosofia blindar. NUNCA instala silencioso —

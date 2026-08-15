@@ -3,6 +3,8 @@ name: functional-e2e
 category: functional
 module: 11
 priority: P0
+lead: qa-lead
+authority: validate
 description: |
   Garante que todo botão, formulário, rota, dropdown e link do projeto
   funciona ponta-a-ponta com dados REAIS (não mock). Gera Playwright specs

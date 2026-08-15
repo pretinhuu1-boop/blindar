@@ -3,6 +3,8 @@ name: multi-region
 category: resilience
 module: 7
 priority: P2
+lead: data-lead
+authority: implement
 description: |
   DR/HA multi-region: active-passive vs active-active, replicação
   cross-region, failover DNS (Route53 health checks / Cloudflare),

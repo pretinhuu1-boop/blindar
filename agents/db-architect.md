@@ -3,6 +3,8 @@ name: db-architect
 category: data
 modules: [7, 9]
 priority: P0
+lead: data-lead
+authority: implement
 description: |
   Cobre todo o ciclo de vida do banco: schema, índices, migrations
   zero-downtime, N+1, RLS multi-tenant, audit/soft-delete obrigatórios,

@@ -3,6 +3,8 @@ name: audio-voice
 category: frontend
 module: 10
 priority: P2
+lead: frontend-lead
+authority: implement
 description: |
   Apps com áudio/voz: STT (Whisper/Deepgram), TTS (ElevenLabs/Azure),
   voice commands, gravação no browser (MediaRecorder), PTT (push-to-

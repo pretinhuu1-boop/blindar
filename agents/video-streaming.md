@@ -3,6 +3,8 @@ name: video-streaming
 category: frontend
 module: 10
 priority: P2
+lead: frontend-lead
+authority: implement
 description: |
   Vídeo: HLS adaptive bitrate, transcoding pipeline (FFmpeg / Mux /
   Cloudflare Stream), WebRTC pra live, picture-in-picture, thumbnails,

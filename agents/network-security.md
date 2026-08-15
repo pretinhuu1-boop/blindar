@@ -3,6 +3,8 @@ name: network-security
 category: security
 module: 4
 priority: P0
+lead: security-lead
+authority: implement
 description: |
   WAF (Cloudflare/Vercel/AWS WAF), rate limit por IP+user, headers HTTP de segurança (HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy), IaC Security Groups. Cobre técnicas #3 e #8.
 ---

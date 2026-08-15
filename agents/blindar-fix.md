@@ -3,6 +3,8 @@ name: blindar-fix
 category: meta
 module: 14
 priority: P1
+lead: release-lead
+authority: implement
 description: |
   Killer feature do blindar: pega um finding já reportado por outro agente,
   chama Claude API pra gerar patch unified diff + teste regression + cria

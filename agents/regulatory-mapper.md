@@ -3,6 +3,8 @@ name: regulatory-mapper
 category: vertical
 module: 8
 priority: P1
+lead: privacy-lead
+authority: implement
 description: |
   Mapeia normas/leis/NRs/regras que fazem sentido para ESTE projeto (setor +
   dados + geografia) e o que precisa seguir. Não despeja tudo — só o aplicável.

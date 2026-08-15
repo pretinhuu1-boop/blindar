@@ -3,6 +3,8 @@ name: fintech-banking-br
 category: vertical
 module: 8
 priority: P0
+lead: product-lead
+authority: implement
 description: |
   Fintech/banking Brasil — moat regulatório real. Cobre PIX (DICT, MED,
   QR estático/dinâmico, idempotência via endToEndId, limites noturnos),

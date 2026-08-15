@@ -3,6 +3,8 @@ name: chaos-engineering
 category: resilience
 module: 13
 priority: P2
+lead: sre-lead
+authority: implement
 description: |
   Resiliência testada de VERDADE. Derruba propositalmente DB, cache,
   network, dependência externa em ambiente controlado e mede se sistema

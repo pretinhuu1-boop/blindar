@@ -3,6 +3,8 @@ name: devops
 category: dx
 module: 14
 priority: P1
+lead: platform-lead
+authority: implement
 description: |
   CI/CD, boot scripts, .env.example sincronizado, GitHub Actions pinned por SHA, deploy scripts, healthchecks em container, secrets via vault não em código.
 ---

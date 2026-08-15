@@ -3,6 +3,8 @@ name: mlops
 category: ai
 module: 2
 priority: P2
+lead: ai-lead
+authority: implement
 description: |
   Quem treina modelo próprio (não LLM API): training pipeline com
   reprodutibilidade (DVC/MLflow), model registry versionado, A/B rollout

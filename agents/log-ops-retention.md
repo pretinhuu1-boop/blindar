@@ -3,6 +3,8 @@ name: log-ops-retention
 category: ops
 module: 6
 priority: P1
+lead: privacy-lead
+authority: implement
 description: |
   Ciclo de vida do log EM DISCO: pasta por dia UTC, rotação por tamanho, um arquivo por processo, streams separados por finalidade, retenção escalonada com guardas de exclusão, guarda de disco cheio, permissões e volume persistente. Herda envelope/correlação de observability e redação de runtime-secrets — não redefine nenhum dos dois.
 ---

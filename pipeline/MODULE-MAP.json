@@ -1,7 +1,7 @@
 {
   "$schema": "https://github.com/pretinhuu1-boop/blindar/blob/main/schemas/module-map.schema.json",
-  "version": "0.56.0",
-  "description": "Mapa estruturado dos 19 módulos do launcher → agentes ativados → fases onde rodam. Consumido pelas Fases 02 (discovery), 04 (rounds-loop) e 06 (production-checklist) pra filtrar agentes pelo array config.selected_modules. v0.45: +graph-builder (m1), +módulo 18 (smoke/runtime truth + homolog-only). v0.52: +db-migration-guardian e +environment-parity (m7) — prova de que migração de engine chegou ao runtime e que os ambientes não divergem. v0.54: +risk-engine, +change-impact, +decision-log (m14) — governança de mudança: classe de risco pausa o modo AUTO, e decisão arquitetural fica registrada e versionada. v0.55: +runtime-adversarial (m15) — confronta defesa declarada no código com defesa provada em runtime. v0.56: +deployment-readiness (m14) — estado desejado de deploy como artefato passivo; blindar define, provider externo executa.",
+  "version": "0.57.0",
+  "description": "Mapa estruturado dos 19 módulos do launcher → agentes ativados → fases onde rodam. Consumido pelas Fases 02 (discovery), 04 (rounds-loop) e 06 (production-checklist) pra filtrar agentes pelo array config.selected_modules. v0.45: +graph-builder (m1), +módulo 18 (smoke/runtime truth + homolog-only). v0.52: +db-migration-guardian e +environment-parity (m7) — prova de que migração de engine chegou ao runtime e que os ambientes não divergem. v0.54: +risk-engine, +change-impact, +decision-log (m14) — governança de mudança: classe de risco pausa o modo AUTO, e decisão arquitetural fica registrada e versionada. v0.55: +runtime-adversarial (m15) — confronta defesa declarada no código com defesa provada em runtime. v0.56: +deployment-readiness (m14) — estado desejado de deploy como artefato passivo; blindar define, provider externo executa. v0.57: +chief-architect (m14, arbitra leads), e adoção de infra-runtime (m18) e race-fuzzing (m15), que tinham playbook mas nenhum módulo os ativava — nunca rodavam.",
   "modules": {
     "1": {
       "name": "Baseline & Discovery",
@@ -281,7 +281,8 @@
         "risk-engine",
         "change-impact",
         "decision-log",
-        "deployment-readiness"
+        "deployment-readiness",
+        "chief-architect"
       ],
       "phases": [
         "03-bootstrap-sec-html",
@@ -299,7 +300,8 @@
         "adversarial-reviewer",
         "wave-guardian",
         "proactive-analysis",
-        "runtime-adversarial"
+        "runtime-adversarial",
+        "race-fuzzing"
       ],
       "phases": [
         "05-adversarial-review",
@@ -352,7 +354,8 @@
         "alembic-health",
         "notnull-no-default",
         "ratelimit-response",
-        "infra-windows"
+        "infra-windows",
+        "infra-runtime"
       ],
       "phases": [
         "04-rounds-loop",

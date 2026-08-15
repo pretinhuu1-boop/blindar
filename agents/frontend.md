@@ -3,6 +3,8 @@ name: frontend
 category: security
 module: 3
 priority: P0
+lead: security-lead
+authority: implement
 description: |
   Hardening de SPA/SSR: CSP estrita, XSS protection, Trusted Types, SRI em scripts externos, cookies HttpOnly+Secure+SameSite=Strict, Referrer-Policy.
 ---

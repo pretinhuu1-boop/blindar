@@ -3,6 +3,8 @@ name: gitleaks
 category: core
 module: 2
 priority: P0
+lead: security-lead
+authority: implement
 description: |
   Secrets detection profissional via Gitleaks — wrapper sobre o binário oficial
   com fallback documentado pra check-secrets-rotation.sh quando ausente. Cobre

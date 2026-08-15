@@ -3,6 +3,8 @@ name: process-resilience
 category: resilience
 module: 13
 priority: P0
+lead: sre-lead
+authority: implement
 description: |
   Garante que processo/sistema/banco NÃO TRAVA nunca. Cobre 7 vetores:
   health checks (live/ready/deep), graceful shutdown (drain + finish),

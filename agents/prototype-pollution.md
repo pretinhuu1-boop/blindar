@@ -3,6 +3,8 @@ name: prototype-pollution
 category: security
 module: 2
 priority: P1
+lead: security-lead
+authority: implement
 description: |
   Detecta prototype pollution em JS/TS — escrita em __proto__/constructor.
   prototype e merge recursivo caseiro que não bloqueia chaves perigosas.

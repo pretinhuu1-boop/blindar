@@ -3,6 +3,8 @@ name: visual-regression
 category: quality
 module: 11
 priority: P2
+lead: qa-lead
+authority: validate
 description: |
   Chromatic/Percy/Playwright snapshots como gate de CI: detecta diff de
   pixel em UI, baseline gating (PR aprovado antes de merge), review

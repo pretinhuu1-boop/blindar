@@ -3,6 +3,8 @@ name: risk-engine
 category: meta
 module: 14
 priority: P0
+lead: chief-architect
+authority: gate
 description: |
   Classifica cada round em LOW/MEDIUM/HIGH/CRITICAL por dado afetado × reversibilidade × ambiente × downtime. HIGH e CRITICAL pausam e pedem autorização MESMO em modo AUTO — autonomia total nunca significou permissão para destruir dado.
 ---

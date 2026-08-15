@@ -3,6 +3,8 @@ name: observability
 category: ops
 module: 6
 priority: P0
+lead: sre-lead
+authority: implement
 description: |
   Logs estruturados (JSON), métricas (Prometheus/OpenTelemetry), tracing distribuído (W3C), audit trail imutável com hash chain. Cobre técnica #7. SLI/SLO definidos.
 ---

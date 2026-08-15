@@ -3,6 +3,8 @@ name: documentation-live
 category: dx
 module: 14
 priority: P2
+lead: release-lead
+authority: implement
 description: |
   Documentação que MORRE com o código (gerada/sincronizada, não escrita
   à mão e esquecida). Cobre: API docs interactive (Redoc/Scalar do

@@ -196,8 +196,8 @@ Grava `.blindar/config.yml` com as escolhas. Pula automaticamente em
 | 18 | Smoke / Runtime Truth + checks de infra (prova que a app SOBE) | sempre (self-skip sem docker/URL) | [`smoke-runtime`](agents/smoke-runtime.md) + 9 checks de infra/runtime |
 | 19 | Pentest ATIVO — payloads reais (requer `.blindar/.accept-authorization`) | só com autorização | [`pentest-active`](agents/pentest-active.md) |
 
-> **Total**: 116 agentes em 19 módulos (89 checks determinísticos + 14 API-wrapped = 103 `check-*.sh`, + playbooks).
-> Contagem verificada por `ls agents/*.md` e `ls templates/checks/check-*.sh` em v0.56 —
+> **Total**: 117 agentes em 19 módulos (90 checks determinísticos + 14 API-wrapped = 104 `check-*.sh`, + playbooks).
+> Contagem verificada por `ls agents/*.md` e `ls templates/checks/check-*.sh` em v0.58 —
 > os números anteriores (118/81) tinham derivado do real.
 > Fonte da verdade: [`pipeline/MODULE-MAP.json`](pipeline/MODULE-MAP.json).
 
@@ -277,6 +277,51 @@ Pipelines alternativos (não numerados — substituem o fluxo acima conforme o
 |---|---|---|
 | **GREENFIELD** ⭐ v0.51 | [`pipeline/GREENFIELD.md`](pipeline/GREENFIELD.md) | `operation_mode: greenfield` |
 | **RECOVERY** ⭐ v0.51 | [`pipeline/RECOVERY.md`](pipeline/RECOVERY.md) | `operation_mode: recovery` |
+
+## Hierarquia de agentes (⭐ v0.57)
+
+117 especialistas chapados não convergem sozinhos: cada um está certo dentro do
+próprio escopo e cego fora dele. `performance` quer Redis; `security` exige
+Redis com auth, TLS e rede isolada; `db-architect` argumenta que o índice que
+falta resolve o mesmo problema sem introduzir serviço. Nenhum está errado — e
+sem árbitro vence quem rodou por último.
+
+Cada `agents/*.md` declara `lead:` e `authority:` no frontmatter. É **camada de
+metadata**: nenhum arquivo foi movido, nenhum agente foi fundido.
+
+| Lead | Agentes | Lead | Agentes |
+|---|---|---|---|
+| `security-lead` | 20 | `runtime-lead` | 8 |
+| `chief-architect` | 16 | `platform-lead` | 7 |
+| `frontend-lead` | 16 | `data-lead` | 7 |
+| `sre-lead` | 12 | `privacy-lead` | 7 |
+| `product-lead` | 10 | `ai-lead` | 6 |
+| `release-lead` | 5 | `qa-lead` | 3 |
+
+[`chief-architect`](agents/chief-architect.md) arbitra entre os leads, por
+precedência declarada: perda de dado > segurança > reversibilidade >
+simplicidade operacional > o que já existe. Ele **não implementa**.
+
+### Autoridade
+
+| `authority` | Pode | Agentes |
+|---|---|---|
+| `read-only` | só analisar | 4 |
+| `plan` | planejar | 6 |
+| `implement` | alterar código | 92 |
+| `validate` | testar | 4 |
+| `adversary` | tentar quebrar | 7 |
+| `gate` | **bloquear entrega, sem editar** | 4 |
+
+`gate` é exceção por construção — se quase todo agente pode bloquear, ninguém
+bloqueia de fato. Somar autoridade de decisão à de execução é como uma decisão
+ruim vira fato consumado antes de ser revista.
+
+Validado por [`tests/agents-registry.test.mjs`](tests/agents-registry.test.mjs)
+nos dois sentidos: toda entrada do `MODULE-MAP` resolve para playbook ou check,
+e todo playbook é ativado por algum módulo. Metadata que ninguém valida
+apodrece em silêncio — o teste nasceu achando 2 agentes sem frontmatter e 2
+playbooks que nenhum módulo executava.
 
 ## Roster de agentes
 
@@ -499,6 +544,24 @@ Três regras que decorrem disso:
 
 A primeira pergunta é "achamos problema demais?". A segunda, "deixamos de olhar
 para alguma coisa?".
+
+## Princípio de evidência (⭐ v0.57)
+
+Toda afirmação precisa de onde ser verificada. Não "PostgreSQL está
+configurado", mas "PostgreSQL em `docker-compose.yml:3`, usado por
+`src/db.ts:1`, migration `002`, conexão confirmada em `pg_stat_activity`".
+
+Verificável na fonte por
+[`check-evidence.sh`](templates/checks/check-evidence.sh), antes de virar
+prosa: achado `crit`/`high` precisa de `file`; gate precisa de `evidence`.
+Achado de runtime é a exceção — a prova dele é a **medição**, não a
+localização.
+
+O relatório final (Fase 07) passa a exigir também: modo de operação usado com
+a evidência que o produziu, os 11 gates com evidência, gates pulados por modo
+nomeados, decisões arquiteturais do ciclo, e **o que não foi alterado e por
+quê** — sem essa última, "não aparece no relatório" se confunde com "não
+existe".
 
 ## Quando NÃO rodar
 

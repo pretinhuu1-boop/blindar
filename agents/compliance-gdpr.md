@@ -3,6 +3,8 @@ name: compliance-gdpr
 category: compliance
 module: 8
 priority: P1
+lead: privacy-lead
+authority: implement
 description: |
   GDPR (UE) — cobre 6 requisitos não-óbvios além do "consent banner":
   legal basis documentado por processamento, ROPA (Record of Processing

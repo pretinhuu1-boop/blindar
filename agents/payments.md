@@ -3,6 +3,8 @@ name: payments
 category: payments
 module: 4
 priority: P0
+lead: product-lead
+authority: implement
 description: |
   Receber dinheiro sem perder dinheiro nem cobrar duas vezes. Cobre:
   idempotency keys obrigatórias, webhook HMAC + replay protection +

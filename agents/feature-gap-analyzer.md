@@ -3,6 +3,8 @@ name: feature-gap-analyzer
 category: evolution
 module: 16
 priority: P1
+lead: product-lead
+authority: implement
 description: |
   Identifica features parciais: existe schema mas não tem endpoint;
   existe endpoint mas não tem UI; existe UI mas falta validação/feedback;

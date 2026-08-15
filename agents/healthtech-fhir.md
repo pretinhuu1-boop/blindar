@@ -3,6 +3,8 @@ name: healthtech-fhir
 category: vertical
 module: 8
 priority: P0
+lead: product-lead
+authority: implement
 description: |
   Healthtech BR/global com padrões FHIR R4/R5, HL7 v2, prontuário
   eletrônico (PEP/EHR), CFM 1821/2299 (telemedicina), LGPD art. 11

@@ -3,6 +3,8 @@ name: responsive-a11y
 category: frontend
 module: 10
 priority: P1
+lead: frontend-lead
+authority: implement
 description: |
   Garante que a UI funciona em mobile/tablet/desktop, atende WCAG AA,
   passa nos Core Web Vitals e tem fluidez (animações ≤300ms, sem layout

@@ -3,6 +3,8 @@ name: execution-report
 category: reporting
 module: 14
 priority: P2
+lead: release-lead
+authority: read-only
 description: |
   Mantém `blindar-report.html` na raiz do projeto: relatório cumulativo
   de tudo que blindar fez, agrupado por timeline / módulo / agente.

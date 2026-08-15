@@ -3,6 +3,8 @@ name: rag-quality
 category: core
 module: 2
 priority: P1
+lead: ai-lead
+authority: implement
 description: |
   Avalia qualidade de pipelines RAG (Retrieval-Augmented Generation):
   chunking strategy, embedding model fit, retrieval precision/recall,

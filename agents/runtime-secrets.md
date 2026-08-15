@@ -3,6 +3,8 @@ name: runtime-secrets
 category: security
 module: 2
 priority: P0
+lead: security-lead
+authority: implement
 description: |
   Secrets em runtime: nunca em log (greps em logger.info/error), nunca em memória além do necessário, redaction automático em error.stack, env vars carregadas via dotenv-safe, rotação programada.
 ---

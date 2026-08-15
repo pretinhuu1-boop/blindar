@@ -258,8 +258,8 @@ Só `chief-architect` é agente novo. Os demais são papéis atribuídos a agent
 | 4 Decision Log + Risk | v0.54 | Decisão desfeita / mudança cega | Baixo | 3 | ✅ entregue em v0.54.0 |
 | 5 Runtime/DAST | v0.55 | Código mente sobre defesa | Médio (falso positivo) | 3 | ✅ entregue em v0.55.0 (crawling autenticado fora — ver nota) |
 | 6 Deployment/Ancorar | v0.56 | VPS implícita | Baixo | 3 | ✅ entregue em v0.56.0 |
-| 7 Hierarquia | v0.57 | Conflito sem árbitro | **Alto** (toca 111 arquivos) | 4 | pendente |
-| 8 Evidência/relatórios | v0.58 | Afirmação sem prova | Baixo | todas | pendente |
+| 7 Hierarquia | v0.57 | Conflito sem árbitro | **Alto** (toca 117 arquivos) | 4 | ✅ entregue em v0.57.0 — metadata, sem mover arquivo |
+| 8 Evidência/relatórios | v0.58 | Afirmação sem prova | Baixo | todas | ✅ entregue em v0.58.0 |
 
 As Fases 1–3 saíram numa única release (v0.53.0) por serem interdependentes: os
 gates da Fase 3 consomem os checks da Fase 2, que mudam de comportamento

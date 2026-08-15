@@ -3,6 +3,8 @@ name: resilience
 category: resilience
 module: 13
 priority: P0
+lead: sre-lead
+authority: implement
 description: |
   Circuit breakers (opossum), bulkheads, thread pools, retry com backoff exponencial + jitter, timeouts em chamadas externas, graceful degradation quando dependência cai.
 ---

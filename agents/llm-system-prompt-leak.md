@@ -3,6 +3,8 @@ name: llm-system-prompt-leak
 category: security
 module: 2
 priority: P1
+lead: security-lead
+authority: implement
 description: |
   OWASP LLM07 — System Prompt Leakage. Detecta system prompt devolvido em
   resposta HTTP ou logado, expondo instruções internas (que viram munição

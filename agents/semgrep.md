@@ -3,6 +3,8 @@ name: semgrep
 category: core
 module: 2
 priority: P0
+lead: security-lead
+authority: implement
 description: |
   SAST profundo via Semgrep CLI. Wrapper que invoca regras OWASP, secrets,
   injection patterns e converte achados para o formato blindar (severity

@@ -3,6 +3,8 @@ name: search-quality
 category: frontend
 module: 10
 priority: P1
+lead: frontend-lead
+authority: implement
 description: |
   Busca interna que funciona: Meilisearch/Algolia/pg_trgm com relevância
   por pesos, autocomplete debounced, sync lag < 5s, faceted filters,

@@ -3,6 +3,8 @@ name: backup-recovery
 category: data
 module: 7
 priority: P0
+lead: data-lead
+authority: implement
 description: |
   Backup automatizado + restore testado mensalmente (drill real, não só backup). Cobre técnica #6 do baseline. PITR Postgres, cross-region replication, retention policy, encryption at-rest, runbook documentado.
 ---

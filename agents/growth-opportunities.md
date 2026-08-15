@@ -3,6 +3,8 @@ name: growth-opportunities
 category: evolution
 module: 16
 priority: P2
+lead: product-lead
+authority: implement
 description: |
   Lista features que fariam sentido existir baseado em best practices,
   concorrência, retenção, automação, IA, mobile, APIs públicas. Não cobre

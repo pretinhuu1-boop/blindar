@@ -3,6 +3,8 @@ name: queue-management
 category: core
 module: 13
 priority: P1
+lead: sre-lead
+authority: implement
 description: |
   Tudo que é assíncrono/pesado passa por fila: backpressure, DLQ, retry com
   backoff e idempotência. Nada de trabalho pesado inline travando o request.

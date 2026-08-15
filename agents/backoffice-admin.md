@@ -3,6 +3,8 @@ name: backoffice-admin
 category: devops
 module: 14
 priority: P2
+lead: platform-lead
+authority: implement
 description: |
   Backoffice/admin tools como feature de primeira classe (não rota
   escondida sem auth). Cobre: impersonation auditada (entrar como user

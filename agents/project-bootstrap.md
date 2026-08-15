@@ -3,6 +3,8 @@ name: project-bootstrap
 category: scaffolding
 module: 14
 priority: P1
+lead: chief-architect
+authority: plan
 description: |
   Cria projeto novo do ZERO. Pergunta tipo (SaaS/MVP/API/Mobile/Landing/
   Lib), escolhe stack baseada em respostas (Next.js 15+NestJS+Postgres,

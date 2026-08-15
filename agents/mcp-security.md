@@ -3,6 +3,8 @@ name: mcp-security
 category: core
 module: 2
 priority: P0
+lead: security-lead
+authority: implement
 description: |
   Audita segurança dos MCPs JÁ CONECTADOS (diferente de mcp-recommender
   que SUGERE). Cobre capability bleed, prompt injection via tool output,

@@ -3,6 +3,8 @@ name: proactive-analysis
 category: meta
 module: 15
 priority: P0
+lead: product-lead
+authority: read-only
 description: |
   Agente consultivo que roda AUTOMATICAMENTE ao final do orquestrador
   (blindar-run.sh) e gera relatório proativo nas 8 dimensões obrigatórias:

@@ -3,6 +3,100 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.58.0] — 2026-08-15
+
+Fase 8 e última do plano EOS: princípio de evidência. Toda afirmação passa a
+precisar de onde ser verificada.
+
+### O gate
+
+Escrever "cite arquivo, linha, comando" numa diretriz é fácil de esquecer.
+**`check-evidence.sh`** (novo) torna a regra verificável **na fonte**, antes de
+virar prosa: achado `crit`/`high` precisa de `file` preenchido, e todo gate da
+Fase 06b precisa de `evidence`.
+
+Como o `check-termination.sh` e o `check-release-gates.sh`, é um decisor — não
+chama `emit_result` e por isso fica fora do denominador de cobertura.
+
+### O gate corrigiu a própria regra na primeira execução
+
+A primeira versão exigia `file` de **todo** achado `crit`/`high`. Rodando
+contra os results reais, reprovou o `check-load-test`: *"erro de 100% acima do
+SLO de 5% com 10 concorrentes"*.
+
+Esse achado não tem arquivo **por natureza** — é medição de runtime, e a
+medição já é a evidência completa. A regra estava reprovando justamente o
+achado mais concreto do relatório. Passou a distinguir as duas formas de
+"onde verificar": achado estático aponta arquivo; achado de runtime aponta
+medição.
+
+### Relatório final
+
+A Fase 07 passa a exigir, além do que já pedia:
+
+- modo de operação usado **e a evidência que o produziu**;
+- os 11 gates com a coluna de evidência e o veredito;
+- **gates pulados por modo, nomeados** — gate pulado em silêncio é
+  indistinguível de gate aprovado;
+- decisões arquiteturais do ciclo;
+- **o que NÃO foi alterado, e por quê** — a seção que mais falta e a que o
+  próximo leitor mais precisa: sem ela, "não aparece no relatório" se confunde
+  com "não existe".
+
+Com isto o plano `docs/PLANO-EOS.md` está completo: 8 fases, v0.51 → v0.58.
+
+## [0.57.0] — 2026-08-15
+
+Fase 7 do plano EOS: hierarquia de agentes. A de maior risco do plano, feita
+como **camada de metadata** — nenhum arquivo movido, nenhum agente fundido,
+nenhuma renomeação.
+
+### O problema
+
+117 especialistas chapados não convergem sozinhos. Cada um está certo dentro do
+próprio escopo e cego fora dele: `performance` quer Redis; `security` exige
+Redis com auth, TLS e rede isolada; `db-architect` argumenta que o índice que
+falta resolve o mesmo problema sem introduzir serviço. Nenhum está errado — e
+sem árbitro vence quem rodou por último.
+
+### `lead` e `authority` no frontmatter
+
+Os 117 agentes passam a declarar `lead:` (quem arbitra) e `authority:` (o que
+pode fazer). 12 leads; `security-lead` governa 20 agentes, `qa-lead` 3.
+
+`authority` ∈ `read-only | plan | implement | validate | adversary | gate`.
+`gate` bloqueia entrega e **não edita** — somar autoridade de decisão à de
+execução é como uma decisão ruim vira fato consumado antes de ser revista. São
+4 agentes com `gate`, e o teste reprova se virarem maioria: se quase todo mundo
+pode bloquear, ninguém bloqueia de fato.
+
+- **`agents/chief-architect.md`** (novo, `authority: gate`): arbitra entre leads
+  por precedência declarada — perda de dado > segurança > reversibilidade >
+  simplicidade operacional > o que já existe. Não implementa.
+
+### O teste encontrou quatro buracos que existiam em silêncio
+
+**`tests/agents-registry.test.mjs`** (novo) valida o registro nos dois sentidos
+e já nasceu achando:
+
+1. `attack-recon.md` e `race-fuzzing.md` sem **nenhum** frontmatter.
+2. `infra-runtime` e `race-fuzzing` eram playbooks que **nenhum módulo
+   ativava** — escritos, mantidos e nunca executados.
+3. `chief-architect` fora do `MODULE-MAP` (recém-criado).
+4. `db-architect` não declarava `module` — usa `modules: [7, 9]`, porque
+   pertence a dois de verdade. Aqui **o teste é que estava errado**: exigia a
+   forma singular e reprovaria um frontmatter correto. Passou a aceitar as duas.
+
+As 11 entradas do `MODULE-MAP` sem arquivo `.md` (`trivy`, `osv-scanner`,
+`entrypoint-cmd`…) são legítimas: checks determinísticos puros, unidades
+executáveis sem playbook. O teste exige que toda entrada resolva para **playbook
+ou check**, não para playbook.
+
+### Outros
+
+- Módulos 14, 15 e 18 adotam os órfãos. `SKILL.md` ganha a seção de hierarquia.
+- `SKILL.md`: 117 agentes / 103 `check-*.sh`.
+
 ## [0.56.0] — 2026-08-15
 
 Fase 6 do plano EOS: alvo de deploy. O `blindar` passa a definir **estado

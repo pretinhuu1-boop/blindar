@@ -3,6 +3,8 @@ name: onboarding-ux
 category: frontend
 module: 10
 priority: P1
+lead: frontend-lead
+authority: implement
 description: |
   Primeiros 5 minutos do usuário decidem retenção. Cobre: signup curto,
   empty states ricos (não tela branca), tour guiado contextual (não modal

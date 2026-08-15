@@ -3,6 +3,8 @@ name: patch-management
 category: security
 module: 5
 priority: P0
+lead: security-lead
+authority: implement
 description: |
   CVE feed monitorado (NVD/OSV), Renovate/Dependabot configurado, SLA por severity (crit ≤ 24h, high ≤ 7d), OS/runtime atualizados. Cobre técnica #5.
 ---

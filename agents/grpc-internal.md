@@ -3,6 +3,8 @@ name: grpc-internal
 category: api
 module: 4
 priority: P2
+lead: chief-architect
+authority: implement
 description: |
   gRPC para comunicação interna entre microservices: Protobuf como
   contrato versionado, streaming bidirecional, deadline obrigatório,

@@ -3,6 +3,8 @@ name: push-notifications
 category: frontend
 module: 10
 priority: P1
+lead: frontend-lead
+authority: implement
 description: |
   Web Push (VAPID) + FCM (Android) + APNs (iOS): consent gradual (NUNCA
   pedir no load), quiet hours (não acordar user 2h da manhã), fallback

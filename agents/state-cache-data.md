@@ -3,6 +3,8 @@ name: state-cache-data
 category: frontend
 module: 10
 priority: P1
+lead: frontend-lead
+authority: implement
 description: |
   Fluidez de dados no client: optimistic UI, SWR/React Query, cache
   invalidation correta, offline-first com Service Worker, conflict

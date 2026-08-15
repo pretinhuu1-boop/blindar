@@ -3,6 +3,8 @@ name: compliance-hipaa
 category: compliance
 module: 8
 priority: P2
+lead: privacy-lead
+authority: implement
 description: |
   HIPAA (saúde US): Privacy Rule, Security Rule (administrative,
   physical, technical safeguards), Breach Notification Rule (60 dias),

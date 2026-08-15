@@ -3,6 +3,8 @@ name: content-quality
 category: content
 module: 12
 priority: P1
+lead: release-lead
+authority: implement
 description: |
   Revisa gramática, ortografia, pontuação, concordância, tom de voz e
   consistência terminológica de TODO texto visível ao usuário (UI,

@@ -3,6 +3,8 @@ name: graph-builder
 category: core
 module: 1
 priority: P0
+lead: chief-architect
+authority: read-only
 description: |
   Constrói o grafo de conhecimento multi-modal do codebase (Graphify nativo)
   uma única vez na discovery. Vira infraestrutura reusada por todos os agentes:

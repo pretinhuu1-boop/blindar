@@ -3,6 +3,8 @@ name: runtime-adversarial
 category: security
 module: 15
 priority: P0
+lead: runtime-lead
+authority: adversary
 description: |
   Confronta o que o código AFIRMA proteger com o que a aplicação em execução realmente protege. Divergência entre os dois é achado de severidade elevada — código que mente sobre defesa é pior que código sem defesa, porque a ausência aparece no relatório e a mentira aparece como aprovação.
 ---

@@ -3,6 +3,8 @@ name: solution-architect
 category: core
 module: 14
 priority: P1
+lead: chief-architect
+authority: plan
 description: |
   Vê o projeto pelo grafo + stack e entrega, por área, o que FALTA pra estar
   completo, seguro e escalável — priorizado. Blindar deixa de só auditar e passa

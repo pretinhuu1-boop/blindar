@@ -3,6 +3,8 @@ name: file-uploads
 category: security
 module: 2
 priority: P0
+lead: security-lead
+authority: implement
 description: |
   Upload de arquivo é vetor #1 subestimado de RCE/XSS. Cobre: presigned
   URL (upload direto pro storage, backend não vê bytes), antivírus

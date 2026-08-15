@@ -3,6 +3,8 @@ name: data-warehouse-etl
 category: data
 module: 7
 priority: P2
+lead: data-lead
+authority: implement
 description: |
   Data warehouse + ETL/ELT pra BI corporativo: Snowflake/BigQuery/
   Redshift, dbt para transformations versionadas, Airflow/Dagster/

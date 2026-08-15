@@ -3,6 +3,8 @@ name: realtime
 category: api
 module: 4
 priority: P1
+lead: chief-architect
+authority: implement
 description: |
   WebSockets/SSE/CRDT corretos: auth no handshake, heartbeat + reconnect
   backoff, rooms por tenant (sem broadcast cross-tenant), presença,

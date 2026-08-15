@@ -3,6 +3,8 @@ name: api-design
 category: api
 module: 4
 priority: P1
+lead: chief-architect
+authority: implement
 description: |
   Cobre design correto de API REST/GraphQL/Webhook: OpenAPI como fonte de
   verdade, versionamento, idempotency keys, paginação cursor, filtragem

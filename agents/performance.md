@@ -3,6 +3,8 @@ name: performance
 category: performance
 module: 9
 priority: P1
+lead: sre-lead
+authority: implement
 description: |
   Backend performance: gargalos medidos com profiler (não chutados), N+1 detection, query optimization, índices corretos, cache strategy, p95 latency tracking.
 ---

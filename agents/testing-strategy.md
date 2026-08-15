@@ -3,6 +3,8 @@ name: testing-strategy
 category: quality
 module: 11
 priority: P0
+lead: qa-lead
+authority: validate
 description: |
   Vai além de E2E (functional-e2e). Cobre estratégia completa: unit tests
   com coverage gate, integration tests com DB real (não mock — feedback
