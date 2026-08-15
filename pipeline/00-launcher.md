@@ -120,7 +120,7 @@ explícita — ver "Resolução dos defaults".
  11   Funcional E2E (todo botão/rota/form funcionando)     ✓ ON
  12   Anti-mock & cleanup (mocks, console.log, TODOs)      ✓ ON
  13   Resiliência & escalabilidade (breakers, 10x)         [rigor≠mvp]
- 14   DX & onboarding (.env.example, scripts, README)      ✓ ON
+ 14   DX + docs + governança de mudança (risco/ADR)        ✓ ON
  15   Pentest + adversarial review                         ✓ ON
  16   Product Evolution (APIs órfãs/gaps/UX/oportunidades) [escopo B|C, API-key]
  17   Ataque — recon passivo externo                       [se URL alvo]

@@ -189,15 +189,15 @@ Grava `.blindar/config.yml` com as escolhas. Pula automaticamente em
 | 11 | Funcional E2E + Testing strategy + Visual regression | sempre | [`functional-e2e`](agents/functional-e2e.md), [`testing-strategy`](agents/testing-strategy.md), [`visual-regression`](agents/visual-regression.md) |
 | 12 | Anti-mock + Externalização + Content quality (gramática/tom/glossário) | sempre | [`mock-killer`](agents/mock-killer.md), [`config-externalization`](agents/config-externalization.md), [`content-quality`](agents/content-quality.md) |
 | 13 | Resiliência + escalabilidade + Process + Scheduled jobs + Chaos + Event-driven | rigor ≠ MVP | [`resilience`](agents/resilience.md), [`scalability`](agents/scalability.md), [`process-resilience`](agents/process-resilience.md), [`scheduled-jobs`](agents/scheduled-jobs.md), [`chaos-engineering`](agents/chaos-engineering.md), [`event-driven`](agents/event-driven.md) |
-| 14 | DX + Flags + Backoffice + Email + Docs + Reports + Architect + Delivery + Project bootstrap | sempre | [`devops`](agents/devops.md), [`feature-flags`](agents/feature-flags.md), [`backoffice-admin`](agents/backoffice-admin.md), [`email-deliverability`](agents/email-deliverability.md), [`documentation-live`](agents/documentation-live.md), [`execution-report`](agents/execution-report.md), [`architect`](agents/architect.md), [`delivery-bundle`](agents/delivery-bundle.md), [`project-bootstrap`](agents/project-bootstrap.md) |
+| 14 | DX + Flags + Backoffice + Email + Docs + Reports + Architect + Delivery + Project bootstrap + **Governança de mudança** | sempre | [`devops`](agents/devops.md), [`feature-flags`](agents/feature-flags.md), [`backoffice-admin`](agents/backoffice-admin.md), [`email-deliverability`](agents/email-deliverability.md), [`documentation-live`](agents/documentation-live.md), [`execution-report`](agents/execution-report.md), [`architect`](agents/architect.md), [`delivery-bundle`](agents/delivery-bundle.md), [`project-bootstrap`](agents/project-bootstrap.md), [`risk-engine`](agents/risk-engine.md) ⭐, [`change-impact`](agents/change-impact.md) ⭐, [`decision-log`](agents/decision-log.md) ⭐ |
 | 15 | Pentest + adversarial review | sempre | [`pentest`](agents/pentest.md), [`adversarial-reviewer`](agents/adversarial-reviewer.md) |
 | 16 | Product Evolution (opt-in, escopo separado — requer `ANTHROPIC_API_KEY`) | só se pedido | [`api-frontend-coverage`](agents/api-frontend-coverage.md), [`user-journey-simulator`](agents/user-journey-simulator.md), [`feature-gap-analyzer`](agents/feature-gap-analyzer.md), [`growth-opportunities`](agents/growth-opportunities.md), [`product-critic`](agents/product-critic.md) |
 | 17 | Ataque — recon passivo externo (requer URL alvo) | se URL fornecida | [`attack-recon`](agents/attack-recon.md) |
 | 18 | Smoke / Runtime Truth + checks de infra (prova que a app SOBE) | sempre (self-skip sem docker/URL) | [`smoke-runtime`](agents/smoke-runtime.md) + 9 checks de infra/runtime |
 | 19 | Pentest ATIVO — payloads reais (requer `.blindar/.accept-authorization`) | só com autorização | [`pentest-active`](agents/pentest-active.md) |
 
-> **Total**: 111 agentes em 19 módulos (85 checks determinísticos + 14 API-wrapped = 99 `check-*.sh`, + playbooks).
-> Contagem verificada por `ls agents/*.md` e `ls templates/checks/check-*.sh` em v0.53 —
+> **Total**: 114 agentes em 19 módulos (87 checks determinísticos + 14 API-wrapped = 101 `check-*.sh`, + playbooks).
+> Contagem verificada por `ls agents/*.md` e `ls templates/checks/check-*.sh` em v0.54 —
 > os números anteriores (118/81) tinham derivado do real.
 > Fonte da verdade: [`pipeline/MODULE-MAP.json`](pipeline/MODULE-MAP.json).
 

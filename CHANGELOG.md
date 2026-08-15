@@ -3,6 +3,62 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.54.0] — 2026-08-15
+
+Fase 4 do plano EOS: governança de mudança. Responde três perguntas que o
+`blindar` não fazia antes de alterar código — **o que mais isso alcança**,
+**quanto custa se estiver errado** e **por que decidimos assim**.
+
+### AUTO deixa de ser permissão irrestrita
+
+`mode: auto` existe para não interromper o operador a cada passo. Não era para
+significar autorização para perda irreversível de dado, mas na prática
+significava: o loop aplicava qualquer round sem perguntar.
+
+- **`agents/risk-engine.md`** (novo): classifica cada round em
+  `LOW | MEDIUM | HIGH | CRITICAL` por dado afetado × reversibilidade ×
+  ambiente × downtime. `HIGH` e `CRITICAL` **pausam mesmo em AUTO**. A
+  classificação depende do `operation_mode`: `DROP COLUMN` é `LOW` em
+  `greenfield` (não há dado a perder) e `CRITICAL` em `harden`.
+- **`pipeline/04-rounds-loop.md`**: gate de risco entre implementar e aplicar.
+  Ao pausar, o agente apresenta cinco coisas — o que muda, o que se perde, **o
+  comando** de desfazer, que backup existe e quando foi restaurado, e a
+  alternativa menos destrutiva. Pausa sem caminho de volta não dá ao operador
+  como decidir.
+- **`check-destructive-migration.sh`** (novo, **crit**): DDL destrutivo sem
+  `down`/`downgrade` declarado. Não reprova destruição — reprova destruição
+  irreversível; se deve rodar é decisão do gate, se dá para desfazer é fato
+  verificável. Detecta `downgrade()` com corpo `pass`, que é ausência de
+  rollback escrita como se fosse rollback. Escape via
+  `@blindar:destructive-ok <motivo>`. Par `project-destrmig-bad`/`-good`.
+
+### Decisão arquitetural para de ser reescrita a cada sessão
+
+- **`agents/decision-log.md`** (novo): ADRs em **`docs/decisions.md`**,
+  versionado. Deliberadamente **não** em `.blindar/` — decisão arquitetural
+  precisa aparecer no diff, ser revisada no PR e sobreviver a `rm -rf .blindar`.
+  Append-only: decisão superada ganha entrada nova que a supersede, nunca
+  edição da antiga.
+- **`check-decision-log.sh`** (novo): exige as 4 seções (contexto, alternativas,
+  decisão, consequências). **Alternativas** é a que mais importa — sem o que foi
+  descartado e por quê, a próxima pessoa refaz a comparação do zero e pode
+  chegar a outra conclusão sem nunca ter visto o argumento original. Sem log,
+  só cobra se o projeto tiver ≥2 sinais arquiteturais. Par
+  `project-adr-bad`/`-good`.
+- **`agents/change-impact.md`** (novo): mapa de raio de alcance em 13 camadas
+  antes de mudança estrutural, com ordem de aplicação em 5 passos para mudanças
+  que alcançam banco e código juntos. Duas linhas que costumam ser esquecidas
+  entram explicitamente: **seed/dados simulados** (continuam gerando o formato
+  antigo em silêncio) e **mensagem em voo** (durante o deploy convivem código
+  velho e novo).
+
+### Outros
+
+- Módulo 14 passa de 12 para 15 agentes; os dois checks novos entram nos gates
+  `DATABASE` e `DOCUMENTATION` da Fase 06b.
+- Numeração dos passos do round corrigida (havia dois passos "6" e "7").
+- `SKILL.md`: 114 agentes / 101 `check-*.sh` (87 determinísticos + 14 API).
+
 ## [0.53.0] — 2026-08-15
 
 Primeiras três fases do plano EOS ([`docs/PLANO-EOS.md`](docs/PLANO-EOS.md)):

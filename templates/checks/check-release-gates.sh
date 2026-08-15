@@ -58,7 +58,8 @@ gate_of() {
     check-feature-flags|check-api-gateway)
       echo "ARCHITECTURE" ;;
     check-db-engine-consistency|check-prisma-schema|check-soft-delete|check-notnull-no-default|\
-    check-alembic-health|check-pagination|check-audit-log|check-redis-patterns)
+    check-alembic-health|check-pagination|check-audit-log|check-redis-patterns|\
+    check-destructive-migration)
       echo "DATABASE" ;;
     check-mock-killer|check-functional-e2e|check-entrypoint-cmd|check-homolog-only|\
     check-infra-windows|check-api-frontend-coverage|check-user-journey-simulator)
@@ -79,7 +80,7 @@ gate_of() {
       echo "DEPLOYMENT" ;;
     check-backup-recovery)
       echo "BACKUP_RECOVERY" ;;
-    check-documentation*|check-runbook*)
+    check-documentation*|check-runbook*|check-decision-log)
       echo "DOCUMENTATION" ;;
     *) echo "UNMAPPED" ;;
   esac
