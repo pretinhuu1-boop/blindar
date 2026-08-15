@@ -3,6 +3,59 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.55.0] — 2026-08-15
+
+Fase 5 do plano EOS: camada adversarial de runtime. A pergunta muda de "a
+defesa está escrita?" para "a defesa funciona quando a requisição chega?".
+
+### Defesa declarada que não defende
+
+Todos os checks de segurança perguntavam se a defesa **existe**. Ficavam cegos
+quando ela existe e está desligada na mesma linha: `helmet({
+contentSecurityPolicy: false })` satisfaz "usa helmet"; `script-src
+'unsafe-inline'` satisfaz "tem CSP".
+
+Isso é pior que ausência de defesa. A ausência aparece no relatório como gap; o
+teatro aparece como **aprovação**, e todo relatório a jusante repete a
+afirmação falsa.
+
+- **`check-defense-theater.sh`** (novo): TLS com verificação desligada
+  (`rejectUnauthorized: false`, `NODE_TLS_REJECT_UNAUTHORIZED=0`,
+  `verify=False`) — **crit**; helmet com CSP desligada — **high**; `script-src`
+  com `unsafe-inline`/`unsafe-eval` — **high**; JWT aceitando algoritmo `none`
+  — **crit**; CORS refletindo qualquer origem **com** `credentials: true` —
+  **crit**. Par `project-theater-bad`/`-good`.
+- **`agents/runtime-adversarial.md`** (novo): o confronto entre afirmação
+  estática e prova de runtime, com tabela de "afirmação → prova" e o par
+  autenticado/não-autenticado lado a lado. `DIVERGENTE` sobe a severidade em
+  relação ao mesmo problema achado só estaticamente, porque significa que um
+  check anterior **aprovou indevidamente** — e a correção volta para o check,
+  não só para o projeto.
+
+### Bug de regex encontrado durante o desenvolvimento
+
+A primeira versão do padrão de CSP usava `script-src[^;"']*'unsafe-inline'`,
+excluindo aspas da classe negada. Valor de CSP é cheio de aspas legítimas, e o
+match parava em `script-src 'self'` antes de chegar ao `'unsafe-inline'` logo
+adiante — o check não disparava no fixture vulnerável. A fronteira correta é o
+`;`, que separa diretivas: com `[^;]*`, um `script-src 'self'; style-src
+'unsafe-inline'` corretamente **não** casa.
+
+### Escopo que ficou de fora, com motivo
+
+O plano previa estender `scripts/pentest-active.sh` com crawling autenticado.
+Não foi feito: adicionar sessão autenticada a um script que dispara payloads
+aumenta o raio de alcance e exige os tokens do operador. Isso é trabalho com
+humano no circuito, conduzido pelo agente, não algo para embutir num script que
+roda sem supervisão. Os quatro probes existentes e os gates de autorização
+(`.blindar/.accept-authorization` + escopo por host) permanecem inalterados.
+
+### Outros
+
+- Módulo 15 passa de 4 para 5 agentes; o check novo entra no gate `SECURITY`.
+- `SKILL.md`: corrigidas duas referências a "4 perguntas" no launcher, que tem 5.
+- `SKILL.md`: 115 agentes / 102 `check-*.sh` (88 determinísticos + 14 API).
+
 ## [0.54.0] — 2026-08-15
 
 Fase 4 do plano EOS: governança de mudança. Responde três perguntas que o
