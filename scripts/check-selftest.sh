@@ -90,6 +90,8 @@ PAIRS=(
   "check-pwa-installable.sh      | project-pwa-bad         | project-pwa-good"
   "check-db-engine-consistency.sh | project-dbdrift-bad    | project-dbdrift-good"
   "check-environment-parity.sh   | project-envparity-bad   | project-envparity-good"
+  "check-destructive-migration.sh | project-destrmig-bad   | project-destrmig-good"
+  "check-decision-log.sh         | project-adr-bad         | project-adr-good"
   # blindar-learn:insert (mantenha — scripts/blindar-learn.sh insere novos pares acima desta linha)
 )
 

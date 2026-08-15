@@ -142,7 +142,7 @@ Decisão final:
 
 **Dor**: Claude desfaz em outra sessão uma decisão arquitetural tomada antes. E altera coisa cara sem medir impacto.
 
-- **Decision Log** — `.blindar/decisions.md` (append-only, hash chain como o audit). Formato ADR: problema, alternativas, decisão, motivo, consequências. Toda escolha de engine, fila, provider de IA, estratégia de tenancy e deploy entra.
+- **Decision Log** — ~~`.blindar/decisions.md`~~ → **`docs/decisions.md`**, versionado. Mudança em relação ao plano original, decidida na implementação: `.blindar/` é transiente e gitignored, então a decisão não apareceria no diff, não seria revisada no PR e sumiria num `--reset`. Decisão arquitetural precisa ser durável e visível. Append-only por convenção (entrada nova supersede a antiga), não por hash chain — o histórico do git já dá a prova de reescrita, e um hash chain num arquivo versionado duplicaria o que o git faz melhor. Formato ADR: contexto, alternativas, decisão, consequências.
 - **Change Impact Analysis** — antes de round que toque schema, auth, fila, infra ou tenancy: lista arquivos, módulos, migrations, testes, docs e deploy afetados.
 - **Risk Engine** — classifica o round em `LOW | MEDIUM | HIGH | CRITICAL` por (dados afetados × reversibilidade × ambiente × downtime). `HIGH`/`CRITICAL` **pausam e pedem autorização mesmo em modo AUTO**.
 
@@ -254,7 +254,7 @@ Só `chief-architect` é agente novo. Os demais são papéis atribuídos a agent
 | 1 Modos | v0.51 | Projeto do zero / quebrado | Médio (mexe no launcher) | — | ✅ entregue em v0.53.0 |
 | 2 DB Guardian + Parity | v0.52 | **Dor #1 do operador** | Baixo (aditivo) | 1 | ✅ entregue em v0.53.0 |
 | 3 Release Gates | v0.53 | "Pronto" sem estar pronto | Médio (muda termination) | 2 | ✅ entregue em v0.53.0 |
-| 4 Decision Log + Risk | v0.54 | Decisão desfeita / mudança cega | Baixo | 3 | pendente |
+| 4 Decision Log + Risk | v0.54 | Decisão desfeita / mudança cega | Baixo | 3 | ✅ entregue em v0.54.0 |
 | 5 Runtime/DAST | v0.55 | Código mente sobre defesa | Médio (falso positivo) | 3 | pendente |
 | 6 Deployment/Ancorar | v0.56 | VPS implícita | Baixo | 3 | pendente |
 | 7 Hierarquia | v0.57 | Conflito sem árbitro | **Alto** (toca 111 arquivos) | 4 | pendente |

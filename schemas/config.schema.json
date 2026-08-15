@@ -114,6 +114,7 @@
           "documentation-live", "content-quality", "execution-report",
           "architect", "delivery-bundle",
           "project-bootstrap", "frontend-generator",
+          "risk-engine", "change-impact", "decision-log",
           "realtime", "search-quality", "push-notifications", "scheduled-jobs",
           "cdn-strategy", "chaos-engineering", "sbom-slsa",
           "mobile-native", "compliance-gdpr", "event-driven", "multi-region",

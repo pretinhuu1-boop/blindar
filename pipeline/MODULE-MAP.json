@@ -1,7 +1,7 @@
 {
   "$schema": "https://github.com/pretinhuu1-boop/blindar/blob/main/schemas/module-map.schema.json",
-  "version": "0.52.0",
-  "description": "Mapa estruturado dos 19 módulos do launcher → agentes ativados → fases onde rodam. Consumido pelas Fases 02 (discovery), 04 (rounds-loop) e 06 (production-checklist) pra filtrar agentes pelo array config.selected_modules. v0.45: +graph-builder (m1), +módulo 18 (smoke/runtime truth + homolog-only). v0.52: +db-migration-guardian e +environment-parity (m7) — prova de que migração de engine chegou ao runtime e que os ambientes não divergem.",
+  "version": "0.54.0",
+  "description": "Mapa estruturado dos 19 módulos do launcher → agentes ativados → fases onde rodam. Consumido pelas Fases 02 (discovery), 04 (rounds-loop) e 06 (production-checklist) pra filtrar agentes pelo array config.selected_modules. v0.45: +graph-builder (m1), +módulo 18 (smoke/runtime truth + homolog-only). v0.52: +db-migration-guardian e +environment-parity (m7) — prova de que migração de engine chegou ao runtime e que os ambientes não divergem. v0.54: +risk-engine, +change-impact, +decision-log (m14) — governança de mudança: classe de risco pausa o modo AUTO, e decisão arquitetural fica registrada e versionada.",
   "modules": {
     "1": {
       "name": "Baseline & Discovery",
@@ -260,7 +260,7 @@
       ]
     },
     "14": {
-      "name": "DX + Flags + Backoffice + Email + Docs + Reports + Architect + Delivery + Project bootstrap (scaffold do zero)",
+      "name": "DX + Flags + Backoffice + Email + Docs + Reports + Architect + Delivery + Project bootstrap (scaffold do zero) + Governança de mudança (risco/impacto/ADR)",
       "mandatory": false,
       "default_on_when": [
         "always"
@@ -277,7 +277,10 @@
         "project-bootstrap",
         "mcp-recommender",
         "blindar-fix",
-        "solution-architect"
+        "solution-architect",
+        "risk-engine",
+        "change-impact",
+        "decision-log"
       ],
       "phases": [
         "03-bootstrap-sec-html",

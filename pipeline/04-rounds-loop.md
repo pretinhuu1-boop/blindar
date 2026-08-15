@@ -66,15 +66,56 @@ no `sec.html` com tag `skipped-by-user-selection`.
    reescrever método grande. Ver [`docs/book-insights.md`](../docs/book-insights.md)
    § Feathers. Isso estende "N/A vira teste de regressão" pra
    "comportamento pré-existente vira teste antes de tocar".
-4. **Implement** — ≤ 80 LOC + teste real (≥ 3 asserts) + grep estático
-5. **Update** — `sec.html`: ATK gap→covered, matrix recalc, version++
-6. **Local check** — suite verde + type-check verde
-7. **Commit** — branch `sec/<round-id>-<slug>` + template message
-8. **Push + CI** — aguardar verde (sem `--no-verify`)
-9. **Merge** — `gh pr merge --squash --delete-branch`
-10. **Next**
+4. **Change impact + risco (⭐ v0.54)** — se o round tocar schema, contrato de
+   API, autenticação/autorização, tenancy, formato de fila/evento, config ou
+   deploy: rode [`change-impact`](../agents/change-impact.md) para mapear o raio
+   de alcance, e classifique com [`risk-engine`](../agents/risk-engine.md).
+   Ver a tabela de gate abaixo. Round de correção localizada pula esta etapa.
+5. **Implement** — ≤ 80 LOC + teste real (≥ 3 asserts) + grep estático
+6. **Decision log (⭐ v0.54)** — se o round decidiu algo arquitetural (engine,
+   fila, cache, provider de IA, tenancy, estratégia de deploy/backup), ou
+   **rejeitou** uma alternativa que alguém proporia de novo, registre em
+   `docs/decisions.md` **no mesmo round**. Ver
+   [`decision-log`](../agents/decision-log.md).
+7. **Update** — `sec.html`: ATK gap→covered, matrix recalc, version++
+8. **Local check** — suite verde + type-check verde
+9. **Commit** — branch `sec/<round-id>-<slug>` + template message
+10. **Push + CI** — aguardar verde (sem `--no-verify`)
+11. **Merge** — `gh pr merge --squash --delete-branch`
+12. **Next**
 
 A cada 10 rounds completos: **Fase 4** (adversarial review) automaticamente.
+
+## Gate de risco (⭐ v0.54) — AUTO não é permissão para destruir
+
+O passo 4 classifica o round em `LOW | MEDIUM | HIGH | CRITICAL`
+([`risk-engine`](../agents/risk-engine.md)). A classe decide se o loop segue
+sozinho:
+
+| Classe | Em `mode: auto` |
+|---|---|
+| `LOW` | aplica |
+| `MEDIUM` | aplica e registra no relatório |
+| `HIGH` | **pausa** e pede autorização |
+| `CRITICAL` | **pausa**, exige plano de volta e backup verificado |
+
+Isto **sobrepõe** o `mode: auto`. O modo AUTO existe para não interromper o
+operador a cada passo, não para autorizar perda de dado sem ele saber — a
+autonomia é proporcional à reversibilidade.
+
+Sempre no mínimo `HIGH`, independente do tamanho do diff: DDL destrutivo,
+afrouxar autenticação/autorização/verificação de assinatura, alterar
+isolamento de tenant, rotacionar credencial compartilhada, mexer em backup,
+`push --force` em branch compartilhada, alterar cobrança.
+
+Ao pausar, apresente as cinco coisas: o que muda, o que se perde se estiver
+errado, **o comando** de desfazer, que backup existe e quando foi restaurado
+pela última vez, e a alternativa menos destrutiva que foi considerada. Pausa
+sem o caminho de volta não dá ao operador como decidir.
+
+Em `operation_mode: evolve`, `HIGH` e `CRITICAL` pausam mesmo em `mode: auto`
+e migration destrutiva é proibida. Em `recovery`, mudança fora do necessário
+para estabilizar é proibida.
 
 ## Modo de execução (v0.8+)
 
@@ -91,7 +132,8 @@ Comportamento depende de `config.mode`:
 **Fonte da verdade**: [`pipeline/MODULE-MAP.json`](MODULE-MAP.json). Pipeline lê esse JSON
 em tempo de execução pra resolver agentes por módulo selecionado.
 
-Versão atual: **117 agentes em v0.48** distribuídos em 19 módulos numerados.
+Versão atual: **114 agentes em v0.54** distribuídos em 19 módulos numerados
+(contagem verificada por `ls agents/*.md`).
 Para a tabela visual completa, ver [`SKILL.md`](../SKILL.md) seção "Menu de
 módulos numerados". A filtragem real respeita `config.selected_modules` ∩
 `MODULE-MAP[id].agents`.
