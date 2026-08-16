@@ -87,6 +87,16 @@ function varrer(arq, rel) {
   for (let i = 0; i < cps.length; i++) {
     const ch = cps[i], cp = ch.codePointAt(0);
     if (ch === "\n") { linha++; continue; }
+    // Controles C0, exceto tab e CR, que são texto normal. Backspace, vertical
+    // tab e form feed são invisíveis no editor igual aos de cima, e aparecem
+    // por acidente quando um escape de outra linguagem é interpretado.
+    // Encontrado no README deste próprio repositório: ao escrever o caminho
+    // do Windows, `skills` + escape + `lindar` virou `skills` + backspace.
+    if (cp < 0x20 && cp !== 0x09 && cp !== 0x0D) {
+      if (!jaVi("c0")) emitir("high", rel, linha,
+        "caractere de controle C0 " + hex(cp) + " — invisível no editor; costuma vir de escape interpretado por engano e corrompe a string em silêncio");
+      continue;
+    }
     if (cp < 0x80) continue;
     const ant = i > 0 ? cps[i-1].codePointAt(0) : undefined;
 

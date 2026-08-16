@@ -38,6 +38,20 @@ triggers:
 
 Quando esta skill for invocada (`blindar`, `blinda este projeto`, etc.), você (Claude) DEVE executar EXATAMENTE esta sequência, sem pular, sem perguntar antes de cada passo, sem alternativas:
 
+0. **Checagem de versão (1× por dia).** Rode
+   `bash ~/.claude/skills/blindar/scripts/check-update.sh --quiet`
+   (Windows sem bash: `scripts/check-update.ps1 -Quiet`).
+   Ele tem cache de 24h, então na segunda invocação do mesmo dia sai na hora.
+   - **Exit 10 = existe versão nova.** NÃO atualize sozinho: mostre a versão
+     local, a nova, e **pergunte** se o operador quer atualizar agora, com o
+     comando que o próprio script imprimiu — ele já detecta se a instalação é
+     clone (`git pull`) ou artefato do sync (reinstalar), porque dizer o
+     comando errado é pior que não dizer.
+   - Exit 0 = seguir sem comentar.
+   - Sem rede, o script sai 0 e você segue. Falha de checagem nunca vira
+     bloqueio, e nunca vira "está atualizado" — só significa que não deu pra
+     saber.
+   - Desativar de vez: `BLINDAR_SKIP_UPDATE_CHECK=1`.
 1. Registre a hora de início: `date -u +%Y-%m-%dT%H:%M:%SZ`
 2. `bash ~/.claude/skills/blindar/scripts/blindar-run.sh --parallel auto` (ou `--fast` se usuário pediu rápido)
 3. Aguardar conclusão (exit code 0-4)
@@ -656,11 +670,23 @@ estado de runtime da instalada (`.git/`, `.blindar/`, `.last-check`).
 
 ## Auto-update
 
-Primeira fase (Baseline) roda `scripts/check-update.ps1 -Quiet` em background.
-TTL de 24h, não bloqueia, avisa uma vez se versão nova existir.
+**Passo 0 da sequência mandatória**, uma vez por dia (cache de 24h em
+`.last-check`). Roda `scripts/check-update.sh --quiet` — ou `check-update.ps1
+-Quiet` no PowerShell.
 
-Desativar: `BLINDAR_SKIP_UPDATE_CHECK=1`.
-Forçar agora: `scripts/check-update.ps1 -Force`.
+**Pergunta, não atualiza sozinho.** Exit 10 significa versão nova: mostre local
+× nova e deixe o operador decidir. Atualizar sem perguntar troca o código sob os
+pés de quem está no meio de um trabalho.
+
+O comando de atualização sai do próprio script, porque depende de como a skill
+foi instalada: clone → `git pull --ff-only`; artefato do `sync-skill.sh` (sem
+`.git`) → reinstalar pelo `install.sh`. Dizer o comando errado é pior que não
+dizer, porque o operador tenta e acha que quebrou.
+
+Sem rede: sai 0 e segue. Falha de checagem **nunca** vira bloqueio nem vira
+"está atualizado" — significa apenas que não deu para saber.
+
+Desativar: `BLINDAR_SKIP_UPDATE_CHECK=1`. Forçar: `--force` / `-Force`.
 
 ## Versão deste skill
 

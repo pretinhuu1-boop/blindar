@@ -26,19 +26,33 @@ Mantém `sec.html`, `blindar-report.html` (técnico) e `client-report.html`
 Termina quando: **0 crit + ≤2 high** após review adversarial (ou módulos
 selecionados completos em modo ESCOLHIDOS).
 
-## Recursos chave da v0.46
+## Recursos chave da v0.67
 
-- **19 módulos numerados** — operador escolhe "tudo", "defaults", "1,3,5", "1-8" ou "tudo menos 13,14"
-- **3 modos de execução** — AUTO / SUPERVISIONADO / ESCOLHIDOS
-- **117 agentes especialistas** em segurança, frontend, banco, API, performance, compliance, AI, payments, etc.
-- **Camada determinística** — 92 checks executáveis (`templates/checks/`) + gate `check-selftest` (60/60 pares fixture-verificados) que provam que cada check dispara no vulnerável e cala no limpo. Cobertura garantida mesmo em modo AUTO.
-- **Grafo de conhecimento nativo** ([`scripts/graph-build.js`](scripts/graph-build.js)) — construído 1× na discovery, reusado por todos os agentes (mais cobertura, menos tokens)
-- **Smoke / Runtime Truth** ([`scripts/smoke-run.sh`](scripts/smoke-run.sh)) — sobe o stack em homolog e prova que a app boota + responde `/health` antes de qualquer "verde"
-- **Intelligence system** ([`schemas/intelligence.schema.json`](schemas/intelligence.schema.json)) — agentes consultam `.blindar/intelligence.yml` pra evitar falso positivo
-- **Frontend generator com aprovação** — 3 portões (preview HTML + decisões + confirmação) antes de tocar em qualquer arquivo
-- **Project bootstrap** — cria projeto novo do zero (Next.js 15 / NestJS / Postgres / Stripe / etc.)
-- **Delivery bundle** — gera pasta `release/` com DEPLOY, MANUAL, API docs, Postman collection production-ready, diagramas Mermaid, SLA, checklist go-live
-- **2 relatórios HTML cumulativos** — técnico (timeline + módulo + agente) e cliente (por categoria de benefício, linguagem amigável)
+- **6 modos de operação** — o blindar detecta a natureza do trabalho antes de agir:
+  GREENFIELD (do zero) · HARDEN (blindar existente) · FEATURE (acrescentar sem
+  estragar) · EVOLVE (já em produção) · RECOVERY (quebrado) · COLLAB (o
+  repositório é o problema: git, CI, docs, equipe)
+- **19 módulos numerados** — "tudo", "defaults", "1,3,5", "1-8" ou "tudo menos 13,14"
+- **119 agentes** com `lead` e `authority` declarados; `chief-architect` arbitra
+  conflito entre especialistas por precedência (perda de dado > segurança >
+  reversibilidade > simplicidade > o que já existe)
+- **Camada determinística** — 107 checks executáveis + gate `check-selftest`
+  (**74/74 pares** fixture-verificados) que provam que cada check dispara no
+  vulnerável e cala no limpo
+- **11 release gates** com veredito **GO / CONDITIONAL GO / NO-GO**. Dimensão sem
+  check executado conta como `NOT VERIFIED`, **nunca** como aprovação
+- **Execução avulsa** — `--only <agente>` para tarefa pontual (segundos em vez de
+  minutos), com o relatório marcado como parcial e a cobertura medida contra o
+  total disponível
+- **Prova de runtime** ([`smoke-run.sh`](scripts/smoke-run.sh)) — sobe o stack e
+  prova que a app boota e responde antes de qualquer "verde"
+- **Migração de banco com prova** — Postgres no `docker-compose.yml` não é
+  evidência de que a aplicação usa Postgres
+- **Ponte para o [`ancorar`](https://github.com/pretinhuu1-boop/ancorar)**
+  ([`ancorar-bridge.sh`](scripts/ancorar-bridge.sh)) — o host entra no veredito:
+  firewall desligado no servidor bloqueia a release
+- **Grafo de conhecimento**, **intelligence system** (anti falso-positivo),
+  **delivery bundle** e **2 relatórios HTML** (técnico e cliente)
 
 ## Instalação
 
@@ -61,7 +75,83 @@ iwr -useb https://raw.githubusercontent.com/pretinhuu1-boop/blindar/main/scripts
 git clone https://github.com/pretinhuu1-boop/blindar.git ~/.claude/skills/blindar
 ```
 
+### Verificar o ambiente (faça isto primeiro)
+
+```bash
+bash ~/.claude/skills/blindar/scripts/doctor.sh
+```
+
+Diz o que falta na **máquina** e, mais importante, **o que se perde** sem cada
+coisa. Sem `ripgrep`, por exemplo, dezenas de checks saem como `skipped` — e
+`skipped` não é aprovação. Numa máquina nova esse é o modo de falha mais
+provável e o mais difícil de perceber, porque o relatório continua parecendo bom.
+
+### Prompt para instalar pelo Claude Code
+
+Cole isto numa sessão do Claude Code, em qualquer pasta:
+
+```text
+Instale a skill blindar nesta máquina e deixe pronta para uso:
+
+1. Clone https://github.com/pretinhuu1-boop/blindar para ~/.claude/skills/blindar
+   (no Windows: %USERPROFILE%/.claude/skills/blindar).
+2. Rode `bash ~/.claude/skills/blindar/scripts/doctor.sh` e me mostre a saída.
+3. Para cada dependência ausente, me diga o comando de instalação da MINHA
+   plataforma e o que eu perco sem ela. Não instale nada sem eu confirmar.
+4. Se `ripgrep` faltar, avise que é a mais importante: sem ela dezenas de checks
+   viram `skipped`, e skipped não é aprovação.
+5. Opcional: clone https://github.com/pretinhuu1-boop/ancorar para
+   ~/.claude/skills/ancorar — é a skill irmã que verifica o SERVIDOR (firewall,
+   TLS, backup, DNS). Sem ela o host nunca é verificado.
+6. Ao final, confirme a versão instalada lendo ~/.claude/skills/blindar/VERSION.
+```
+
 Depois de instalar, leia o [`CHECKLIST.md`](CHECKLIST.md) e marque os passos.
+
+## Prompt para usar num projeto
+
+Este é o prompt de uso. Cole na raiz do projeto que você quer trabalhar:
+
+```text
+Use a skill blindar neste projeto.
+
+Antes de qualquer coisa:
+1. Detecte o MODO de operação e me diga qual foi, com a evidência que te levou a
+   ele — se o projeto está vazio (GREENFIELD), saudável (HARDEN), se eu pedi para
+   acrescentar algo (FEATURE), se está em produção (EVOLVE), se está quebrado
+   (RECOVERY) ou se o problema é o repositório (COLLAB). Confirme comigo antes
+   de seguir.
+2. Rode `bash ~/.claude/skills/blindar/scripts/blindar-run.sh --parallel auto`.
+3. Execute os agentes `deferred` — eles são a sua fila de trabalho, não são
+   opcionais.
+
+Ao me apresentar o resultado:
+- Separe achado REAL de ruído de build. Se um crítico veio de `.next`, `dist` ou
+  `coverage`, diga isso em vez de contá-lo.
+- Toda afirmação precisa de onde ser verificada: arquivo e linha, ou a medição.
+  Não escreva "PostgreSQL configurado"; escreva onde está e o que prova.
+- Me diga o que NÃO foi verificado e por quê. Gate sem check executado é
+  NOT VERIFIED, nunca aprovado.
+- Liste os crit/high por ordem de risco real, com o que acontece se ninguém
+  corrigir.
+
+Regras enquanto trabalha:
+- Não altere nada destrutivo sem me perguntar (migration que apaga, credencial,
+  autenticação, dado).
+- Se for mexer em schema, contrato de API, autorização ou fila, me mostre o
+  impacto antes.
+- Registre decisão arquitetural em docs/decisions.md com as alternativas que
+  você descartou.
+```
+
+Para tarefa pontual, sem o pipeline inteiro:
+
+```text
+Rode só o check X neste projeto:
+bash ~/.claude/skills/blindar/scripts/blindar-run.sh --only <agente>
+
+Lembre que o resultado é PARCIAL e não vale como veredito de release.
+```
 
 ## Uso
 

@@ -3,6 +3,61 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.68.0] — 2026-08-16
+
+Portabilidade: fazer o blindar funcionar **completo** numa máquina nova.
+
+### `scripts/doctor.sh` — o que falta na MÁQUINA, e o que se perde
+
+O `preflight.sh` valida o projeto-alvo; nada validava o ambiente. Sem
+`ripgrep`, dezenas de checks saem como `skipped` — e o relatório mostra
+cobertura alta. Numa máquina nova esse é o modo de falha mais provável e o mais
+difícil de perceber.
+
+Cada ausência diz **o que se perde**, não só "faltando": sem `node` o
+orquestrador não resolve o MODULE-MAP; sem `docker` o módulo 18 self-skipa e a
+aplicação **nunca é provada de pé**; sem `ancorar` o host nunca é verificado.
+
+**Descoberta ao rodá-lo**: o ripgrep **não estava instalado** nesta máquina.
+Tudo nesta sessão rodou pelo fallback de grep.
+
+### Os dois caminhos de busca continuavam divergindo
+
+A v0.59 corrigiu o wrapper do ripgrep — o caminho que aqui **nunca executa**. O
+fallback seguia com o piso antigo: excluía `dist` (que o ripgrep não excluía) e
+não excluía `coverage` nem minificados (que o ripgrep excluía).
+
+Agora os dois derivam da **mesma** lista (`BLINDAR_IGNORE_DIRS` /
+`BLINDAR_IGNORE_FILES`), o que torna a divergência impossível **por construção**
+— melhor que um teste conferindo se continuam iguais.
+
+### Controles C0 no `check-invisible-unicode`
+
+O check pulava `cp < 0x80`, então backspace, vertical tab e form feed passavam.
+Encontrado **no README deste repositório**: ao escrever o caminho do Windows,
+`skillslindar` virou `skills` + backspace + `lindar`. Invisível no editor,
+e o texto renderizado fica errado.
+
+### Atualização: pergunta, não avisa no meio do log
+
+`check-update.sh` passa a sair **10** quando há versão nova, e a checagem vira o
+**passo 0** da sequência mandatória — 1× por dia, cache de 24h. O `SKILL.md`
+manda **perguntar** ao operador em vez de só logar: atualizar sozinho troca o
+código sob os pés de quem está no meio de um trabalho.
+
+O comando de atualização sai do próprio script, porque depende da instalação:
+clone → `git pull`; artefato do `sync-skill.sh` (sem `.git`) → reinstalar. Dizer
+o comando errado é pior que não dizer.
+
+Falha de checagem nunca vira bloqueio **nem** vira "está atualizado" — significa
+que não deu para saber.
+
+### README
+
+Recursos atualizados de v0.46 para v0.67 (estavam três dezenas de versões
+atrás), mais **três prompts prontos**: instalar pelo Claude Code, usar num
+projeto, e rodar tarefa pontual com `--only`.
+
 ## [0.67.0] — 2026-08-16
 
 Três pendências anotadas durante a execução real, todas fechadas.
