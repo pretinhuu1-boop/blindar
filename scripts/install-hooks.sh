@@ -17,10 +17,12 @@ set -uo pipefail
 SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ESCOPO="projeto"
 ALLOWLIST=1
+SO_CLAUDE_MD=0
 for a in "$@"; do
   case "$a" in
     --user) ESCOPO="user" ;;
     --no-allowlist) ALLOWLIST=0 ;;
+    --claude-md) SO_CLAUDE_MD=1 ;;
     -h|--help) sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
   esac
 done
@@ -94,6 +96,38 @@ if (comAllowlist) {
 
 fs.writeFileSync(alvo, JSON.stringify(cfg, null, 2) + "\n", "utf8");
 ' "$ALVO" "$GUARD" "$ALLOWLIST" || exit 1
+
+# ─── CLAUDE.md de exemplo (opcional, sempre pergunta) ───
+# Governança global é do OPERADOR. Instalar por cima sem perguntar seria
+# reescrever a forma de trabalhar de alguém — por isso pergunta, e por isso
+# guarda backup datado quando já existe um.
+MODELO="$SKILL_DIR/templates/CLAUDE.md.exemplo"
+DESTINO_MD="$HOME/.claude/CLAUDE.md"
+if [ -f "$MODELO" ]; then
+  echo ""
+  if [ -f "$DESTINO_MD" ]; then
+    echo "  Você já tem um ~/.claude/CLAUDE.md. O blindar traz um modelo com os"
+    echo "  anti-padrões que este projeto pagou caro para aprender."
+    PERGUNTA="  Substituir pelo modelo? (backup datado do seu é feito antes) [s/N] "
+  else
+    echo "  O blindar traz um CLAUDE.md de exemplo: governança, anti-padrões e"
+    echo "  regras de qualidade que valem para qualquer projeto."
+    PERGUNTA="  Instalar em ~/.claude/CLAUDE.md? [s/N] "
+  fi
+  if [ "${BLINDAR_INSTALL_CLAUDE_MD:-ask}" = "yes" ]; then RESP_MD="s"
+  elif [ "${BLINDAR_INSTALL_CLAUDE_MD:-ask}" = "no" ] || [ ! -t 0 ]; then RESP_MD="n"
+  else printf '%s' "$PERGUNTA"; read -r RESP_MD </dev/tty || RESP_MD="n"; fi
+  case "${RESP_MD:-n}" in
+    s|S|y|Y)
+      mkdir -p "$(dirname "$DESTINO_MD")"
+      if [ -f "$DESTINO_MD" ]; then
+        BKP="$DESTINO_MD.backup-$(date -u +%Y-%m-%d)"
+        cp "$DESTINO_MD" "$BKP" && echo "  backup: $BKP"
+      fi
+      cp "$MODELO" "$DESTINO_MD" && echo "  CLAUDE.md instalado em $DESTINO_MD" ;;
+    *) echo "  pulado. Depois: cp \"$MODELO\" \"$DESTINO_MD\"" ;;
+  esac
+fi
 
 echo ""
 echo "  Arquivo: $ALVO"

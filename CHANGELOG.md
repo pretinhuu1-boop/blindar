@@ -3,6 +3,47 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.72.0] — 2026-08-16
+
+### Cache de veredito — não de prompt
+
+O `_api_wrapper.sh` já usava `cache_control: ephemeral`, que é **desconto dentro
+do mesmo request**. Isto é outra coisa: guarda o **resultado** do agente
+indexado pelo que ele analisou. Mesma evidência + mesmo agente + mesma versão =
+mesmo veredito, e a segunda rodada não paga API nem espera.
+
+Onde dói: no projeto real são **52 agentes deferred + 14 API-wrapped**. Se o
+arquivo não mudou, o veredito não mudou — e tudo era recalculado do zero.
+
+**As três travas**, porque cache que devolve resultado velho como se fosse novo
+é exatamente "ausência de medição virando aprovação" — a família de bug que
+esta sessão inteira corrigiu:
+
+1. O hash cobre a **evidência inteira enviada**, não o nome do arquivo.
+2. Cobre a **versão do blindar e o system prompt do agente** — agente corrigido
+   invalida veredito antigo, senão uma correção de check nunca chegaria a quem
+   já tinha rodado.
+3. O result reusado carrega `from_cache: true` e o `cached_at` original, e o
+   resumo do run **conta** quantos vieram do cache. Reuso nunca é apresentado
+   como medição desta rodada.
+
+Quarta propriedade: `skipped` por ferramenta ausente **não entra no cache** —
+não é veredito, é ausência dele, e cachear congelaria a lacuna para sempre.
+
+Desligar: `BLINDAR_NO_CACHE=1`.
+
+Implementado em `templates/checks/_cache.sh` separado, e não inline no wrapper:
+misturar shell com JS inline já custou dois bugs de escape nesta sessão.
+
+### `CLAUDE.md` de exemplo, opcional
+
+`templates/CLAUDE.md.exemplo` entra no repo e o instalador **pergunta** antes de
+copiar — com backup datado se já existir um. Governança global é do operador;
+instalar por cima sem perguntar seria reescrever a forma de trabalhar de alguém.
+
+Carrega os anti-padrões que este projeto pagou caro para aprender, incluindo o
+mais caro de todos: *o default do desconhecido nunca é o valor bom*.
+
 ## [0.71.0] — 2026-08-16
 
 ### `SKILL.md` sai de 42 KB para 25 KB

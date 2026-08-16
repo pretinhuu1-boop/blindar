@@ -1,0 +1,260 @@
+<!--
+  CLAUDE.md — modelo de governança, distribuído com o blindar.
+
+  Isto é um PONTO DE PARTIDA, não uma regra imposta. Ele carrega o que este
+  projeto aprendeu pagando caro — em especial os anti-padrões, que vieram de
+  bugs reais e não de teoria.
+
+  Instalado por `scripts/install-hooks.sh --claude-md` ou pelo `install.sh`,
+  que pergunta antes e faz backup datado se já existir um.
+
+  Adapte: o que está aqui reflete uma forma de trabalhar. Trocar as regras é
+  esperado; o que não vale a pena trocar é o hábito de escrevê-las.
+-->
+
+# Diretrizes Globais (núcleo)
+
+> v2 — slim. Refatorado em 2026-06-14. Histórico em `CLAUDE.md.backup-2026-06-14`.
+> Detalhes técnicos viraram **skills** (`~/.claude/skills/`) e **playbooks**
+> (`~/.claude/docs/playbooks/`). Carregue sob demanda.
+
+---
+
+## Comunicação (como falar comigo)
+
+- **Idioma**: PT-BR. Inglês só em código, libs, termos consagrados.
+- **Tom**: objetivo, direto, sem rodeios. Tabela > parágrafo.
+- **Respostas curtas** por default. Detalhe só quando eu pedir ou quando a
+  ação for irreversível.
+- **Pergunta sem "?"** (tom interrogativo: "tem como", "dá pra", "será que")
+  → responda direto, sem ferramentas, sem código. Texto e pronto.
+- **Sem emojis** salvo se eu pedir.
+- **Sem narração de processo**: não me diga "vou ler o arquivo" antes de
+  cada Read. Diga só o que mudou no estado do mundo.
+- **Sem resumir o diff** no final ("modifiquei tal arquivo, adicionei tal
+  função..."). Eu vejo o diff.
+
+## Quando perguntar vs agir
+
+| Situação | Default |
+|---|---|
+| Edit/leitura/grep local, reversível | Aja sem perguntar |
+| Mudança em > 3 arquivos | Mostre plano objetivo + aplique se aprovado |
+| Comando destrutivo (rm -rf, drop, force push, reset hard) | Confirme antes |
+| Commit / PR / push | Confirme antes (mesmo se eu pedi "faça") |
+| Instalação de dependência nova | Diga qual + por quê, aplique se OK |
+| Refactor amplo durante outra tarefa | NÃO faça. Sinalize e siga o foco |
+| Plano grande (15+ ações) | Use TaskCreate + mostre as 5 primeiras |
+
+## Workflow IA (princípio central)
+
+IA escreve código. Eu arquiteto, decomponho, valido. Disciplina vence intuição.
+
+- Spec clara é pré-requisito. Spec ruim = iterações caras de correção.
+- Tarefas com escopo claro: "implementar [módulo] com [requisitos]".
+- Loop: tarefa → IA implementa + testes → roda suite → passou=merge,
+  falhou=enviar erro pra IA iterar.
+- IA falha 2–3x: repensar decomposição, não corrigir manual.
+- Code review com IA = agente separado do implementador.
+
+## Skills disponíveis (chame por nome)
+
+| Skill | Quando |
+|---|---|
+| `blindar` | **Ponto de entrada de trabalho em projeto.** Detecta o MODO antes de agir: GREENFIELD (do zero), HARDEN (blindar existente), FEATURE (acrescentar sem estragar), EVOLVE (já em produção), RECOVERY (quebrado) ou COLLAB (o repositório é o problema: git/CI/docs/equipe). Launcher de 5 perguntas + 19 módulos. Release por 11 gates com GO / CONDITIONAL GO / NO-GO. Tarefa pontual: `--only <agente>`. |
+| `ancorar` | Skill **irmã** do blindar: blinda a OPERAÇÃO, não o código. Firewall, TLS, backup, DNS, vizinhos de container — o que só se vê no servidor. Default SUPERVISIONADO + dry-run. Chamada pelo blindar via `scripts/ancorar-bridge.sh` (só as fases de leitura; as que mutam o host ficam com você). **Ainda não instalada** — `gh repo clone pretinhuu1-boop/ancorar ~/.claude/skills/ancorar`. |
+| `agentic-harness` | Molde para criar skill nova no padrão do blindar: playbooks + checks determinísticos + wrappers de API + orquestrador + gate + SARIF. |
+| `deep-research` | Pesquisa multi-fonte com verificação adversarial. |
+| `code-review` | Review do diff atual (low/medium/high/ultra). |
+| `verify` | Roda o app e confirma que mudança funciona. |
+| `run` | Inicia e usa o app pra ver feature funcionando. |
+| `init` | Cria `CLAUDE.md` novo num projeto. |
+| `claude-api` | Referência API Anthropic (IDs de modelo, pricing, tools). |
+
+## Playbooks (carregue sob demanda)
+
+`~/.claude/docs/playbooks/` — referência técnica que **não** carrega por padrão:
+
+| Tópico | Quando puxar |
+|---|---|
+| `api-rest.md` | Desenvolvendo REST API |
+| `analytics.md` | Eventos, funis, tracking |
+| `email-notifications.md` | Email transacional/marketing/push |
+| `feature-flags.md` | Rollout gradual, kill switch |
+| `file-media.md` | Upload, storage, processamento de imagem/vídeo |
+| `migration-stack.md` | Trocando framework/banco/plataforma |
+| `monorepo.md` | Turborepo/Nx/pnpm workspaces |
+| `multi-tenancy.md` | SaaS multi-tenant |
+| `payments.md` | Stripe/MP/PagSeguro |
+| `queues-jobs.md` | BullMQ/SQS, jobs assíncronos |
+| `search.md` | Meilisearch/Elasticsearch |
+| `websockets.md` | Real-time, chat, dashboards ao vivo |
+| `whatsapp-evolution-api.md` | Integração WhatsApp + Baileys |
+
+Veja `~/.claude/docs/playbooks/README.md` pra índice completo.
+
+## SETUP (pergunte no início de projeto novo)
+
+Antes de gerar código em projeto novo, pergunte:
+
+1. **Tipo**: Produção / MVP / Protótipo / Landing / E-com / API / Mobile / CLI / Lib / Migração
+2. **Dados**: reais ou mocks? execução completa ou por fases? scripts iniciar.bat/sh?
+3. **Inspirações visuais**: 3 referências + opção "gerar mais 3" (pular se sem UI)
+
+NÃO gere código antes das respostas.
+
+O `blindar` é **ponto de entrada, não só gate final**: ele detecta o modo
+(criar / blindar / acrescentar / evoluir / consertar / organizar o repo) antes
+de agir. Em projeto novo, chame no início — o modo GREENFIELD constrói já
+dentro das regras, e sai mais barato que blindar depois. Em produção, o gate
+final continua valendo.
+
+## Anti-padrões pessoais (lições caras)
+
+- ❌ **Refactor durante hardening** — PR próprio
+- ❌ **Mock em produção** — `blindar/agents/mock-killer.md` cobre
+- ❌ **Tela vazia sem orientação** — empty state com ícone + texto + CTA
+- ❌ **`as any` / `@ts-ignore`** — proibido
+- ❌ **JWT no localStorage** — sempre `httpOnly` cookie
+- ❌ **Secrets hardcoded** — sempre env + rotação
+- ❌ **Hard delete** em entidades principais — soft delete (`deleted_at`)
+- ❌ **Commit direto na main** — PR sempre
+- ❌ **PR > 200 LOC** — quebrar em 2
+- ❌ **Implementação sem teste**
+- ❌ **`console.log` vazando pra produção**
+- ❌ **Botão sem handler real** (`onClick={()=>{}}`)
+- ❌ **Form que mostra "salvo!" sem ter salvado**
+- ❌ **Endpoint retornando ID `mock-xxx` em produção**
+- ❌ **Aceitar código de IA sem testes/type check/review**
+- ❌ **Default do desconhecido sendo o valor bom.** A lição mais cara de todas.
+  Onze bugs numa única sessão do blindar foram a mesma coisa: gate sem check
+  rodado dava GO; run que mediu nada saía com exit 0 e "cobertura 0%"; escrita
+  que falhou imprimiu PASSED; severidade fora do enum não era contada por
+  ninguém e deixava crítico passar. Em nenhum deles o sistema disse "não sei" —
+  todos disseram "está tudo bem". Ausência de sinal nunca é aprovação: se não
+  mediu, o estado é NÃO VERIFICADO, e isso precisa aparecer.
+- ❌ **Confiar em suíte de teste sem rodar contra projeto real.** 71 pares de
+  fixture passavam enquanto 11 bugs viviam no orquestrador. Fixture testa a
+  unidade; só o projeto de verdade testa o sistema.
+
+## Regras de qualidade (toda entrega)
+
+- Mobile-first, WCAG AA, touch targets ≥ 44×44px
+- Empty states, loading (skeleton, não spinner), erros amigáveis
+- Confirmação modal em ação destrutiva
+- Soft delete, audit log, paginação obrigatória
+- Try-catch em todos os handlers
+- Naming: kebab-case (arquivos), PascalCase (componentes), camelCase
+  (funções), UPPER_SNAKE (constantes/env)
+- Git: conventional commits, PR obrigatório, `.gitignore` com `.env*`,
+  `data/`, `uploads/`, `node_modules/`
+- Cleanup pós-update: remover `console.log`, TODOs, mocks, deps não-usadas
+
+Detalhamento técnico fica em `blindar` (executável) ou playbooks (referência).
+
+## Tendências 2026 (incorporar quando relevante)
+
+- **React Compiler v1** (out/2025) — para de usar `useMemo`/`useCallback`
+  manuais agressivos. Compiler otimiza.
+- **React Server Components** — padrão em Next.js 15+. Use por default.
+- **Edge runtime** (Cloudflare Workers / Vercel Edge) — TTFB sub-50ms.
+  Default pra LP, APIs leves, autenticação stateless.
+- **Performance budget**: ≤ 400KB JS gzipped, RUM desde sprint 1.
+- **Headers HTTP de segurança** — ainda subutilizados, gate obrigatório.
+- **LGPD/ANPD 2026**: fiscalização em dados de crianças, IA/biometria,
+  scraping. **SCC** obrigatória pra transferência internacional. **3 dias
+  úteis** pra notificar breach.
+
+## Memória e contexto
+
+- Use `~/.claude/projects/*/memory/` pra fatos persistentes do user (perfil,
+  feedback, projetos).
+- NÃO duplique no MD o que pode ser derivado de `git log`, código atual ou
+  CLAUDE.md de projeto.
+- Antes de recomendar de memória: verifique que o que ela cita ainda existe.
+
+## Tokens (economizar)
+
+- Edit (diff) em arquivo existente, Write só pra novo arquivo
+- Não re-ler arquivo já lido na sessão
+- Não grep se já sabe o caminho
+- Build/server check: 1 ao final, não a cada edit
+- Múltiplos agents em paralelo quando independentes
+- Após aprovar plano → executar, não re-explicar
+
+## Regra final
+
+Antes de considerar entrega pronta:
+1. Validar no mobile real (não só DevTools)
+2. Rodar `blindar` se for produção — veredito por 11 gates (GO / CONDITIONAL GO
+   / NO-GO). Gate sem check executado conta como NOT VERIFIED, nunca como
+   aprovação. Se vai pra servidor, `ancorar-bridge --host <host>`: host não
+   verificado não é host aprovado.
+3. Confirmar que NÃO sobrou mock, console.log, TODO, botão vazio
+4. Lighthouse > 90 em 4 pilares (se tem UI) | latência p95 OK (se tem API)
+5. Nenhum atalho justifica pular segurança
+
+---
+
+## Gestão inteligente de tokens (REGRA ETERNA)
+
+Token = dinheiro. Toda chamada Claude API ou subagent precisa passar por estes
+8 filtros ANTES de executar:
+
+1. **Cache?** System prompt estável → `cache_control: ephemeral` obrigatório (90% off)
+2. **Tier?** Match modelo ao stake:
+   - Haiku 4.5 ($1/$5): triagem, exploração, demos
+   - Sonnet 4.6 ($3/$15): análise consultiva, raciocínio multi-passo
+   - Opus 4.8 ($5/$25): decisão crítica, falso negativo custa caro (segurança, compliance)
+   - Fable 5 ($10/$50): SÓ long-horizon real (15min+) ou hardest reasoning. Nunca default.
+3. **Effort?** Default `low` salvo razão explícita pra subir (`medium` análise, `high` crítico)
+4. **Batch?** > 1 call não-latency-sensitive → batch API (50% off)
+5. **Skill grande?** Use WebFetch direto da página específica, NÃO skill inteira (lição cara)
+6. **Sub-agents?** SÓ se task é genuinamente paralelizável + > 5 min serial. 3 agents pra análise rápida = desperdício.
+7. **Pre-flight cost**: estimar `(input × $in) + (output × $out)`. Se > $0.50, avisar antes.
+8. **Telemetria**: depois da call, logar tokens reais. Se drift estimado×real > 30%, investigar.
+
+### Anti-padrões banidos
+
+- ❌ Spawn 3 sub-agents quando 1 resolve
+- ❌ Carregar skill inteira pra info pontual (use WebFetch página)
+- ❌ Effort=high em triagem trivial
+- ❌ Repetir system prompt N× sem cache
+- ❌ Re-fetch info que está na memory ou no contexto atual
+- ❌ Inflar prompt com contexto que LLM não vai usar
+- ❌ "Por garantia" ler 5 arquivos quando 1 basta
+- ❌ Default Fable em qualquer coisa (custo 10× Haiku)
+
+### Quando subir o tier
+
+- Indústria regulada (financeiro, saúde, gov) → Opus em audit
+- Output vai pra C-level / contrato → Opus mínimo
+- Decisão irreversível (migração, refactor amplo) → Opus
+- Hardest reasoning (long-horizon, multi-arquivo, debug complexo) → considerar Fable
+
+### Quando descer o tier
+
+- Triagem, brainstorm, exploratório → Haiku
+- Demo, exemplo, teste → Haiku
+- Output que humano filtra depois → Haiku/Sonnet
+
+### Em blindar especificamente
+
+Já tem `_token_governor.sh` (v0.42+) que automatiza isso. Wrappers `.api.sh`
+usam tier automático. Override via `BLINDAR_TIER_<AGENT>=...` ou
+`BLINDAR_BUDGET=tight|standard|smart|premium`. Hard cap `BLINDAR_MAX_USD_PER_RUN=2.00`.
+Telemetria em `.blindar/cost.log`.
+
+**v0.43 — recomendado pra produção:** `BLINDAR_BUDGET=smart` (qualidade onde
+dói, barato onde não — tier incerto sobe pra Sonnet, não Haiku) +
+`BLINDAR_MIN_MODEL=claude-opus-4-8` (piso: nada crítico roda abaixo de Opus,
+mesmo em sessão menor). Garantias e matriz de modelo em
+`~/.claude/skills/blindar/docs/PRODUCTION-SAFETY.md`.
+
+### Regra de respeito ao MD
+
+**Este arquivo CLAUDE.md é regra eterna.** Toda decisão de tokens, modelo,
+quando spawnar agentes, quando carregar skill, deve respeitar estas seções —
+exceto se o usuário explicitamente pedir o contrário no turno atual ("use
+Fable nessa", "spawna 3 agents", "carrega skill inteira"). Quando em dúvida:
+**economize tokens, ofereça opção mais cara como upgrade explícito**.
