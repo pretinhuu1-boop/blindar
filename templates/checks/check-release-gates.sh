@@ -52,7 +52,7 @@ gate_of() {
     check-osv-scanner|check-supply-chain|check-sbom-slsa|check-deps-audit|check-network-security|\
     check-tenant-isolation*|check-file-uploads|check-api-surface-isolation|check-mcp-security|\
     check-prompt-injection-defense|check-ai-llm-safety|check-llm-system-prompt-leak|\
-    check-vector-db-security|check-fine-tune-data-leak|check-pentest*|check-defense-theater)
+    check-vector-db-security|check-fine-tune-data-leak|check-pentest*|check-defense-theater|check-invisible-unicode)
       echo "SECURITY" ;;
     check-api-design|check-architect|check-solution-architect|check-config-externalization|\
     check-feature-flags|check-api-gateway)
