@@ -73,7 +73,7 @@ gate_of() {
     check-compliance-lgpd-br|check-pii-encryption|check-log-ops-retention|check-regulatory-mapper)
       echo "PRIVACY" ;;
     check-responsive-a11y|check-frontend*|check-content-quality|check-visual-regression|\
-    check-i18n-tz|check-datetime-tz|check-seo-marketing-meta|check-pwa-installable|\
+    check-i18n-tz|check-datetime-tz|check-seo-marketing-meta|check-seo-foundation|check-pwa-installable|\
     check-session-timeout-ux|check-lighthouse|check-bundle-size|check-govtech-acessibilidade)
       echo "QUALITY" ;;
     check-environment-parity|check-deps-sync|check-cdn-strategy|check-patch-management|\
