@@ -26,8 +26,11 @@ Mantém `sec.html`, `blindar-report.html` (técnico) e `client-report.html`
 Termina quando: **0 crit + ≤2 high** após review adversarial (ou módulos
 selecionados completos em modo ESCOLHIDOS).
 
-## Recursos chave da v0.67
+## Recursos chave da v0.69
 
+- **Hub único** — o blindar roteia o pedido antes de agir: trabalho no projeto
+  (6 modos), verificar o **servidor** (ponte para o `ancorar`) ou **criar uma
+  skill nova** (molde `agentic-harness`, embutido em `docs/`). Um comando resolve.
 - **6 modos de operação** — o blindar detecta a natureza do trabalho antes de agir:
   GREENFIELD (do zero) · HARDEN (blindar existente) · FEATURE (acrescentar sem
   estragar) · EVOLVE (já em produção) · RECOVERY (quebrado) · COLLAB (o

@@ -3,6 +3,54 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.69.0] — 2026-08-16
+
+### O hub
+
+Um comando resolve. O `blindar` roteia o pedido **antes** de agir:
+
+```
+                    ┌─ servidor?      → ancorar-bridge.sh
+  blindar  ─────────┼─ criar skill?   → skill-builder
+                    └─ este projeto?  → os 6 modos
+```
+
+Chamar `blindar` passa a cobrir: auditar, construir, acrescentar, evoluir,
+consertar, organizar o repositório, **verificar o servidor** e **criar a próxima
+skill**. Sem ter de lembrar qual ferramenta chamar.
+
+- **`pipeline/00-mode-select.md`** ganha o **Passo 0**: roteamento de intenção
+  acima dos 6 modos. Inclui a desambiguação que evita o erro mais comum —
+  *"verifica o deploy"* é projeto se for sobre o artefato e o compose; é
+  `ancorar` se for sobre o servidor. Na dúvida: "o código ou a máquina?".
+- **`agents/skill-builder.md`** (novo) + **`docs/agentic-harness/`**: o molde
+  para criar skills passa a viver **dentro** do blindar. É markdown puro, sem
+  código — mantê-lo em repositório separado custava um repo sem entregar nada.
+  Além das 21 garantias do molde, ele agora carrega as 4 lições que só
+  apareceram rodando contra projeto real.
+- **`scripts/install.sh`** roda o `doctor.sh` ao final e **oferece clonar o
+  `ancorar`**. Uma linha de comando deixa a máquina nova pronta.
+
+O `ancorar` fica em repositório próprio de propósito: tem código (16 checks de
+host via SSH, 10 fases) e um contrato de supervisão diferente — absorvê-lo seria
+duplicar. **Dois repositórios no total.**
+
+### Os 49 `deferred` viram subagentes paralelos
+
+O passo 5 da sequência mandatória mandava executar cada playbook em sequência,
+no mesmo contexto. No projeto real isso foram **49 playbooks**: em fila, a
+janela enche e os últimos recebem menos atenção que os primeiros — e ninguém
+percebe, porque o relatório sai igual.
+
+Agora vão em **subagentes paralelos**, um por agente, em lotes de 6–8. Contexto
+isolado é o que mantém o quadragésimo nono tão cuidadoso quanto o primeiro.
+
+O prompt do subagente carrega as regras que não se negociam: severidade só do
+enum; achado crit/high precisa de `file` (ou da medição, se for runtime); não
+achar nada é `passed` com lista vazia, **não** inventar achado para parecer
+útil; e `skipped` só para o que não se aplica. Agente que não gravou result não
+foi executado — vira `errored`, nunca aprovado.
+
 ## [0.68.0] — 2026-08-16
 
 Portabilidade: fazer o blindar funcionar **completo** numa máquina nova.

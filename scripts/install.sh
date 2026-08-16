@@ -50,6 +50,48 @@ fi
 echo ""
 echo "blindar instalado em $TARGET"
 echo ""
+
+# ─── Ambiente ───
+# Rodar o doctor aqui e nao depois: a ausencia de ferramenta e silenciosa no
+# lugar errado. Sem ripgrep dezenas de checks saem como "skipped" e o relatorio
+# mostra cobertura alta — o operador nunca sabe que metade nao olhou nada.
+if [ -f "$TARGET/scripts/doctor.sh" ]; then
+  bash "$TARGET/scripts/doctor.sh" || true
+fi
+
+# ─── Skill irma ───
+# O ancorar fica em repo proprio porque tem codigo (16 checks de host via SSH,
+# 10 fases) e um contrato de supervisao diferente. Sem ele o blindar cobre o
+# codigo e o HOST nunca e verificado.
+ANCORAR_TARGET="${ANCORAR_TARGET:-$HOME/.claude/skills/ancorar}"
+if [ ! -d "$ANCORAR_TARGET" ]; then
+  echo ""
+  echo "  A skill irma 'ancorar' verifica o SERVIDOR (firewall, TLS, backup, DNS,"
+  echo "  vizinhos de container) — o que o blindar nao alcanca. Sem ela, o gate"
+  echo "  DEPLOYMENT fica em 'host nunca verificado'."
+  echo ""
+  if [ "${BLINDAR_INSTALL_ANCORAR:-ask}" = "yes" ]; then
+    RESP="s"
+  elif [ "${BLINDAR_INSTALL_ANCORAR:-ask}" = "no" ] || [ ! -t 0 ]; then
+    RESP="n"
+  else
+    printf "  Instalar o ancorar tambem? [s/N] "
+    read -r RESP </dev/tty || RESP="n"
+  fi
+  case "${RESP:-n}" in
+    s|S|y|Y)
+      if git clone --depth 1 "https://github.com/pretinhuu1-boop/ancorar.git" "$ANCORAR_TARGET" 2>/dev/null; then
+        echo "  ancorar instalado em $ANCORAR_TARGET"
+      else
+        echo "  nao consegui clonar o ancorar (repo privado? faca login com: gh auth login)"
+        echo "  depois: gh repo clone pretinhuu1-boop/ancorar \"$ANCORAR_TARGET\""
+      fi ;;
+    *)
+      echo "  pulado. Depois: gh repo clone pretinhuu1-boop/ancorar \"$ANCORAR_TARGET\"" ;;
+  esac
+fi
+
+echo ""
 echo "Proximo passo: leia CHECKLIST.md"
 echo "  cat \"$TARGET/CHECKLIST.md\""
 echo ""
