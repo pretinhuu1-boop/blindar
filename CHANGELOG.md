@@ -3,6 +3,44 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.70.0] — 2026-08-16
+
+### Guard da lista CRITICAL — hook, não boa intenção
+
+O `risk-engine` diz que apagar dado, desligar autenticação e reescrever
+histórico compartilhado pausam mesmo em AUTO. Isso dependia de **o modelo
+lembrar**. O `CLAUDE.md` do operador já tinha a regra: *"Claude pode esquecer de
+executar algo. Hook não esquece."* — e o blindar não usava **nenhum** hook do
+Claude Code.
+
+- **`templates/hooks/blindar-guard.sh`** (novo): `PreToolUse` em `Bash`. Pausa
+  `DROP`/`TRUNCATE`, `DELETE` sem `WHERE`, `migrate reset`, `push --force`,
+  `reset --hard`, `filter-branch`, `rm -rf` em raiz e remoção de volume.
+  Distingue `--force` de `--force-with-lease`, que passa.
+- **`scripts/install-hooks.sh`** (novo): **lê antes de escrever e faz merge** —
+  `settings.json` costuma ter configuração do operador, e substituir apagaria
+  hooks e permissões existentes. Idempotente. Recusa arquivo malformado em vez
+  de sobrescrever.
+
+Três decisões de desenho:
+
+**Pausa, não proíbe.** A regra é pedir autorização. `deny` tornaria impossível o
+trabalho legítimo (migração planejada, decommission autorizado) e o operador
+desligaria o hook inteiro — trocando uma pausa por nenhuma proteção.
+
+**Cada pausa diz o que se perde**, não só "perigoso". Pausa sem custo explícito
+vira clique reflexo em "sim", que é o mesmo que não pausar.
+
+**Falha aberta de propósito.** Sem `node`, libera com aviso. Um guard que
+bloqueia todo comando porque uma dependência sumiu é desinstalado no primeiro
+minuto. É defesa em profundidade — o playbook continua valendo por cima.
+
+### Allowlist só-leitura
+
+O mesmo instalador adiciona `git status`, `git diff`, `git log`, `Read`,
+`Grep`… Nada que altere estado entra: a allowlist existe para tirar atrito de
+comando inofensivo, não para pular decisão que importa.
+
 ## [0.69.0] — 2026-08-16
 
 ### O hub
