@@ -8,6 +8,7 @@ log_section "Check: trivy (vuln + secret + misconfig)"
 if ! command -v trivy >/dev/null 2>&1; then
   log_warn "trivy não encontrado — pulando"
   log_info "Instale: brew install trivy (ou veja https://aquasecurity.github.io/trivy)"
+  BLINDAR_MISSING_TOOL="trivy"   # sem isto o result sai missing_tool:null
   emit_result "$BLINDAR_AGENT" "skipped" 0
   exit 0
 fi

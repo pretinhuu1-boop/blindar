@@ -3,6 +3,162 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.73.0] — 2026-08-16
+
+Esta versão saiu de uma pergunta simples: o blindar funciona em outra máquina?
+Ele nunca tinha sido testado fora daqui. O teste de máquina limpa — HOME novo,
+clone do GitHub, ambiente sem herança — achou coisa que dois anos de fixture
+não achavam, incluindo um falso negativo no check de segredos.
+
+### O check de segredos aprovava projeto com chave real
+
+`check-secrets` começava por `gitleaks protect --staged`. O código de saída do
+gitleaks é 0 = nenhum vazamento, 1 = achou. Numa auditoria não há nada staged:
+ele varria um índice vazio, achava nada, saía 0 — e o `if` dava certo. O scan da
+árvore de trabalho, que estava no `elif`, **nunca rodava**.
+
+Chave da AWS em `src/` era reportada como `passed`.
+
+E quando `protect` achava algo, saía 1, o `if` falhava, caía no `elif`, que ao
+achar também saía 1 — nenhum ramo pegava, `scope` ficava indefinido e sob
+`set -u` o script abortava. **Achar segredo quebrava o check.**
+
+Agora a árvore de trabalho é sempre varrida, o índice é varrido a mais quando
+existe, os dois relatórios são unidos com dedup, e o veredito vem da contagem —
+nunca do código de saída. Saída >1 do gitleaks é erro, e erro não vira `passed`.
+
+O fixture existente (`project-with-secrets`) tem os padrões mascarados de
+propósito, para não virar segredo de verdade num repositório público. Por isso o
+gitleaks nunca disparava nele e o par não cobria o caminho que quebrou. Entrou
+`project-gitleaks-bad/good`, com segredos que o gitleaks **realmente** detecta
+(JWT de exemplo do jwt.io e chave genérica) e que o Push Protection do GitHub
+não bloqueia.
+
+### O doctor dizia "ambiente completo" com 10 checks sem executar
+
+Ele conferia 7 ferramentas. Os checks chamam gitleaks, trivy, semgrep,
+osv-scanner, govulncheck, pip-audit, cargo-audit — nenhum na lista. Sem eles o
+scan de CVE e de segredo não roda, e o doctor assinava embaixo.
+
+A lista agora é **derivada dos checks instalados**, não escrita à mão: check novo
+com dependência nova aparece sozinho. Lista à mão desatualizaria no primeiro
+check adicionado e voltaria a mentir do mesmo jeito.
+
+E o veredito final passou a separar "roda" de "completo".
+
+### Ferramenta instalada que o blindar dizia não existir
+
+No Windows o instalador grava o diretório no PATH persistente, mas processo já
+em execução não recebe a mudança. Quem instala ripgrep, lê "Successfully
+installed" e roda o blindar via terminal aberto vê 60 checks saírem `skipped`,
+sem relação aparente.
+
+O `_lib.sh` agora lê o PATH persistente do registro e junta o que falta. Não
+inventa caminho nem mantém lista de gerenciador de pacote — usa o que a máquina
+já declarou. Uma vez por árvore de processos.
+
+`type -P` e não `command -v` para achar o ripgrep: o Claude Code define `rg` como
+função de shell apontando para o ripgrep embutido nele. `command -v` acharia a
+função e responderia "tem rg" — mas função não é herdada por processo filho, e
+os checks rodam como filhos. Daria "tem" no agente e "não tem" no check.
+
+### jq deixou de bloquear release
+
+O doctor dizia que sem jq não se perde nada. Era falso nos dois sentidos:
+`check-secrets` pulava inteiro (gitleaks instalado e o check de segredo não
+rodava) e `check-termination` **bloqueava a release** por falta de jq.
+
+Os dois passaram a ler com node, que já é dependência essencial. Continua
+valendo a regra que originou tudo: valor ilegível nunca vira 0 — agora com
+verificação explícita, e contagem não-numérica é NO-GO em vez de aprovação.
+
+De quebra, a comparação de cobertura saiu do `bc`, que não existe por padrão no
+Windows: `bc -l 2>/dev/null` devolvia vazio, `(( ))` vazio é erro de sintaxe e,
+sob `set -e`, matava o script no meio — sem veredito e sem dizer por quê.
+
+### A ponte para o ancorar aprovava host que ninguém olhou
+
+Com o `ancorar` finalmente instalado, deu para exercitar a ponte de verdade —
+até aqui ela chamava um script que não existia na máquina.
+
+Contra host inalcançável, o ancorar pulava os 16 checks, a ponte imprimia
+"fase 3 ok" e **saía 0**. O texto na tela já dizia "pulado != aprovado", mas o
+código de saída dizia o contrário — e é o código de saída que CI e gate leem.
+
+Agora: zero passou e zero falhou é `NÃO VERIFICADO`, exit 3. A mesma regra do
+projeto, aplicada ao host.
+
+A recusa de fase que muta o host (2/4/5/6/9) já estava correta: exit 64 e o
+comando certo para rodar pelo ancorar, que impõe supervisão e dry-run.
+
+### Checks que pulavam sem dizer por quê
+
+Cinco (`gitleaks`, `secrets`, `trivy`, `semgrep`, `osv-scanner`) saíam `skipped`
+com `missing_tool: null`. O relatório dizia "não rodou" sem dizer o que instalar
+para fazer rodar.
+
+### Achado sem localização
+
+`check-runtime-secrets` contava com `wc -l` e chamava `add_finding` com arquivo e
+linha **vazios** nos seis padrões. O relatório dizia "6 process.env não-público"
+sem dizer em qual arquivo — crítico que ninguém consegue abrir.
+
+Rodando contra projeto real, dois críticos assim não reproduziram. Sem
+localização não havia como saber se eram reais, o que os torna piores que
+inúteis: consomem confiança. Agora é um achado por ocorrência, com arquivo e
+linha, e quando o teto de 15 corta, o achado **diz** quantos ficaram de fora.
+
+### O gate reportava 101% de cobertura
+
+Registrar o par do `check-secrets` fez a conta virar `75/74 (101%)`: o numerador
+contava o par verificado, o denominador excluía o check por ser wrapper de
+scanner externo. Métrica que passa de 100% não está medindo o que diz medir.
+
+Wrapper de scanner com par registrado agora entra nos dois lados — alguém já
+provou que existe fixture onde ele dispara.
+
+E o gate ganhou um **terceiro estado**. Numa máquina sem gitleaks, o fixture
+vulnerável do `check-secrets` sai `skipped`: contar como regressão reprovaria o
+gate por causa do ambiente, e contar como ✓ diria "verificado" sobre algo que
+ninguém executou. Agora sai `⊘ NÃO VERIFICADO (falta gitleaks)`, fora do
+numerador e fora das regressões, listado no fim do resumo.
+
+### O check de update mandava fazer downgrade
+
+A comparação era `[ "$REMOTE" != "$LOCAL" ]` — diferente, não mais nova. Numa
+instalação à frente do `main` (build de desenvolvimento, branch de release, ou
+quem acabou de subir a versão) o aviso saía assim:
+
+```
+  blindar v0.72.0 disponivel
+  Voce esta em v0.73.0
+  Atualizar: curl -sSL .../install.sh | bash
+```
+
+Aceitar levaria a um **downgrade**. E como o `SKILL.md` usa o exit 10 para
+*perguntar* ao operador se quer atualizar, perguntar "quer atualizar?" quando a
+resposta certa é "você já está na frente" transforma o aviso em armadilha: quem
+confia nele perde a versão nova.
+
+Agora compara campo a campo, numericamente. Estar à frente diz isso e sai 0.
+
+### `tests/maquina-limpa.sh`
+
+O script que achou tudo acima entrou no repositório. HOME novo, `--local` para a
+árvore de trabalho ou clone do GitHub para o que está publicado — os dois modos
+importam, porque o clone é o que outra máquina recebe hoje.
+
+### `tests/no-nul-bytes.test.mjs`
+
+Um byte NUL entrou num `.join()` de JavaScript embutido em shell — segunda vez
+nesta base, das duas pela mesma via: escape atravessando mais de uma camada.
+
+O que torna caro é como falha. O script roda normalmente, mas o **git passa a
+tratar o arquivo como binário**: some o diff, some o blame, e uma correção no
+check de segredos aparece no pull request como `Bin 2296 -> 6355 bytes`. Ninguém
+revisa o que não vê — foi assim que esta ocorrência foi notada, não por erro de
+execução, mas porque `git diff --stat` disse "Bin".
+
 ## [0.72.0] — 2026-08-16
 
 ### Cache de veredito — não de prompt

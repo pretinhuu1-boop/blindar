@@ -22,6 +22,7 @@ log_section "Check: semgrep (SAST)"
 if ! command -v semgrep >/dev/null 2>&1; then
   log_warn "Semgrep não instalado — instale via 'pipx install semgrep' ou 'brew install semgrep'"
   add_finding "low" "Semgrep não instalado — instale via 'pipx install semgrep' ou 'brew install semgrep'" "" ""
+  BLINDAR_MISSING_TOOL="semgrep"   # sem isto o result sai missing_tool:null
   emit_result "$BLINDAR_AGENT" "skipped" 0
   exit 0
 fi

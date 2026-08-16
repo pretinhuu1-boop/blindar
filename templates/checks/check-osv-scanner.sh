@@ -8,6 +8,7 @@ log_section "Check: osv-scanner (vulns em lockfiles via OSV.dev)"
 if ! command -v osv-scanner >/dev/null 2>&1; then
   log_warn "osv-scanner não encontrado — pulando"
   log_info "Instale: brew install osv-scanner OU go install github.com/google/osv-scanner/cmd/osv-scanner@latest"
+  BLINDAR_MISSING_TOOL="osv-scanner"   # sem isto o result sai missing_tool:null
   emit_result "$BLINDAR_AGENT" "skipped" 0
   exit 0
 fi

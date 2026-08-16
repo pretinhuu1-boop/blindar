@@ -14,7 +14,8 @@
 #   2 = high > 2 sem accept-risk (bloqueia)
 #   3 = cobertura insuficiente
 #   4 = CI streak insuficiente
-#   5 = jq ausente — não dá pra contar, então não dá pra liberar
+#   5 = não deu pra CONTAR (node ausente, ou número ilegível no agregado).
+#       Não contar não é contar zero: sem contagem não se libera.
 
 set -euo pipefail
 
@@ -22,18 +23,43 @@ BLINDAR_DIR="${BLINDAR_DIR:-.blindar}"
 AGGREGATE="$BLINDAR_DIR/results/aggregate.json"
 ACCEPT_RISK="$BLINDAR_DIR/accept-risk.md"
 
-# jq é OBRIGATÓRIO aqui, não conveniência. As contagens abaixo saem dele; sem
-# jq elas vêm como string vazia, a comparação numérica falha silenciosamente e
-# este script declara "release LIBERADA" independente do que foi encontrado.
-# Faltar instrumentação é NO-GO — nunca aprovação.
-if ! command -v jq >/dev/null 2>&1; then
-  echo "❌ 'jq' não está instalado — impossível contar os findings." >&2
-  echo "   Sem jq este script leria as contagens como vazio e diria GO" >&2
-  echo "   independente do que existe. Release BLOQUEADA por falta de" >&2
-  echo "   instrumentação, NÃO por aprovação." >&2
-  echo "   Instale: winget install jqlang.jq | apt install jq | brew install jq" >&2
+# As contagens abaixo vinham de jq. Sem jq elas viravam string vazia, a
+# comparação numérica falhava em silêncio e o script dizia GO independente do
+# que existisse — por isso passou a EXIGIR jq e bloquear na ausência.
+#
+# Bloquear é melhor que aprovar errado, mas continua sendo release barrada por
+# ferramenta, não por achado. Numa máquina nova, sem jq, o gate de terminação
+# reprovava projeto saudável — e o doctor ainda anunciava que sem jq não se
+# perde nada.
+#
+# Agora lê com node, que é dependência ESSENCIAL do blindar (sem node o
+# orquestrador nem resolve o MODULE-MAP). Some o bloqueio espúrio e continua
+# valendo a regra que originou tudo: valor ilegível NUNCA vira 0.
+if ! command -v node >/dev/null 2>&1; then
+  echo "❌ 'node' não está instalado — impossível contar os findings." >&2
+  echo "   Sem contagem não há veredito, e ausência de veredito não é" >&2
+  echo "   aprovação. Release BLOQUEADA por falta de instrumentação." >&2
+  echo "   Instale: https://nodejs.org (>=20)" >&2
   exit 5
 fi
+
+# Lê um caminho pontilhado do JSON. Chave ausente → default. Arquivo ilegível
+# ou valor não-numérico → ERRO, nunca 0: "não consegui ler" e "não tem nenhum"
+# são estados diferentes e só um deles autoriza seguir.
+json_num() { # arquivo caminho.pontilhado default
+  node -e '
+    const fs = require("fs");
+    const [arq, caminho, pad] = process.argv.slice(1);
+    let v;
+    try {
+      v = caminho.split(".").reduce((o, k) => (o == null ? undefined : o[k]),
+                                    JSON.parse(fs.readFileSync(arq, "utf8")));
+    } catch (e) { process.stderr.write("ilegivel"); process.exit(3); }
+    if (v === undefined || v === null) { process.stdout.write(pad); process.exit(0); }
+    if (typeof v !== "number" || !Number.isFinite(v)) { process.exit(3); }
+    process.stdout.write(String(v));
+  ' "$1" "$2" "${3:-0}" 2>/dev/null
+}
 
 if [ ! -f "$AGGREGATE" ]; then
   echo "❌ $AGGREGATE não encontrado. Rode: bash scripts/blindar/run-all.sh primeiro." >&2
@@ -46,10 +72,21 @@ MAX_HIGH_ACCEPTED="${MAX_HIGH_ACCEPTED:-2}"
 MIN_COVERAGE_PCT="${MIN_COVERAGE_PCT:-80}"
 MIN_CI_GREEN_STREAK="${MIN_CI_GREEN_STREAK:-3}"
 
-CRITS=$(jq '.findings_by_severity.crit // 0' "$AGGREGATE")
-HIGHS=$(jq '.findings_by_severity.high // 0' "$AGGREGATE")
-MEDS=$(jq '.findings_by_severity.med // 0' "$AGGREGATE")
-LOWS=$(jq '.findings_by_severity.low // 0' "$AGGREGATE")
+CRITS=$(json_num "$AGGREGATE" findings_by_severity.crit 0) || CRITS=""
+HIGHS=$(json_num "$AGGREGATE" findings_by_severity.high 0) || HIGHS=""
+MEDS=$(json_num  "$AGGREGATE" findings_by_severity.med  0) || MEDS=""
+LOWS=$(json_num  "$AGGREGATE" findings_by_severity.low  0) || LOWS=""
+
+# O motivo de tudo isto: vazio comparado numericamente não falha alto, passa.
+for _par in "crit:$CRITS" "high:$HIGHS" "med:$MEDS" "low:$LOWS"; do
+  case "${_par#*:}" in
+    ''|*[!0-9]*)
+      echo "❌ contagem de ${_par%%:*} ilegível em $AGGREGATE." >&2
+      echo "   Não é zero achado: é achado não contado. NO-GO." >&2
+      exit 5 ;;
+  esac
+done
+unset _par
 
 # Conta highs em accept-risk
 HIGH_ACCEPTED=0
@@ -90,10 +127,23 @@ fi
 
 # Coverage check (se disponível)
 if [ -f "coverage/coverage-summary.json" ]; then
-  COVERAGE=$(jq -r '.total.statements.pct // 0' coverage/coverage-summary.json)
-  if (( $(echo "$COVERAGE < $MIN_COVERAGE_PCT" | bc -l 2>/dev/null) )); then
-    echo "❌ Coverage $COVERAGE% < $MIN_COVERAGE_PCT% — release BLOQUEADA"
+  COVERAGE=$(json_num coverage/coverage-summary.json total.statements.pct) || COVERAGE=""
+  if [ -z "$COVERAGE" ]; then
+    # O arquivo existe e não deu pra ler. Antes isto caía em `bc` sem valor:
+    # `(( ))` vazio é erro de sintaxe e, sob `set -e`, matava o script no meio —
+    # sem veredito e sem dizer por quê. Arquivo de cobertura ilegível é cobertura
+    # NÃO VERIFICADA, que bloqueia igual a cobertura baixa.
+    echo "❌ coverage-summary.json existe mas é ilegível — cobertura NÃO VERIFICADA"
+    echo "   Não verificado não é aprovado. Release BLOQUEADA."
     [ "$EXIT_CODE" -eq 0 ] && EXIT_CODE=3
+  else
+    # Comparação em node, não em bc: bc não existe por padrão no Windows e o
+    # `2>/dev/null` escondia isso — a comparação virava vazia e o teste sumia.
+    if node -e 'process.exit(Number(process.argv[1]) < Number(process.argv[2]) ? 0 : 1)' \
+         "$COVERAGE" "$MIN_COVERAGE_PCT" 2>/dev/null; then
+      echo "❌ Coverage $COVERAGE% < $MIN_COVERAGE_PCT% — release BLOQUEADA"
+      [ "$EXIT_CODE" -eq 0 ] && EXIT_CODE=3
+    fi
   fi
 else
   echo "⚠  coverage-summary.json não encontrado (rode npm run test:coverage)"

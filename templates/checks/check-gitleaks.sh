@@ -12,6 +12,7 @@ if ! command -v gitleaks >/dev/null 2>&1; then
   log_info "Instale: 'brew install gitleaks' ou https://github.com/gitleaks/gitleaks#installing"
   log_info "Fallback: check-secrets-rotation.sh cobre o básico (grep manual de patterns conhecidos)"
   add_finding "low" "gitleaks ausente — instale pra cobertura 100+ regras (vs grep manual). Fallback: check-secrets-rotation.sh" "" ""
+  BLINDAR_MISSING_TOOL="gitleaks"   # sem isto o result sai missing_tool:null
   emit_result "$BLINDAR_AGENT" "skipped" 0
   exit 0
 fi
