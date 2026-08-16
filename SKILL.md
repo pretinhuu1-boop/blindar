@@ -3,8 +3,8 @@ name: blindar
 description: |
   Audita, blinda, otimiza e prepara o projeto para produção. Detecta primeiro a
   natureza do trabalho — GREENFIELD (criar do zero), HARDEN (blindar existente),
-  EVOLVE (já em produção, incremental e reversível) ou RECOVERY (quebrado,
-  estabilizar antes) — e só então roda o pipeline: launcher (5 perguntas + menu
+  FEATURE (acrescentar capacidade sem estragar o resto), EVOLVE (já em produção,
+  incremental e reversível) ou RECOVERY (quebrado, estabilizar antes) — e só então roda o pipeline: launcher (5 perguntas + menu
   de 19 módulos) → baseline → discovery → sec.html → rounds pequenos (1 PR cada)
   → adversarial review → production checklist → release gates → relatório.
   Mantém sec.html como dashboard vivo. Release decidida por 11 gates
@@ -24,6 +24,9 @@ triggers:
   - "cria do zero já blindado"
   - "o projeto quebrou"
   - "migra pra postgres"
+  - "implementa"
+  - "adiciona"
+  - "cria a tela de"
 ---
 
 # blindar — orquestrador
@@ -136,11 +139,18 @@ relatório.
 |---|---|---|---|
 | `greenfield` | não há o que blindar | [`GREENFIELD.md`](pipeline/GREENFIELD.md) | constrói já dentro das regras; termina entregando ao `harden` |
 | `harden` | projeto existente e saudável (**default**) | 00 → 09 | comportamento clássico |
+| `feature` ⭐ v0.62 | pedido é **acrescentar capacidade** | [`FEATURE.md`](pipeline/FEATURE.md) | nasce dentro das regras; checks no fim rodam sobre o **diff** (`--since`), não sobre o projeto inteiro |
 | `evolve` | já está em produção | 00 → 09 | `supervised` forçado, round ≤40 LOC, migration destrutiva proibida |
 | `recovery` | sistema quebrado | [`RECOVERY.md`](pipeline/RECOVERY.md) | suite vermelha é a **entrada**, não o abort; uma correção por vez |
 
-Precedência da detecção: `recovery` > `greenfield` > `evolve` > `harden`. Não
-se blinda escombro, não se audita o vazio, não se experimenta em produção.
+Precedência da detecção: `recovery` > `greenfield` > `evolve`/`feature` >
+`harden`. Não se blinda escombro, não se audita o vazio, não se experimenta em
+produção.
+
+`feature` é o único detectado pelo **pedido**, não pelo estado do repositório —
+um projeto saudável que vai receber uma feature é indistinguível, no disco, de
+um que vai ser auditado. E em produção ele **compõe** com o `evolve` em vez de
+substituí-lo: disciplina de construção mais as travas de quem tem usuários.
 
 Configurado em `operation_mode` (ortogonal a `mode`, que é auto/supervised/chosen).
 
@@ -276,6 +286,7 @@ Pipelines alternativos (não numerados — substituem o fluxo acima conforme o
 | Pipeline | Arquivo | Entra por |
 |---|---|---|
 | **GREENFIELD** ⭐ v0.51 | [`pipeline/GREENFIELD.md`](pipeline/GREENFIELD.md) | `operation_mode: greenfield` |
+| **FEATURE** ⭐ v0.62 | [`pipeline/FEATURE.md`](pipeline/FEATURE.md) | `operation_mode: feature` |
 | **RECOVERY** ⭐ v0.51 | [`pipeline/RECOVERY.md`](pipeline/RECOVERY.md) | `operation_mode: recovery` |
 
 ## Hierarquia de agentes (⭐ v0.57)
