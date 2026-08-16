@@ -86,7 +86,7 @@ if [ "${CC_INPUTS:-0}" -gt 0 ]; then
   while IFS=: read -r file line content; do
     [ -z "$file" ] && continue
     if ! echo "$content" | grep -qiE "autocomplete[\s=]+['\"]?(cc-number|cc-exp|cc-csc|cc-name)"; then
-      add_finding "medium" "Input de cartão sem autocomplete cc-* (bloqueia auto-fill): $(echo "$content" | xargs)" "$file" "$line"
+      add_finding "med" "Input de cartão sem autocomplete cc-* (bloqueia auto-fill): $(echo "$content" | xargs)" "$file" "$line"
       NO_AUTOCOMPLETE=$((NO_AUTOCOMPLETE + 1))
     fi
   done < "$TMP"
@@ -113,7 +113,7 @@ log_info "Verificando Apple Pay / Google Pay..."
 HAS_APPLEPAY=$(rg -l "(PaymentRequestButton|applepay|apple-pay|ApplePay)" --type ts --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | head -1)
 HAS_GPAY=$(rg -l "(googlepay|google-pay|GooglePay|google\.payments)" --type ts --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | head -1)
 if [ -z "$HAS_APPLEPAY" ] && [ -z "$HAS_GPAY" ]; then
-  add_finding "medium" "Sem Apple Pay nem Google Pay configurado (conversão mobile cai ~50%)" "código" ""
+  add_finding "med" "Sem Apple Pay nem Google Pay configurado (conversão mobile cai ~50%)" "código" ""
   log_warn "Wallets mobile ausentes — MED"
 fi
 
@@ -156,7 +156,7 @@ if [ "${FAIL_FILES:-0}" -gt 0 ]; then
   done < "$TMP"
 fi
 if [ "$NO_FALLBACK" -gt 0 ]; then
-  add_finding "medium" "$NO_FALLBACK handler(s) de falha sem oferecer PIX/boleto como fallback" "código" ""
+  add_finding "med" "$NO_FALLBACK handler(s) de falha sem oferecer PIX/boleto como fallback" "código" ""
   log_warn "$NO_FALLBACK fluxo(s) sem fallback alternativo — MED"
 fi
 rm -f "$TMP"

@@ -192,7 +192,7 @@ while IFS= read -r file; do
   fi
 done < "$TMP"
 if [ "$NO_RETRY" -gt 0 ]; then
-  add_finding "medium" "$NO_RETRY arquivo(s) com chamada PIX sem retry/backoff (idempotente — dá pra retry)" "código" ""
+  add_finding "med" "$NO_RETRY arquivo(s) com chamada PIX sem retry/backoff (idempotente — dá pra retry)" "código" ""
   log_warn "$NO_RETRY arquivo(s) PIX sem retry — MED"
 fi
 rm -f "$TMP"
@@ -209,7 +209,7 @@ while IFS= read -r file; do
   fi
 done < "$TMP"
 if [ "$NO_NIGHT_LIMIT" -gt 0 ]; then
-  add_finding "medium" "$NO_NIGHT_LIMIT handler(s) PIX sem validação de limite noturno (20h-06h)" "código" ""
+  add_finding "med" "$NO_NIGHT_LIMIT handler(s) PIX sem validação de limite noturno (20h-06h)" "código" ""
   log_warn "$NO_NIGHT_LIMIT handler(s) sem limite noturno — MED"
 fi
 rm -f "$TMP"

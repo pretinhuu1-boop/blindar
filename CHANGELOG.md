@@ -3,6 +3,79 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.59.0] — 2026-08-16
+
+Primeira execução do blindar de ponta a ponta contra um projeto real (monorepo
+NestJS + Next.js + Prisma, 129 agentes, 20 min). O orquestrador funciona — e a
+execução real encontrou **cinco bugs** que 71 pares de fixture não pegavam.
+Todos da mesma família: **ausência de sinal lida como aprovação**.
+
+### 1. Severidade fora do enum torna o achado invisível
+
+17 chamadas emitiam `"critical"` e `"medium"` em vez de `crit` e `med`. Todo
+consumidor casa a string exata — `check-termination` conta
+`.findings_by_severity.crit`, o release-gate faz `select(.severity=="crit")`,
+o `check-evidence` testa `=== "crit"`.
+
+Consequência: um achado **crítico** aparece no JSON, não é contado por ninguém,
+e **o portão de release diz GO**. Estava em `check-healthtech-fhir` (dado de
+paciente, SMART on FHIR) e `check-govtech-acessibilidade` (obrigação legal).
+
+- `_lib.sh` ganha `normalize_severity()`. Apelidos conhecidos são mapeados;
+  valor desconhecido **não vira `low`** — vira `high` com o original preservado
+  na mensagem. O default do desconhecido não pode ser o valor benigno.
+- `tests/severity-contract.test.mjs` (novo) impede a regressão no call site.
+
+### 2. Os dois caminhos de busca varriam árvores diferentes
+
+O fallback de `grep` sempre excluiu `node_modules/.git/dist/.blindar` no seu
+`base`; o wrapper do `ripgrep` real não excluía nada. O mesmo check varria
+árvores diferentes conforme o ripgrep estivesse instalado — e o desacordo só
+aparece **com** ripgrep, isto é, em produção e não no fallback.
+
+Efeito observado: `content-quality` varreu `.blindar/results/*.json` (a própria
+saída do blindar) e reportou o JSON de findings como "erro técnico vazando pra
+UI" — auto-detecção reentrante.
+
+`BLINDAR_RG_BASE_IGNORE` passa a valer nos dois caminhos, com só o que nunca é
+alvo legítimo. `dist`/`build`/`.next` ficam **de fora** do piso de propósito:
+varrer o bundle construído é exatamente o certo para `runtime-secrets` e
+`pii-encryption`, que procuram segredo assado no artefato do cliente.
+
+### 3. 868 findings, 853 vindos do build
+
+`content-quality` varria `frontend/.next`. E reportava `passed`, então ninguém
+olhava. Somados `.next`, `.nuxt`, `out`, `.svelte-kit`.
+
+### 4. Sem lock: dois runs se corrompem em silêncio
+
+O segundo run trunca o `.run-lines.log`, que é a fonte que o primeiro lê na
+agregação. Observado: run completo com exit 0 e relatório dizendo *"129
+agentes, passed 1, errored 0, coverage 0%"* — enquanto o `mock-killer` sozinho
+tinha achado 310 findings.
+
+- Lock por PID com detecção de lock órfão.
+- Guarda: N agentes planejados com **0 resultados agregados** vira `ERRORED`.
+  Um run que não mediu nada não pode sair com forma de sucesso.
+
+### 5. Falha de escrita virando aprovação
+
+`emit_result` teve o `cat >` falhando com *"No such file or directory"* e o
+check seguiu imprimindo `✓ PASSED` e saindo 0. Agora verifica que o arquivo
+existe e não está vazio; se não, falha explicitamente.
+
+### Bug de segunda ordem, encontrado pelo próprio gate
+
+Renomear as severidades quebrou `check-healthtech-fhir`: ele **contava os
+próprios findings** grepando `'"severity":"critical"'`. A emissão foi corrigida
+e a contagem não — o check passou a emitir `passed` no fixture vulnerável. O
+gate pegou. Convenção interna errada porém consistente é pior que inconsistente:
+corrigir metade quebra.
+
+Junto, o padrão `grep -c ... || echo 0`: o `grep -c` já imprime `0` e sai 1, e o
+`|| echo 0` acrescenta um segundo — produzindo `[: 0\n0: integer expression
+expected`. Corrigido em 7 pontos, incluindo dois checks novos meus.
+
 ## [0.58.0] — 2026-08-15
 
 Fase 8 e última do plano EOS: princípio de evidência. Toda afirmação passa a

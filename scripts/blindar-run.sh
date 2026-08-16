@@ -70,6 +70,30 @@ SKILL_VERSION="$(tr -d '[:space:]' < "$SKILL_DIR/VERSION" 2>/dev/null || echo un
 
 mkdir -p "$RESULTS_DIR"
 
+# ─── Lock de execução ───
+# Dois runs no mesmo projeto se corrompem em SILÊNCIO: o segundo trunca o
+# .run-lines.log, que é a fonte que o primeiro lê na agregação. Observado em
+# produção — o run completo terminou com exit 0 e um relatório dizendo
+# "129 agentes, passed 1, errored 0, coverage 0%", enquanto o mock-killer
+# sozinho tinha achado 310 findings. Um run que mediu nada saiu com forma de
+# sucesso.
+LOCK_FILE="${BLINDAR_DIR:-$PROJECT_DIR/.blindar}/run.lock"
+if [ -f "$LOCK_FILE" ]; then
+  LOCK_PID=$(head -1 "$LOCK_FILE" 2>/dev/null | tr -d '[:space:]')
+  # Lock órfão (processo morreu sem limpar) não pode bloquear para sempre.
+  if [ -n "$LOCK_PID" ] && kill -0 "$LOCK_PID" 2>/dev/null; then
+    echo "ERRO: já existe um blindar-run em andamento neste projeto (PID $LOCK_PID)." >&2
+    echo "      Rodar dois ao mesmo tempo corrompe o log de agregação e produz" >&2
+    echo "      um relatório que diz cobertura 0% sem nenhum erro." >&2
+    echo "      Aguarde o término, ou apague $LOCK_FILE se souber que o processo morreu." >&2
+    exit 75
+  fi
+  echo "⚠ lock órfão de PID $LOCK_PID encontrado (processo não existe mais) — assumindo." >&2
+fi
+printf '%s\n%s\n' "$$" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$LOCK_FILE"
+# EXIT (não ERR — errexit está desligado, trap ERR aqui seria código morto).
+trap 'rm -f "$LOCK_FILE" 2>/dev/null || true' EXIT
+
 # Parse args
 STRICT=0; FAST=0; SECURITY_ONLY=0; JSON_ONLY=0; MODULES_FILTER=""; WITH_EVOLUTION=0
 SINCE_REF=""; PARALLEL="1"; VERBOSE=0; NO_PROACTIVE=0
@@ -396,6 +420,21 @@ while IFS='|' read -r mid ag kind st fc; do
 done < "$RUN_LOG"
 
 DURATION=$(( $(date +%s) - TOTAL_START ))
+
+# ─── Guarda: run que não mediu nada NÃO pode sair com forma de sucesso ───
+# Se TOTAL agentes foram planejados e o log de agregação não rendeu nenhuma
+# linha, o log foi perdido ou truncado (ver lock acima). Sem medição não há
+# veredito, e ausência de veredito nunca é aprovação — a mesma regra que o
+# check-release-gates aplica com as 11 dimensões vazias.
+AGGREGATED=$(( PASSED + FAILED + SKIPPED + DEFERRED + ERRORED ))
+if [ "$TOTAL" -gt 0 ] && [ "$AGGREGATED" -eq 0 ]; then
+  log ""
+  log "${R}${BOLD}ERRO: $TOTAL agentes planejados e 0 resultados agregados.${RST}"
+  log "  O log de agregação ($RUN_LOG) está vazio ou foi truncado —"
+  log "  outro run concorrente, ou o processo morreu no meio."
+  log "  Isto NÃO é 'nenhum problema encontrado'. Nada foi medido."
+  ERRORED=$TOTAL
+fi
 
 # Strict mode: deferred = fail
 if [ "$STRICT" -eq 1 ] && [ "$DEFERRED" -gt 0 ]; then

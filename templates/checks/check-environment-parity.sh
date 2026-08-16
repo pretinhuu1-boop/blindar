@@ -72,7 +72,7 @@ if [ "$FOUND" -lt 2 ]; then
   exit 0
 fi
 
-DISTINCT=$(echo "$ENGINES" | tr ' ' '\n' | grep -c '[a-z]' || echo 0)
+DISTINCT=$(echo "$ENGINES" | tr ' ' '\n' | grep -c '[a-z]' | tail -1)
 DISTINCT=$(echo "$DISTINCT" | tr -d ' ')
 
 if [ "$DISTINCT" -gt 1 ]; then
@@ -89,7 +89,7 @@ if command -v rg >/dev/null 2>&1; then
   rg -n -o -i 'image:[[:space:]]*["'"'"']?(docker\.io/)?(library/)?postgres:[0-9]+' \
     -g '!node_modules' -g '!.git' -g '!.blindar' > "$COMPOSE_TMP" 2>/dev/null || true
   VERSIONS=$(sed -E 's/.*postgres:([0-9]+).*/\1/' "$COMPOSE_TMP" 2>/dev/null | sort -u | tr '\n' ' ')
-  VCOUNT=$(echo "$VERSIONS" | tr ' ' '\n' | grep -c '[0-9]' || echo 0)
+  VCOUNT=$(echo "$VERSIONS" | tr ' ' '\n' | grep -c '[0-9]' | tail -1)
   VCOUNT=$(echo "$VCOUNT" | tr -d ' ')
   if [ "$VCOUNT" -gt 1 ]; then
     add_finding "med" "versões distintas de PostgreSQL entre arquivos de compose ($(echo "$VERSIONS" | xargs)) — comportamento de query planner e sintaxe podem divergir entre ambientes" "docker-compose*.yml" ""
