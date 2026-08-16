@@ -3,6 +3,60 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.63.0] — 2026-08-16
+
+### Execução avulsa — `--only`
+
+Testar um agente exigia o orquestrador inteiro (11 min). Agora:
+
+```bash
+bash scripts/blindar-run.sh --only mock-killer,environment-parity
+```
+
+**2 segundos.** Continua passando pelo orquestrador: o result é gravado no
+formato normal e o schema é validado.
+
+A trava que faz isso ser seguro: se o `coverage_pct` fosse medido contra a lista
+**filtrada**, rodar 1 agente daria **100%** — a métrica diria "tudo coberto"
+tendo olhado uma coisa só. O denominador continua sendo o total **disponível**,
+então 1 de 130 mostra **0%**. O `run-report.json` carrega `partial: true`,
+`only_agents` e `not_run_by_filter`, e a tela avisa "EXECUÇÃO PARCIAL".
+
+A proibição do `SKILL.md` passa a ser específica: não rodar o `.sh` **fora** do
+orquestrador. O caminho pontual existe e é sancionado.
+
+### Modo COLLAB e disciplina de git
+
+O `blindar` tratava do código e nunca do **repositório**. O primeiro projeto
+real auditado não tinha **nenhum commit**.
+
+- **`pipeline/COLLAB.md`** (novo, 6º modo): C1 parar o sangramento antes de
+  commitar · C2 primeiro commit legível · C3 nada entra em `main` sem passar por
+  algo · C4 a equipe sabe o que fazer sem perguntar · C5 ônibus factor · C6
+  entregar ao modo seguinte.
+
+  **A ordem do C1 não é negociável**: `.gitignore` primeiro, `.env.example`
+  depois, `git add` por último. Se já houver commit com segredo, apagar o
+  arquivo **não resolve** — a credencial deve ser considerada comprometida e
+  **rotacionada**. A rotação é obrigatória; reescrever histórico é opcional.
+
+- **`agents/git-collaboration.md`** (novo): vale em **todos** os modos, não é
+  etapa. Commit que explica o **porquê**; PR que cabe na cabeça de quem revisa
+  (acima de ~200 linhas recebe aprovação sem leitura, o que é pior que não ter
+  revisão, porque cria a ilusão de que houve); conflito resolvido **entendendo
+  os dois lados** — `--ours`/`--theirs` resolve o marcador e descarta a intenção
+  do outro.
+
+  A assimetria que governa: quase tudo em git é reversível, e três coisas não
+  são — segredo commitado, histórico reescrito depois de publicado, e trabalho
+  alheio sobrescrito.
+
+- **`check-git-hygiene.sh`** (novo): `.env` fora do `.gitignore` (**crit** — a
+  janela para evitar é antes do primeiro commit), `.gitignore` ausente ou sem
+  `node_modules`/`.env` (**high**), sem CI que guarde o merge (**high**), sem
+  CODEOWNERS nem template de PR (**low**), binário grande versionável (**med**).
+  Par `project-githyg-bad`/`-good`.
+
 ## [0.62.0] — 2026-08-16
 
 ### Modo FEATURE — o caso mais comum do dia a dia, que não tinha modo

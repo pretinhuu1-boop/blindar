@@ -18,6 +18,11 @@
 #   --security-only   Roda APENAS módulos de segurança: 2 (core security),
 #                     5 (supply-chain), 15 (pentest). Mutex com --module.
 #   --module N,N,N    Lista módulos por número (ex: --module 1,2,9)
+#   --only A[,B]      EXECUÇÃO AVULSA: roda só os agentes nomeados (ex:
+#                     --only mock-killer,secrets). Para tarefa pontual. O
+#                     relatório sai com partial:true e o coverage_pct continua
+#                     medido contra o total DISPONÍVEL — um run de 1 agente
+#                     nunca mostra 100%.
 #   --json            Output JSON puro pra CI
 #   --with-evolution  Encadeia blindar-evolve.sh após hardening
 #   --since REF       Modo diff: roda checks só sobre arquivos mudados desde REF
@@ -95,7 +100,7 @@ printf '%s\n%s\n' "$$" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$LOCK_FILE"
 trap 'rm -f "$LOCK_FILE" 2>/dev/null || true' EXIT
 
 # Parse args
-STRICT=0; FAST=0; SECURITY_ONLY=0; JSON_ONLY=0; MODULES_FILTER=""; WITH_EVOLUTION=0
+STRICT=0; FAST=0; SECURITY_ONLY=0; JSON_ONLY=0; MODULES_FILTER=""; WITH_EVOLUTION=0; ONLY_AGENTS=""
 SINCE_REF=""; PARALLEL="1"; VERBOSE=0; NO_PROACTIVE=0
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -104,6 +109,7 @@ while [ $# -gt 0 ]; do
     --security-only) SECURITY_ONLY=1; shift ;;
     --json)   JSON_ONLY=1; shift ;;
     --module) MODULES_FILTER="$2"; shift 2 ;;
+    --only)   ONLY_AGENTS="$2"; shift 2 ;;
     --with-evolution) WITH_EVOLUTION=1; shift ;;
     --since)  SINCE_REF="$2"; shift 2 ;;
     --parallel) PARALLEL="$2"; shift 2 ;;
@@ -236,8 +242,43 @@ ids.forEach(id => {
 console.log([...new Set(out)].join('\n'));
 " "$MODULE_MAP_NATIVE" "$FILTER")
 
+PARTIAL=0
+TOTAL_DISPONIVEL=$(echo "$AGENTS_LIST" | grep -c .)
+if [ -n "$ONLY_AGENTS" ]; then
+  # Execução avulsa: roda só os agentes nomeados. Existe pra tarefa pontual —
+  # antes disto, testar um agente exigia o orquestrador inteiro.
+  #
+  # A trava: um run parcial NUNCA pode ser confundido com cobertura completa.
+  # Se `coverage_pct` fosse calculado contra a lista filtrada, rodar 1 agente
+  # daria 100% — a métrica diria "tudo coberto" tendo olhado uma coisa só.
+  # Por isso o denominador continua sendo o total disponível, e o relatório
+  # carrega `partial: true`.
+  PARTIAL=1
+  _sel=$(printf '%s' "$ONLY_AGENTS" | tr ',' ' ')
+  _filtrada=""
+  for _pair in $AGENTS_LIST; do
+    _ag="${_pair#*:}"
+    for _want in $_sel; do
+      [ "$_ag" = "$_want" ] && _filtrada="${_filtrada}${_pair}"$'
+'
+    done
+  done
+  AGENTS_LIST=$(printf '%s' "$_filtrada" | grep . || true)
+  if [ -z "$AGENTS_LIST" ]; then
+    echo "ERRO: nenhum agente conhecido em --only '$ONLY_AGENTS'." >&2
+    echo "      Confira o nome em pipeline/MODULE-MAP.json (sem o prefixo 'check-')." >&2
+    exit 64
+  fi
+fi
+
 TOTAL=$(echo "$AGENTS_LIST" | grep -c .)
-log_section "blindar-run: $TOTAL agentes (modules=$FILTER, strict=$STRICT, parallel=$PARALLEL, verbose=$VERBOSE${SINCE_REF:+, since=$SINCE_REF})"
+if [ "$PARTIAL" -eq 1 ]; then
+  log_section "blindar-run: EXECUÇÃO PARCIAL — $TOTAL de $TOTAL_DISPONIVEL agentes (--only $ONLY_AGENTS)"
+  log "${Y}Parcial: os outros $((TOTAL_DISPONIVEL - TOTAL)) agentes NÃO rodaram.${RST}"
+  log "${Y}Este resultado não é veredito de release — use o run completo pra isso.${RST}"
+else
+  log_section "blindar-run: $TOTAL agentes (modules=$FILTER, strict=$STRICT, parallel=$PARALLEL, verbose=$VERBOSE${SINCE_REF:+, since=$SINCE_REF})"
+fi
 
 TOTAL_START=$(date +%s)
 
@@ -457,13 +498,19 @@ fi
     echo "  \"since\": \"$SINCE_REF\","
     echo "  \"changed_files\": $CHANGED_FILES_JSON,"
   fi
+  echo "  \"partial\": $( [ "$PARTIAL" -eq 1 ] && echo true || echo false ),"
+  if [ "$PARTIAL" -eq 1 ]; then
+    echo "  \"only_agents\": \"$ONLY_AGENTS\","
+    echo "  \"agents_available\": $TOTAL_DISPONIVEL,"
+    echo "  \"not_run_by_filter\": $((TOTAL_DISPONIVEL - TOTAL)),"
+  fi
   echo "  \"total_agents\": $TOTAL,"
   echo "  \"passed\": $PASSED,"
   echo "  \"failed\": $FAILED,"
   echo "  \"skipped\": $SKIPPED,"
   echo "  \"deferred\": $DEFERRED,"
   echo "  \"errored\": $ERRORED,"
-  echo "  \"coverage_pct\": $(( (PASSED + FAILED + SKIPPED) * 100 / (TOTAL > 0 ? TOTAL : 1) )),"
+  echo "  \"coverage_pct\": $(( (PASSED + FAILED + SKIPPED) * 100 / (TOTAL_DISPONIVEL > 0 ? TOTAL_DISPONIVEL : 1) )),"
   echo "  \"results\": ["
   first=1
   for r in "${RESULTS[@]}"; do
@@ -487,7 +534,10 @@ log "${R}Failed:${RST}   $FAILED"
 log "${Y}Skipped:${RST}  $SKIPPED"
 log "${Y}Deferred:${RST} $DEFERRED (precisa Claude)"
 log "${R}Errored:${RST}  $ERRORED"
-log "Cobertura executável: $(( (PASSED + FAILED + SKIPPED) * 100 / (TOTAL > 0 ? TOTAL : 1) ))%"
+# Mesmo denominador do run-report: o total DISPONÍVEL, não o filtrado. Com
+# --only, medir contra a lista filtrada mostraria 100% tendo olhado um agente —
+# e a tela é o que o operador lê antes do JSON.
+log "Cobertura executável: $(( (PASSED + FAILED + SKIPPED) * 100 / (TOTAL_DISPONIVEL > 0 ? TOTAL_DISPONIVEL : 1) ))%$( [ "$PARTIAL" -eq 1 ] && echo "  ${Y}(parcial: $TOTAL de $TOTAL_DISPONIVEL agentes)${RST}" )"
 log ""
 log "Report: $RUN_REPORT"
 

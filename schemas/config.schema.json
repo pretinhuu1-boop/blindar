@@ -13,9 +13,9 @@
     },
     "operation_mode": {
       "type": "string",
-      "enum": ["greenfield", "harden", "feature", "evolve", "recovery"],
+      "enum": ["greenfield", "harden", "feature", "evolve", "recovery", "collab"],
       "default": "harden",
-      "description": "Modo de OPERAÇÃO — a natureza do trabalho, definido na Fase 00-mode-select. 'greenfield' constrói do zero (pipeline/GREENFIELD.md); 'harden' audita projeto existente (pipeline padrão); 'feature' acrescenta capacidade a projeto saudável (pipeline/FEATURE.md) e é o único detectado pelo PEDIDO e não pelo estado do repo — compõe com 'evolve' quando o projeto está em produção; 'evolve' atua sobre sistema em produção (incremental, reversível, supervised forçado); 'recovery' estabiliza sistema quebrado antes de blindar (pipeline/RECOVERY.md). Altera gates da Fase 1, tamanho de round e o que é permitido alterar. v0.51.0+."
+      "description": "Modo de OPERAÇÃO — a natureza do trabalho, definido na Fase 00-mode-select. 'greenfield' constrói do zero (pipeline/GREENFIELD.md); 'harden' audita projeto existente (pipeline padrão); 'feature' acrescenta capacidade a projeto saudável (pipeline/FEATURE.md) e é o único detectado pelo PEDIDO e não pelo estado do repo — compõe com 'evolve' quando o projeto está em produção; 'evolve' atua sobre sistema em produção (incremental, reversível, supervised forçado); 'recovery' estabiliza sistema quebrado antes de blindar (pipeline/RECOVERY.md); 'collab' prepara o REPOSITÓRIO e o processo para uma equipe — git, CI, docs, revisão (pipeline/COLLAB.md). Altera gates da Fase 1, tamanho de round e o que é permitido alterar. v0.51.0+."
     },
     "operation_mode_source": {
       "type": "string",
