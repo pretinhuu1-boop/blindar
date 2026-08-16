@@ -72,6 +72,25 @@ Quando esta skill for invocada (`blindar`, `blinda este projeto`, etc.), você (
 
 **Se algo falhar**: reporte exit code + arquivo de log, NÃO tente "consertar" rodando outras coisas.
 
+### Verificar o host (⭐ v0.66)
+
+O blindar cobre o **código**. Firewall ativo, certificado válido, backup fresco,
+DNS apontando certo e vizinho de container saudável só se veem **no servidor** —
+e isso é da skill irmã [`ancorar`](https://github.com/pretinhuu1-boop/ancorar).
+
+```bash
+bash scripts/ancorar-bridge.sh --host meu.servidor.com
+```
+
+A ponte invoca só as fases de **leitura** do ancorar (0, 1, 3, 7, 8, 10). As que
+mutam o host — provisionar, migrar, cutover, decommission — são **recusadas** com
+o comando certo no lugar: automatizá-las daqui trocaria o *supervisionado +
+dry-run* do ancorar pelo *auto* daqui.
+
+O resultado entra no gate `DEPLOYMENT`: ancorar reprovando o host vira
+**BLOCKED**, e host nunca verificado vira warning. Host não verificado não é
+host aprovado.
+
 ### Execução avulsa (⭐ v0.63) — tarefa pontual
 
 Quando o operador quer **uma coisa só** ("roda só o anti-mock aqui", "checa só a
