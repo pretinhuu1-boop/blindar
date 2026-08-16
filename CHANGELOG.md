@@ -3,6 +3,35 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.71.0] — 2026-08-16
+
+### `SKILL.md` sai de 42 KB para 25 KB
+
+O `SKILL.md` é carregado **em toda invocação** — inclusive quando o pedido é
+rodar um único check. Ele havia crescido para 803 linhas com tudo que entrou
+nesta sequência de versões.
+
+15 seções saíram do caminho quente para `reference/`, com o critério: **é
+referência consultada quando a etapa exige, ou decisão tomada em toda
+invocação?** O que fica é o segundo.
+
+| Arquivo | Tem |
+|---|---|
+| `reference/modulos-e-agentes.md` | menu dos 19 módulos, 12 leads, roster |
+| `reference/camada-deterministica.md` | checks executáveis, instalador, intelligence |
+| `reference/apoio.md` | frameworks, templates, runbooks, stacks, tendências |
+| `reference/operacao.md` | sync dev↔instalada, auto-update, origem |
+
+O que **permanece** no `SKILL.md`: a sequência mandatória, o roteamento do hub,
+os 6 modos, os princípios e os gates — o que decide comportamento.
+
+Mesmo tratamento que o `agentic-harness` já tinha recebido: entrada enxuta,
+peso sob demanda.
+
+**Links relativos corrigidos**: as seções movidas apontavam para `agents/`,
+`pipeline/`, `templates/` — um nível acima a partir de `reference/`. Todos os
+links dos dois lados foram verificados e resolvem.
+
 ## [0.70.0] — 2026-08-16
 
 ### Guard da lista CRITICAL — hook, não boa intenção
