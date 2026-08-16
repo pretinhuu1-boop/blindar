@@ -35,7 +35,7 @@ seria contraditório:
 
 | `operation_mode` | Comportamento do gate |
 |---|---|
-| `harden` / `evolve` | como acima — PARA |
+| `harden` / `feature` / `evolve` | como acima — PARA. Em `feature`, com um motivo extra: não dá para provar que a feature não quebrou nada se já estava quebrado antes dela |
 | `recovery` | **não para.** Suite vermelha/build quebrado é a condição de entrada do modo, não motivo de abortar. Repo sujo também é tolerado (a correção em andamento pode estar no working tree). Siga por [`RECOVERY.md`](RECOVERY.md). |
 | `greenfield` | **não se aplica.** Não há suite nem CI para avaliar ainda; ambas nascem em G8/G7 de [`GREENFIELD.md`](GREENFIELD.md). |
 

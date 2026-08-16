@@ -3,6 +3,50 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.62.0] — 2026-08-16
+
+### Modo FEATURE — o caso mais comum do dia a dia, que não tinha modo
+
+Os quatro modos existentes auditam (`harden`), constroem do zero
+(`greenfield`), protegem produção (`evolve`) ou apagam incêndio (`recovery`).
+Faltava **acrescentar algo a um projeto existente e saudável**.
+
+Sem ele, "implementa o módulo de pagamento" caía no `harden` — que é auditoria,
+não construção. O resultado era código escrito sem a disciplina do `greenfield`
+e um relatório sobre **o passado do projeto** em vez da feature pedida.
+
+- **`pipeline/FEATURE.md`** (novo): F1 entender antes de escrever · F2 impacto ·
+  F3 a feature nasce dentro das regras · F4 a matriz de acesso ganha linha ·
+  F5 provar que funciona · F6 **provar que não quebrou o que já existia** ·
+  F7 registrar.
+
+### Duas decisões de desenho que valem registrar
+
+**É o único modo detectado pelo PEDIDO, não pelo disco.** Um projeto saudável
+que vai receber uma feature é indistinguível, no sistema de arquivos, de um
+projeto saudável que vai ser auditado. O sinal está no verbo do operador —
+"implementa", "adiciona", "cria a tela de".
+
+**Em produção ele compõe com o `evolve`, não o substitui.** Feature em sistema
+com usuários é as duas coisas ao mesmo tempo: a disciplina de construção daqui
+somada às travas de lá (round ≤40 LOC, `supervised`, migration destrutiva
+proibida).
+
+### O que separa este modo de "escrever código"
+
+F6. A suite **inteira** verde, não só os testes novos; os checks rodando sobre
+o **diff** (`blindar-run.sh --since`) em vez do projeto inteiro; e o gate
+`security-first` valendo integralmente — um PR que não é de segurança não pode
+enfraquecer segurança.
+
+E F3 transforma o que no `greenfield` são etapas de construção em **requisitos
+de aceitação**: autorização verificada na API e não só na UI, `tenant_id` desde
+a primeira migration, seed no banco e não em array, fila com retry e
+idempotência, teste escrito junto. Nenhum é "depois".
+
+F4 amarra com o `iam-architecture`: feature quase sempre traz recurso novo, e
+recurso ausente da matriz não é "sem acesso" — é **não decidido**.
+
 ## [0.61.0] — 2026-08-16
 
 ### Build varrido como se fosse fonte
