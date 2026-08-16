@@ -21,6 +21,9 @@ source "$_API_WRAPPER_DIR/_token_governor.sh"
 # blindar_api_check AGENT_NAME SYSTEM_PROMPT USER_CONTENT [FORCED_MODEL]
 # Quarto arg é OVERRIDE opcional — normalmente deixe vazio pra governor decidir.
 # ───────────────────────────────────────────────────────────────
+# Cache de veredito: helper separado, para não misturar shell com JS inline.
+[ -f "$(dirname "${BASH_SOURCE[0]}")/_cache.sh" ] &&   source "$(dirname "${BASH_SOURCE[0]}")/_cache.sh"
+
 blindar_api_check() {
   local agent="$1"
   local system="$2"
@@ -74,6 +77,18 @@ blindar_api_check() {
   # 6. Decide se ativar cache (system prompt > ~1024 tokens)
   local use_cache=0
   [ "$system_chars" -gt 4096 ] && use_cache=1
+
+  # 6b. Veredito em cache? Evita o request inteiro quando a evidência não mudou.
+  # As três travas (hash cobre a evidência, cobre a versão/prompt do agente, e o
+  # result reusado carrega from_cache) estão documentadas no _cache.sh.
+  local ck=""
+  if command -v blindar_cache_key >/dev/null 2>&1; then
+    ck=$(blindar_cache_key "$agent" "$system" "$truncated_content")
+    if blindar_cache_try "$agent" "$ck"; then
+      log_info "$agent → veredito reusado do cache (evidência inalterada)"
+      return 0
+    fi
+  fi
 
   # 7. Monta tool definition
   local tool_def='{
@@ -229,10 +244,12 @@ blindar_api_check() {
 
   if [ "$has_crit_or_high" -eq 1 ]; then
     emit_result "$agent" "failed" 1
+    command -v blindar_cache_store >/dev/null 2>&1 && blindar_cache_store "$agent" "${ck:-}"
     return 0
   fi
 
   emit_result "$agent" "passed" 0
+  command -v blindar_cache_store >/dev/null 2>&1 && blindar_cache_store "$agent" "${ck:-}"
 }
 
 # Helper: lê arquivos relevantes pra um agente (limita tokens)

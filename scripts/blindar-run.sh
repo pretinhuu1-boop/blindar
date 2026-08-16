@@ -72,6 +72,9 @@ PROJECT_DIR="${PWD}"
 RESULTS_DIR="${BLINDAR_DIR:-$PROJECT_DIR/.blindar}/results"
 RUN_REPORT="${BLINDAR_DIR:-$PROJECT_DIR/.blindar}/run-report.json"
 SKILL_VERSION="$(tr -d '[:space:]' < "$SKILL_DIR/VERSION" 2>/dev/null || echo unknown)"
+# O cache de veredito usa a versão como parte da chave: blindar novo invalida
+# veredito antigo, que foi produzido por outra lógica.
+export BLINDAR_SKILL_VERSION="$SKILL_VERSION"
 
 mkdir -p "$RESULTS_DIR"
 
@@ -545,6 +548,18 @@ log "${R}Errored:${RST}  $ERRORED"
 # Mesmo denominador do run-report: o total DISPONÍVEL, não o filtrado. Com
 # --only, medir contra a lista filtrada mostraria 100% tendo olhado um agente —
 # e a tela é o que o operador lê antes do JSON.
+_CACHE_N=0
+if [ -d "$RESULTS_DIR" ] && command -v node >/dev/null 2>&1; then
+  _CACHE_N=$(node -e '
+    const fs=require("fs"),p=require("path");let n=0;
+    try{for(const f of fs.readdirSync(process.argv[1]).filter(x=>x.endsWith(".json"))){
+      try{if(JSON.parse(fs.readFileSync(p.join(process.argv[1],f),"utf8")).from_cache)n++;}catch(e){}
+    }}catch(e){}
+    process.stdout.write(String(n));
+  ' "$RESULTS_DIR" 2>/dev/null || echo 0)
+fi
+# Reuso precisa APARECER: veredito de cache é medição anterior, não desta rodada.
+[ "${_CACHE_N:-0}" -gt 0 ] && log "Reusados do cache:  $_CACHE_N (evidência inalterada — medição anterior, não desta rodada)"
 log "Cobertura executável: $(( (PASSED + FAILED + SKIPPED) * 100 / (TOTAL_DISPONIVEL > 0 ? TOTAL_DISPONIVEL : 1) ))%$( [ "$PARTIAL" -eq 1 ] && echo "  ${Y}(parcial: $TOTAL de $TOTAL_DISPONIVEL agentes)${RST}" )"
 log ""
 log "Report: $RUN_REPORT"
