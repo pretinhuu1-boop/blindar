@@ -38,8 +38,38 @@ log_section() { echo ""; echo "${BOLD}═══ $* ═══${RESET}"; }
 # ─── Findings array (acumula no script) ───
 declare -a FINDINGS=()
 
+# Severidade fora do enum é finding INVISÍVEL. Todo consumidor casa a string
+# exata: check-termination conta `.findings_by_severity.crit`, o release-gate
+# faz `select(.severity=="crit")`, o check-evidence testa `=== "crit"`. Um
+# add_finding com "critical" (em vez de "crit") produz um achado que aparece no
+# JSON, não é contado por ninguém, e deixa o portão de release dizer GO com um
+# crítico aberto.
+# Encontrado em produção: check-healthtech-fhir e check-govtech-acessibilidade
+# emitiam "critical", e check-ecom/fintech emitiam "medium".
+#
+# Normaliza os apelidos conhecidos. Valor desconhecido NÃO vira "low": o default
+# do desconhecido nunca pode ser o valor benigno — vira "high" com o original
+# preservado na mensagem, para aparecer e ser diagnosticável.
+normalize_severity() {
+  case "$1" in
+    crit|high|med|low) echo "$1" ;;
+    critical)          echo "crit" ;;
+    medium|warning|warn) echo "med" ;;
+    info|informational|note) echo "low" ;;
+    *)                 echo "high" ;;
+  esac
+}
+
 add_finding() {
   local sev="$1"; local msg="$2"; local file="${3:-}"; local line="${4:-}"
+  local norm; norm=$(normalize_severity "$sev")
+  if [ "$norm" != "$sev" ]; then
+    case "$sev" in
+      critical|medium|warning|warn|info|informational|note) : ;;
+      *) msg="$msg [severidade inválida '$sev' recebida como high]" ;;
+    esac
+    sev="$norm"
+  fi
   # file/line TAMBÉM passam por escape_json: no Windows o rg emite paths com
   # barra invertida (src\config.ts) e "\c" não é escape JSON válido → o result
   # ficava impossível de parsear justamente quando o check ACHAVA algo.
@@ -96,6 +126,9 @@ emit_result() {
   [ -n "${BLINDAR_MISSING_TOOL:-}" ] && skip_json="\"$(escape_json "$BLINDAR_MISSING_TOOL")\""
 
   local out="$RESULTS_DIR/${agent}.json"
+  # O diretório pode ter sumido entre o source do _lib.sh e agora (limpeza
+  # concorrente, --reset em paralelo). Recriar aqui é barato.
+  mkdir -p "$RESULTS_DIR" 2>/dev/null || true
   cat > "$out" <<EOF
 {
   "schema": "blindar/check-result@v1",
@@ -110,6 +143,17 @@ emit_result() {
   "findings": $findings_json
 }
 EOF
+
+  # Result que não foi persistido NÃO pode ser reportado como aprovação.
+  # Observado: o `cat >` falhou com "No such file or directory" e o check
+  # seguiu imprimindo "✓ PASSED" e saindo 0 — falha de escrita virando sucesso,
+  # e o orquestrador não teria result nenhum para agregar.
+  if [ ! -s "$out" ]; then
+    log_fail "$agent: NÃO consegui gravar o resultado em $out"
+    log_fail "  O check rodou, mas o veredito não foi persistido — isto não é"
+    log_fail "  'nenhum problema encontrado'. Tratando como erro."
+    return 4
+  fi
 
   log_info "Resultado: $out"
   case "$status" in
@@ -183,9 +227,30 @@ if type -P rg >/dev/null 2>&1; then
   # MSYS2_ARG_CONV_EXCL='*' desliga a conversão só para este processo; o rg aceita
   # barras normais em caminhos, então nada mais é afetado. Em Linux/macOS as vars
   # são ignoradas. Não passar caminho POSIX absoluto (/c/...) pro rg daqui.
+  # ─── Piso de exclusão comum aos DOIS caminhos ───
+  # O fallback de grep (abaixo) sempre excluiu node_modules/.git/dist/.blindar
+  # no seu `base`. Este wrapper não excluía nada — então o mesmo check varria
+  # árvores diferentes conforme o ripgrep estivesse instalado ou não, e o
+  # desacordo só aparecia COM ripgrep, isto é, em produção e não no fallback.
+  #
+  # Consequência observada rodando contra projeto real: o content-quality
+  # varreu `.blindar/results/*.json` (a própria saída do blindar) e reportou o
+  # JSON de findings como "erro técnico vazando pra UI" — auto-detecção
+  # reentrante. `.blindar.*` cobre os diretórios de arquivo de runs anteriores.
+  #
+  # Aqui entra só o que NUNCA é alvo legítimo de auditoria. `dist`, `build` e
+  # `.next` ficam de FORA deste piso de propósito: varrer o bundle construído é
+  # exatamente o certo para runtime-secrets e pii-encryption, que procuram
+  # segredo assado no artefato do cliente.
+  BLINDAR_RG_BASE_IGNORE=(
+    -g '!node_modules' -g '!.git' -g '!.blindar' -g '!.blindar.*'
+    -g '!coverage' -g '!**/*.min.js' -g '!**/*.min.css' -g '!**/*.map'
+  )
+  export BLINDAR_RG_BASE_IGNORE
   rg() {
     MSYS2_ARG_CONV_EXCL='*' MSYS_NO_PATHCONV=1 \
-      command "$BLINDAR_RG_BIN" --type-add 'prisma:*.prisma' --type-add 'env:.env*' "$@" </dev/null
+      command "$BLINDAR_RG_BIN" --type-add 'prisma:*.prisma' --type-add 'env:.env*' \
+      "${BLINDAR_RG_BASE_IGNORE[@]}" "$@" </dev/null
   }
   export -f rg
 fi

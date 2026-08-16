@@ -63,7 +63,7 @@ for f in $LOG_FILES; do
 
   # Entradas = headings de nível 2. Arquivo-por-ADR (docs/adr/0001-x.md) conta
   # como uma entrada só.
-  ENTRIES=$(grep -c '^## ' "$f" 2>/dev/null || echo 0)
+  ENTRIES=$(grep -c '^## ' "$f" 2>/dev/null | tail -1)
   ENTRIES=$(echo "$ENTRIES" | tr -d ' ')
 
   MISSING=""

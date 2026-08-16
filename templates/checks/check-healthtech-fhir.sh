@@ -31,7 +31,7 @@ log_info "Stack healthtech detectada ($FHIR_HITS sinais) — auditando"
 PATIENT_NO_ID=$(rg -nU "\"resourceType\"\\s*:\\s*\"Patient\"[\\s\\S]{0,400}" --type json --type ts "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null \
   | grep -v "identifier" | wc -l || echo 0)
 if [ "$PATIENT_NO_ID" -gt 0 ]; then
-  add_finding "critical" "$PATIENT_NO_ID Patient resource(s) sem campo 'identifier' (CPF/CNS) — paciente fantasma, viola CFM 1821 e impede interoperabilidade" "" ""
+  add_finding "crit" "$PATIENT_NO_ID Patient resource(s) sem campo 'identifier' (CPF/CNS) — paciente fantasma, viola CFM 1821 e impede interoperabilidade" "" ""
 fi
 
 # ─── 2. Endpoint FHIR sem auth/scope check (CRIT) ───
@@ -44,7 +44,7 @@ if [ "$FHIR_ROUTES_TOTAL" -gt 0 ]; then
 fi
 rm -f "$FHIR_ROUTES_TMP"
 if [ "$FHIR_ROUTES_NO_AUTH" -gt 0 ]; then
-  add_finding "critical" "$FHIR_ROUTES_NO_AUTH endpoint(s) FHIR sem auth/scope check — viola SMART on FHIR e expõe PHI" "" ""
+  add_finding "crit" "$FHIR_ROUTES_NO_AUTH endpoint(s) FHIR sem auth/scope check — viola SMART on FHIR e expõe PHI" "" ""
 fi
 
 # ─── 3. PHI em log/console (CRIT — LGPD art. 11) ───
@@ -56,7 +56,7 @@ if [ -s "$PHI_LOG_TMP" ]; then
 fi
 rm -f "$PHI_LOG_TMP"
 if [ "$PHI_IN_LOG" -gt 0 ]; then
-  add_finding "critical" "$PHI_IN_LOG referência(s) a PHI em log/console — viola LGPD art. 11 (dado sensível de saúde)" "" ""
+  add_finding "crit" "$PHI_IN_LOG referência(s) a PHI em log/console — viola LGPD art. 11 (dado sensível de saúde)" "" ""
 fi
 
 # ─── 4. Consent resource ausente em fluxo de compartilhamento (HIGH) ───
@@ -82,7 +82,7 @@ if [ "$TELE_HITS" -gt 0 ]; then
   TELE_NO_CRM=$(rg -vc "(crm|practitioner|medico)" "$TELE_TMP" 2>/dev/null || echo 0)
   rm -f "$TELE_TMP"
   if [ "$TELE_NO_CONSENT" -gt 0 ] || [ "$TELE_NO_CRM" -gt 0 ]; then
-    add_finding "critical" "Telemedicina detectada sem registro completo (CRM médico + consentimento gravado) — viola CFM 2299/2021" "" ""
+    add_finding "crit" "Telemedicina detectada sem registro completo (CRM médico + consentimento gravado) — viola CFM 2299/2021" "" ""
   fi
 fi
 
@@ -90,7 +90,7 @@ fi
 ADDR_EXPOSURE=$(rg -nU "(serialize|toJSON|response).*?Patient" --type ts "${IGNORE[@]}" "${INTEL_GLOBS[@]}" -A 5 2>/dev/null \
   | grep -i "address" | grep -vE "(mask|redact|omit|exclude)" | wc -l || echo 0)
 if [ "$ADDR_EXPOSURE" -gt 0 ]; then
-  add_finding "medium" "$ADDR_EXPOSURE serialização(ões) de Patient.address sem masking — minimum necessary (LGPD art. 6, III)" "" ""
+  add_finding "med" "$ADDR_EXPOSURE serialização(ões) de Patient.address sem masking — minimum necessary (LGPD art. 6, III)" "" ""
 fi
 
 # ─── 8. DiagnosticReport.result sem versioning (HIGH) ───
@@ -109,7 +109,7 @@ if [ -s "$PERIOD_NO_TZ_TMP" ]; then
 fi
 rm -f "$PERIOD_NO_TZ_TMP"
 if [ "$PERIOD_NO_TZ" -gt 0 ]; then
-  add_finding "medium" "$PERIOD_NO_TZ Encounter.period sem timezone — viola ISO 8601 + ePING + dificulta auditoria temporal" "" ""
+  add_finding "med" "$PERIOD_NO_TZ Encounter.period sem timezone — viola ISO 8601 + ePING + dificulta auditoria temporal" "" ""
 fi
 
 # ─── 10. OAuth implicit em vez de PKCE (HIGH) ───
@@ -120,8 +120,8 @@ if [ "$IMPLICIT_FLOW" -gt 0 ] && [ "$PKCE_USED" -eq 0 ]; then
 fi
 
 # ─── Resultado ───
-CRIT_COUNT=$(printf '%s\n' "${FINDINGS[@]:-}" | grep -c '"severity":"critical"' 2>/dev/null || echo 0)
-HIGH_COUNT=$(printf '%s\n' "${FINDINGS[@]:-}" | grep -c '"severity":"high"' 2>/dev/null || echo 0)
+CRIT_COUNT=$(printf '%s\n' "${FINDINGS[@]:-}" | grep -c '"severity":"crit"' 2>/dev/null | tail -1)
+HIGH_COUNT=$(printf '%s\n' "${FINDINGS[@]:-}" | grep -c '"severity":"high"' 2>/dev/null | tail -1)
 
 if [ "${#FINDINGS[@]}" -eq 0 ]; then
   emit_result "$BLINDAR_AGENT" "passed" 0

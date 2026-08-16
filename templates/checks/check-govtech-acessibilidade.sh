@@ -29,7 +29,7 @@ log_info "Indícios de govtech BR detectados ($GOV_HITS sinais) — auditando"
 LOGIN_HITS=$(rg -c "(login|signin|sign-in|signIn|auth/login)" --type ts "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0)
 GOVBR_LOGIN=$(rg -c "(gov\\.br|govbr|acesso\\.gov|sso\\.acesso)" --type ts --type js --type json "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0)
 if [ "$LOGIN_HITS" -gt 3 ] && [ "$GOVBR_LOGIN" -eq 0 ]; then
-  add_finding "critical" "Sistema com login mas sem opção gov.br SSO — diretriz federal exige aceite de identidade cidadã" "" ""
+  add_finding "crit" "Sistema com login mas sem opção gov.br SSO — diretriz federal exige aceite de identidade cidadã" "" ""
 fi
 
 # ─── 2. Sem botão "Acessibilidade" no header (HIGH — eMAG 1.10) ───
@@ -49,7 +49,7 @@ fi
 OUTLINE_NONE=$(rg -nU ":focus[\\s\\S]{0,200}outline\\s*:\\s*(none|0)" --type css --type ts "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0)
 FOCUS_VISIBLE=$(rg -c "(focus-visible|focusVisible|outline:\\s*[12]px)" --type css --type ts "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0)
 if [ "$OUTLINE_NONE" -gt 0 ] && [ "$FOCUS_VISIBLE" -eq 0 ]; then
-  add_finding "critical" "$OUTLINE_NONE regra(s) ':focus { outline:none }' sem substituto visual — viola eMAG 2.1 + WCAG 2.4.7" "" ""
+  add_finding "crit" "$OUTLINE_NONE regra(s) ':focus { outline:none }' sem substituto visual — viola eMAG 2.1 + WCAG 2.4.7" "" ""
 fi
 
 # ─── 5. Sem versão alto-contraste (HIGH — eMAG 4.4) ───
@@ -61,7 +61,7 @@ fi
 # ─── 6. Mapa do site ausente (MED — eMAG 1.5) ───
 SITEMAP_LINK=$(rg -c "(mapa[- ]?do[- ]?site|site-?map|sitemap)" --type ts --type html "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0)
 if [ "$SITEMAP_LINK" -eq 0 ]; then
-  add_finding "medium" "Sem link 'Mapa do site' (rodapé) — viola eMAG 1.5" "" ""
+  add_finding "med" "Sem link 'Mapa do site' (rodapé) — viola eMAG 1.5" "" ""
 fi
 
 # ─── 7. Sem lang="pt-br" em <html> (HIGH) ───
@@ -91,7 +91,7 @@ fi
 TRANSP_PAGE=$(rg -c "(/transparencia|/dados-abertos|transparencia-ativa)" --type ts --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0)
 PUBLIC_ORG=$(rg -c "(prefeitura|ministerio|secretaria.*?estado|tribunal|camara.*?municipal|orgao.*?publico)" --type ts --type md "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0)
 if [ "$PUBLIC_ORG" -gt 0 ] && [ "$TRANSP_PAGE" -eq 0 ]; then
-  add_finding "medium" "Órgão público sem página /transparencia ou /dados-abertos — viola LAI (Lei 12.527/2011)" "" ""
+  add_finding "med" "Órgão público sem página /transparencia ou /dados-abertos — viola LAI (Lei 12.527/2011)" "" ""
 fi
 
 # ─── 10. CSP que bloqueia ferramentas de leitor (MED) ───
@@ -107,18 +107,18 @@ if [ -s "$CSP_HITS_TMP" ]; then
 fi
 rm -f "$CSP_HITS_TMP"
 if [ "$CSP_BLOCKS_GOV" -gt 0 ]; then
-  add_finding "medium" "CSP não permite vlibras.gov.br / sso.acesso.gov.br — pode bloquear leitor de tela + login gov.br" "" ""
+  add_finding "med" "CSP não permite vlibras.gov.br / sso.acesso.gov.br — pode bloquear leitor de tela + login gov.br" "" ""
 fi
 
 # ─── 11. VLibras não embedado (MED — recomendado pra gov) ───
 VLIBRAS_EMBED=$(rg -c "(vlibras\\.gov\\.br/app|VLibras\\.Widget|vw-access-button)" --type ts --type html --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0)
 if [ "$VLIBRAS_EMBED" -eq 0 ]; then
-  add_finding "medium" "VLibras não embedado — recomendado pelo MCom em portais gov BR (acessibilidade Libras)" "" ""
+  add_finding "med" "VLibras não embedado — recomendado pelo MCom em portais gov BR (acessibilidade Libras)" "" ""
 fi
 
 # ─── Resultado ───
-CRIT_COUNT=$(printf '%s\n' "${FINDINGS[@]:-}" | grep -c '"severity":"critical"' 2>/dev/null || echo 0)
-HIGH_COUNT=$(printf '%s\n' "${FINDINGS[@]:-}" | grep -c '"severity":"high"' 2>/dev/null || echo 0)
+CRIT_COUNT=$(printf '%s\n' "${FINDINGS[@]:-}" | grep -c '"severity":"crit"' 2>/dev/null | tail -1)
+HIGH_COUNT=$(printf '%s\n' "${FINDINGS[@]:-}" | grep -c '"severity":"high"' 2>/dev/null | tail -1)
 
 if [ "${#FINDINGS[@]}" -eq 0 ]; then
   emit_result "$BLINDAR_AGENT" "passed" 0
