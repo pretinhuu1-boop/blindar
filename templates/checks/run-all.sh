@@ -145,15 +145,29 @@ AGGREGATE="$RESULTS_DIR/aggregate.json"
 if ! command -v jq >/dev/null 2>&1; then
   # Fallback Node.js: concatena results em um aggregate.json simples
   if command -v node >/dev/null 2>&1; then
-    node -e "
+    # Paths vão por argv, nunca interpolados no source: no Windows o Node é
+    # binário nativo e resolveria "/c/..." como "C:\c\..."; e um backslash
+    # interpolado quebraria a string JS. Ver docs/BASH-COMPAT.md.
+    RESULTS_DIR_NATIVE="$RESULTS_DIR"; AGGREGATE_NATIVE="$AGGREGATE"
+    if command -v cygpath >/dev/null 2>&1; then
+      RESULTS_DIR_NATIVE=$(cygpath -m "$RESULTS_DIR")
+      AGGREGATE_NATIVE=$(cygpath -m "$AGGREGATE")
+    fi
+    NODE_ERR=$(node -e "
       const fs=require('fs'),p=require('path');
-      const dir='$RESULTS_DIR';
+      const dir=process.argv[1];
       const files=fs.readdirSync(dir).filter(f=>f.endsWith('.json')&&f!=='aggregate.json');
       const results=files.map(f=>{try{return JSON.parse(fs.readFileSync(p.join(dir,f),'utf8'))}catch(e){return null}}).filter(Boolean);
       const sev=s=>results.flatMap(r=>r.findings||[]).filter(f=>f.severity===s).length;
       const agg={schema:'blindar/aggregate@v1',ran_at:new Date().toISOString(),duration_sec:$TOTAL_DURATION,total_checks:results.length,passed:results.filter(r=>r.status==='passed').length,failed:results.filter(r=>r.status==='failed').length,skipped:results.filter(r=>r.status==='skipped').length,total_findings:results.reduce((a,r)=>a+(r.findings_count||0),0),findings_by_severity:{crit:sev('crit'),high:sev('high'),med:sev('med'),low:sev('low')},results};
-      fs.writeFileSync('$AGGREGATE',JSON.stringify(agg,null,2));
-    " 2>/dev/null || echo '{"error":"aggregate failed (node missing)"}' > "$AGGREGATE"
+      fs.writeFileSync(process.argv[2],JSON.stringify(agg,null,2));
+    " "$RESULTS_DIR_NATIVE" "$AGGREGATE_NATIVE" 2>&1) || {
+      # Node existe (checado acima) — o erro real vai pro arquivo, não some.
+      printf '{"error":"aggregate failed","detail":%s}\n' \
+        "$(printf '%s' "$NODE_ERR" | head -3 | tr -d '\r' | tr '\n' ' ' | sed 's/"/\\"/g; s/^/"/; s/$/"/')" \
+        > "$AGGREGATE"
+      echo "[WARN] aggregate via node falhou: $NODE_ERR" >&2
+    }
   else
     echo '{"error":"aggregate requires jq or node"}' > "$AGGREGATE"
   fi

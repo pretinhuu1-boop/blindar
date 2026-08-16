@@ -3,6 +3,34 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.60.0] — 2026-08-16
+
+### Path POSIX chegando em binário nativo do Windows
+
+O `validate.sh` dizia `[FAIL] JSON invalido` para JSON perfeitamente válido.
+
+Em Git Bash/MSYS o `[ -f "$FILE" ]` passa, porque o bash entende
+`/tmp/cfg.json`. Mas `jq` e `python3` são binários **nativos do Windows** e
+resolvem o mesmo caminho como `C:	mp\cfg.json`, que não existe. O `ENOENT`
+era engolido pelo `2>/dev/null` e o script culpava o **conteúdo** do arquivo —
+mandando o operador procurar erro de sintaxe onde não havia.
+
+Regra que passa a valer no repo inteiro (`docs/BASH-COMPAT.md`): nunca
+interpolar path dentro do source de outra linguagem (`node -e`, `python3 -c`);
+passar por argv e converter com `cygpath -m`, guardado por
+`command -v cygpath`. A forma mista (`C:/Users/...`) é aceita pelo bash e pelos
+nativos, e não carrega backslash para dentro de string de outra linguagem.
+
+Também: distinguir "não consegui abrir" de "conteúdo inválido", e não engolir o
+stderr do validador.
+
+O `graph-build.js` tinha a mesma falha por outro caminho: `--dir` errado
+produzia grafo com `files:0` — indistinguível de "projeto sem código". Passa a
+sair 2. Mesmo princípio do release gate: o default do desconhecido nunca é o
+valor bom.
+
+`tests/pathconv.test.mjs` cobre a conversão e os dois modos de falha.
+
 ## [0.59.0] — 2026-08-16
 
 Primeira execução do blindar de ponta a ponta contra um projeto real (monorepo

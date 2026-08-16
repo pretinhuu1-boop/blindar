@@ -102,6 +102,49 @@ fi
 
 ---
 
+## Windows: path POSIX × binário nativo
+
+No Git Bash o bash é MSYS (entende `/tmp`, `/c/...`), mas `jq`, `python3` e
+`node` normalmente são binários **nativos** do Windows. Eles resolvem
+`/tmp/cfg.json` como `C:\tmp\cfg.json` — que não existe.
+
+O MSYS converte automaticamente argumentos que *parecem* path (`cmd /tmp/x`),
+o que mascara o problema até alguém setar `MSYS_NO_PATHCONV=1`. A conversão
+**não** acontece quando o path está embutido dentro de uma string maior:
+
+```bash
+# QUEBRA: o arg é "import json; ..." — o MSYS não vê path pra converter,
+# e "C:\tmp\new.json" ainda viraria tab+newline dentro da string Python.
+python3 -c "import json; json.load(open('$FILE'))"
+
+# OK: path vai por argv (o MSYS converte) e cygpath -m garante o caso
+# MSYS_NO_PATHCONV=1. `-m` dá C:/Users/... — aceito pelo bash e pelo nativo,
+# e sem backslash pra escapar dentro de outra linguagem.
+FILE_NATIVE=$(command -v cygpath >/dev/null 2>&1 && cygpath -m "$FILE" || printf '%s' "$FILE")
+python3 -c 'import json,sys; json.load(open(sys.argv[1]))' "$FILE_NATIVE"
+```
+
+Regras:
+
+1. **Nunca interpole path dentro do source de outra linguagem.** Passe por
+   `argv` (`sys.argv`, `process.argv`).
+2. **Converta com `cygpath -m`** antes de chamar binário nativo (`node`, `jq`,
+   `python3`) — sempre guardado por `command -v cygpath`, pra não quebrar
+   Linux/macOS/WSL.
+3. **Não engula stderr do validador.** `2>/dev/null` transformava um ENOENT
+   em "JSON inválido" e mandava o operador caçar erro de sintaxe num arquivo
+   correto (`scripts/validate.sh`, corrigido).
+4. **Distinga "não consegui abrir" de "conteúdo inválido"** na mensagem. São
+   causas diferentes e levam a ações diferentes.
+5. **Não deixe path errado virar resultado vazio silencioso.** `graph-build.js`
+   engolia o ENOENT do `readdirSync` e emitia um grafo `files:0` que parecia
+   "projeto sem código". Hoje falha com exit 2.
+
+Call sites que já fazem a conversão: `scripts/blindar-run.sh` (MODULE-MAP e
+`validate-schemas.js`), `scripts/validate.sh`.
+
+---
+
 ## Como auditar novos checks
 
 Antes de mergear um check novo, rode esta busca pra detectar regressões:

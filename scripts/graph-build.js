@@ -13,7 +13,7 @@
 // Tipos de aresta: imports | exposes | depends_on | uses_env
 
 import { readdirSync, readFileSync, writeFileSync, mkdirSync, statSync, existsSync } from 'node:fs';
-import { join, relative, sep, basename } from 'node:path';
+import { join, relative, resolve, sep, basename } from 'node:path';
 import { parseArgs } from 'node:util';
 
 const { values } = parseArgs({
@@ -25,6 +25,21 @@ const { values } = parseArgs({
 });
 
 const ROOT = values.dir;
+
+// --dir inexistente NÃO pode virar grafo vazio silencioso: walk() engole o
+// ENOENT do readdirSync e o resultado (files:0) parece "projeto sem código"
+// em vez de "path errado" — e o mkdirSync do final ainda criava a árvore.
+// Acontece em Git Bash quando um path POSIX (/tmp/x) chega num Node NATIVO do
+// Windows e é resolvido como C:\tmp\x. Ver docs/BASH-COMPAT.md.
+if (!existsSync(ROOT) || !statSync(ROOT).isDirectory()) {
+  console.error(`ERRO: --dir não existe ou não é diretório: ${ROOT}`);
+  console.error(`      resolvido para: ${resolve(ROOT)}`);
+  if (process.platform === 'win32' && ROOT.startsWith('/')) {
+    console.error(`      path POSIX num Node do Windows — converta antes: cygpath -m "${ROOT}"`);
+  }
+  process.exit(2);
+}
+
 const IGNORE_DIRS = new Set(['node_modules', '.git', 'dist', 'build', '.next', '.blindar', 'coverage', 'vendor', '__pycache__', '.venv', 'venv']);
 const SRC_EXT = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.py', '.go', '.rs', '.java', '.rb']);
 

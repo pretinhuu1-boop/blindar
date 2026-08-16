@@ -109,9 +109,17 @@ if (!inputPath) {
   }
 }
 
+const inputRaw = inputPath;
 inputPath = path.resolve(cwd, inputPath);
 if (!fs.existsSync(inputPath)) {
   process.stderr.write(`ERRO: --input não existe: ${inputPath}\n`);
+  // Em Git Bash o shell enxerga /tmp/x, mas este Node é binário NATIVO do
+  // Windows e resolve o mesmo path como C:\tmp\x. Ver docs/BASH-COMPAT.md.
+  if (process.platform === 'win32' && inputRaw.startsWith('/')) {
+    process.stderr.write(
+      `      (você passou o path POSIX "${inputRaw}" — converta antes: cygpath -m "${inputRaw}")\n`
+    );
+  }
   process.exit(2);
 }
 
