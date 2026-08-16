@@ -23,6 +23,10 @@ else R=''; G=''; Y=''; B=''; RST=''; fi
 # Adicione uma linha aqui SEMPRE que verificar um check contra fixtures.
 # Processo: blindar acha um bug → vira check → vira par aqui (docs/INCIDENT-TO-CHECK.md).
 PAIRS=(
+  # check-secrets NAO tinha par: o unico fixture de segredo e mascarado de
+  # proposito, entao o gitleaks nunca disparava nele. Sem disparo nao ha
+  # contrato, e o falso negativo do scan do indice vazio viveu ali.
+  "check-secrets.sh              | project-gitleaks-bad    | project-gitleaks-good"
   "check-cors-csrf.sh            | project-insecure-api    | project-secure-api"
   "check-rate-limit.sh           | project-insecure-api    | project-secure-api"
   "check-headers-security.sh     | project-insecure-api    | project-secure-api"
@@ -116,6 +120,7 @@ run_status() { # dir check → echo status
 echo "${B}═══ blindar check self-test ═══${RST}"
 PASS=0; FAIL=0; FAILED=()
 declare -A VERIFIED=()
+NAOVER=()   # par registrado que a MAQUINA nao consegue avaliar
 
 for row in "${PAIRS[@]}"; do
   IFS='|' read -r ck vuln clean <<< "$row"
@@ -126,6 +131,16 @@ for row in "${PAIRS[@]}"; do
   # 1) dispara no vulnerável → status DEVE ser failed
   if [ -d "$FIXTURES_DIR/$vuln" ]; then
     st=$(run_status "$FIXTURES_DIR/$vuln" "$ck")
+    # `skipped` no fixture VULNERÁVEL não é o check errando: é a máquina sem a
+    # ferramenta que o check invoca. Contar como regressão faria o gate reprovar
+    # por causa do ambiente; contar como ✓ seria pior ainda, porque diria
+    # "verificado" sobre algo que ninguém executou. É um terceiro estado.
+    if [ "$st" = "skipped" ]; then
+      mt="$LAST_MISSING_TOOL"
+      echo "${Y}⊘${RST} $ck  — NÃO VERIFICADO nesta máquina (falta ${mt:-ferramenta externa})"
+      NAOVER+=("$ck (${mt:-ferramenta externa})")
+      continue
+    fi
     if [ "$st" != "failed" ]; then local_ok=0; reason="não disparou no vulnerável ($vuln, status=$st)"; fi
   else echo "${Y}SKIP${RST} $ck (fixture $vuln ausente)"; continue; fi
   # 2) cala no limpo → status NÃO pode ser failed (passed/skipped ok)
@@ -161,7 +176,17 @@ is_gateable() {
   local f="$1" base
   base=$(basename "$f")
   case "$base" in *.api.sh) return 1 ;; esac              # 1
-  echo "$base" | grep -qE "$SCANNER_WRAPPERS" && return 1
+  # Wrapper de scanner com par REGISTRADO conta: alguém provou que existe
+  # fixture onde ele dispara. Sem esta exceção o par entrava no numerador e não
+  # no denominador, e a cobertura saía 75/74 = 101% — métrica que passa de 100%
+  # não está medindo o que diz medir.
+  if echo "$base" | grep -qE "$SCANNER_WRAPPERS"; then
+    local _tem_par=1 _p
+    for _p in "${PAIRS[@]}"; do
+      case "${_p%%|*}" in *"$base"*) _tem_par=0; break ;; esac
+    done
+    [ "$_tem_par" -eq 0 ] || return 1
+  fi
   grep -qE 'emit_result[^\n]*"failed"' "$f" || return 1   # 2
   grep -qE '\$HOME|\$\{HOME|\$APPDATA|\$\{APPDATA' "$f" && return 1  # 3
   grep -qE 'npx |curl |wget ' "$f" && return 1            # 4
@@ -191,6 +216,12 @@ echo "${B}── cobertura de fixtures ──${RST}"
 echo "Gate-áveis com par verificado: ${VERIFIED_N}/${TOTAL_CHECKS} (${PCT}%)"
 echo "Sobre TODOS os checks:         ${VERIFIED_N}/${ALL_CHECKS} (${PCT_ALL}%)  — ${EXCLUDED} excluídos (.api.sh + scanners externos)"
 echo "Meta: 100% dos gate-áveis. Cada check novo DEVE entrar em PAIRS antes de mergear."
+if [ "${#NAOVER[@]}" -gt 0 ]; then
+  echo ""
+  echo "${Y}NÃO VERIFICADOS nesta máquina (${#NAOVER[@]}) — o par existe, a ferramenta não:${RST}"
+  for n in "${NAOVER[@]}"; do echo "  ⊘ $n"; done
+  echo "  Não entram como aprovados nem como regressão. Instale e rode de novo."
+fi
 
 echo ""
 echo "${B}═══ RESUMO ═══${RST}"

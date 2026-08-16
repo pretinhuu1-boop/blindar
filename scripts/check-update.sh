@@ -41,6 +41,32 @@ CACHE="$SKILL_ROOT/.last-check"
   exit 1
 }
 
+# ─── "diferente" nao e "mais nova" ───
+# A comparacao era `[ "$REMOTE" != "$LOCAL" ]`. Numa instalacao a frente do main
+# — build de desenvolvimento, branch de release, ou simplesmente quem acabou de
+# subir a versao — isso anunciava "blindar v0.72.0 disponivel / Voce esta em
+# v0.73.0" e oferecia o comando de instalacao. Aceitar levaria a um DOWNGRADE.
+#
+# Pior: o SKILL.md usa o exit 10 para PERGUNTAR ao operador se quer atualizar.
+# Perguntar "quer atualizar?" quando a resposta certa e "voce ja esta na frente"
+# transforma o aviso em armadilha, e quem confia no aviso perde a versao nova.
+#
+# Compara campo a campo, numericamente. Sufixo (-rc1, -dev) e ignorado na
+# ordenacao: se os numeros empatam, nao ha o que oferecer.
+versao_maior_que() { # A B → 0 se A > B
+  local a="${1%%-*}" b="${2%%-*}" i pa pb
+  local IFS=.
+  read -r -a pa <<< "$a"
+  read -r -a pb <<< "$b"
+  for i in 0 1 2; do
+    local na="${pa[$i]:-0}" nb="${pb[$i]:-0}"
+    case "$na$nb" in *[!0-9]*) return 1 ;; esac   # nao-numerico: nao arrisca
+    [ "$na" -gt "$nb" ] && return 0
+    [ "$na" -lt "$nb" ] && return 1
+  done
+  return 1
+}
+
 LOCAL=$(tr -d '[:space:]' < "$VERSION_FILE")
 
 # Cache 24h
@@ -48,7 +74,7 @@ if [ "$FORCE" = "0" ] && [ -f "$CACHE" ]; then
   CACHE_AGE_SEC=$(( $(date +%s) - $(stat -c %Y "$CACHE" 2>/dev/null || stat -f %m "$CACHE") ))
   if [ "$CACHE_AGE_SEC" -lt 86400 ]; then
     REMOTE=$(grep -oE '"remote_version":"[^"]+' "$CACHE" | head -1 | cut -d'"' -f4)
-    if [ -n "$REMOTE" ] && [ "$REMOTE" != "$LOCAL" ]; then
+    if [ -n "$REMOTE" ] && versao_maior_que "$REMOTE" "$LOCAL"; then
       echo "blindar v$REMOTE disponivel (local: v$LOCAL). Ver CHANGELOG.md"
       exit 10
     elif [ "$QUIET" = "0" ]; then
@@ -70,7 +96,7 @@ cat > "$CACHE" <<EOF
 {"checked_at":"$(date -u +%FT%TZ)","local_version":"$LOCAL","remote_version":"$REMOTE"}
 EOF
 
-if [ "$REMOTE" != "$LOCAL" ]; then
+if versao_maior_que "$REMOTE" "$LOCAL"; then
   # A instalada nem sempre e um clone: quando vem do sync-skill.sh ela e
   # artefato puro, sem .git, e `git pull` ali falha. Dizer o comando errado e
   # pior que nao dizer nada, porque o operador tenta e acha que quebrou.
@@ -87,5 +113,9 @@ if [ "$REMOTE" != "$LOCAL" ]; then
   echo ""
   exit 10
 elif [ "$QUIET" = "0" ]; then
-  echo "blindar v$LOCAL (atualizado)"
+  if versao_maior_que "$LOCAL" "$REMOTE"; then
+    echo "blindar v$LOCAL (a frente do main, que esta em v$REMOTE)"
+  else
+    echo "blindar v$LOCAL (atualizado)"
+  fi
 fi

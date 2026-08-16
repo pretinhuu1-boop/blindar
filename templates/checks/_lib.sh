@@ -249,8 +249,91 @@ BLINDAR_IGNORE_DIRS="node_modules .git .blindar .blindar.* coverage"
 BLINDAR_IGNORE_FILES="*.min.js *.min.css *.map"
 export BLINDAR_IGNORE_DIRS BLINDAR_IGNORE_FILES
 
-if type -P rg >/dev/null 2>&1; then
-  BLINDAR_RG_BIN="$(type -P rg)"
+# ─── PATH da MÁQUINA vs PATH deste shell (Windows) ───
+# No Windows o instalador grava o diretório no PATH persistente do usuário, mas
+# processo já em execução não recebe a mudança — só o PRÓXIMO shell. Quem acaba
+# de instalar gitleaks/trivy/ripgrep lê "Successfully installed", roda o blindar
+# e vê os checks correspondentes saírem `skipped`, sem relação aparente.
+#
+# Aqui a diferença é resolvida na fonte: lê o PATH persistente do registro e
+# junta o que este processo ainda não tem. Não inventa caminho nem mantém lista
+# de gerenciador de pacote — usa o que a máquina já declarou.
+#
+# Uma vez por árvore de processos: o marcador é exportado e os 107 checks filhos
+# pulam a leitura.
+if [ -z "${BLINDAR_PATH_SYNCED:-}" ] && [ -n "${WINDIR:-${SystemRoot:-}}" ]; then
+  export BLINDAR_PATH_SYNCED=1
+  # MSYS2_ARG_CONV_EXCL obrigatório: sem ele o runtime MSYS reescreve o argumento
+  # `/v` como se fosse caminho POSIX ("C:/Program Files/Git/v") e o reg responde
+  # "sintaxe inválida". O erro vai pro /dev/null, a variável fica vazia e o sync
+  # não acontece — sem nenhum sinal de que tentou.
+  _persist="$(MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*' \
+    reg query 'HKCU\Environment' /v Path 2>/dev/null \
+    | sed -n 's/.*REG_[A-Z_]*SZ[[:space:]]*//p' | tr -d '\r')"
+  if [ -n "${_persist:-}" ]; then
+    _IFS_OLD="$IFS"; IFS=';'
+    for _p in $_persist; do
+      [ -z "$_p" ] && continue
+      case "$_p" in *'%'*) continue ;; esac   # %VAR% não expandido: não arriscar
+      # cygpath converte C:\x → /c/x. Sem ele o bash trata como caminho inválido
+      # e a entrada some silenciosamente — mesma classe de perda que este bloco
+      # existe pra evitar.
+      _u="$(cygpath -u "$_p" 2>/dev/null)" || _u=""
+      [ -z "$_u" ] || [ ! -d "$_u" ] && continue
+      case ":$PATH:" in *":$_u:"*) continue ;; esac
+      PATH="$PATH:$_u"
+    done
+    IFS="$_IFS_OLD"; unset _IFS_OLD _p _u
+    export PATH
+  fi
+  unset _persist
+fi
+
+# ─── Achar o ripgrep mesmo fora do PATH ───
+# O gerenciador instala e diz "instalado com sucesso"; o PATH só muda no PRÓXIMO
+# shell. Entre esses dois momentos o rg EXISTE na máquina e o blindar o declara
+# ausente — e ausente aqui custa 60 dos 107 checks virando `skipped`, o que não
+# é reprovação nem aprovação, é medição que não aconteceu.
+#
+# Quem acabou de instalar lê "instalado com sucesso" e roda: recebe um relatório
+# com metade da cobertura e nenhum motivo aparente. É o modo de falha que este
+# projeto inteiro existe para não ter: perda silenciosa de sinal.
+#
+# `type -P` de propósito, não `command -v`: o Claude Code define `rg` como FUNÇÃO
+# de shell apontando para o ripgrep embutido nele. `command -v` acha a função e
+# responde "tem rg" — mas função de shell não é herdada por processo filho, e os
+# checks rodam como scripts filhos. Daria "tem" no agente e "não tem" no check.
+blindar_probe_rg() {
+  local c
+  for c in \
+    "${LOCALAPPDATA:-$HOME/AppData/Local}"/Microsoft/WinGet/Links/rg.exe \
+    "${LOCALAPPDATA:-$HOME/AppData/Local}"/Microsoft/WinGet/Packages/BurntSushi.ripgrep*/*/rg.exe \
+    "$HOME"/scoop/shims/rg.exe \
+    /c/ProgramData/chocolatey/bin/rg.exe \
+    "$HOME"/.cargo/bin/rg \
+    /opt/homebrew/bin/rg /usr/local/bin/rg /usr/bin/rg /snap/bin/rg
+  do
+    [ -x "$c" ] && { printf '%s' "$c"; return 0; }
+  done
+  return 1
+}
+
+if [ -n "${BLINDAR_RG_BIN:-}" ] && [ ! -x "$BLINDAR_RG_BIN" ]; then
+  unset BLINDAR_RG_BIN   # herdado de um ambiente onde valia; aqui não vale mais
+fi
+if [ -z "${BLINDAR_RG_BIN:-}" ]; then
+  if type -P rg >/dev/null 2>&1; then
+    BLINDAR_RG_BIN="$(type -P rg)"
+  else
+    # Achado fora do PATH conta como achado, mas o operador precisa SABER que o
+    # PATH dele não tem — senão o mesmo comando falha noutro contexto e a causa
+    # fica invisível. `doctor.sh` lê esta var e mostra o caminho.
+    BLINDAR_RG_BIN="$(blindar_probe_rg || true)"
+    [ -n "$BLINDAR_RG_BIN" ] && export BLINDAR_RG_OFF_PATH=1
+  fi
+fi
+
+if [ -n "${BLINDAR_RG_BIN:-}" ]; then
   export BLINDAR_RG_BIN
   # ─── MSYS/Cygwin argv path-mangling (Git Bash no Windows) ───
   # rg.exe é binário NATIVO do Windows. Ao spawnar um nativo, o runtime MSYS
@@ -289,7 +372,7 @@ if type -P rg >/dev/null 2>&1; then
   export -f rg
 fi
 
-if ! type -P rg >/dev/null 2>&1; then
+if [ -z "${BLINDAR_RG_BIN:-}" ]; then
   rg() {
     # Isola erros do grep — pipefail/errexit do caller não devem matar o wrapper.
     set +eo pipefail

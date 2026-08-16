@@ -89,6 +89,24 @@ coisa. Sem `ripgrep`, por exemplo, dezenas de checks saem como `skipped` — e
 `skipped` não é aprovação. Numa máquina nova esse é o modo de falha mais
 provável e o mais difícil de perceber, porque o relatório continua parecendo bom.
 
+O doctor também lista os **scanners externos** e quanto custa a ausência de cada
+um. Ele não diz "ambiente completo" enquanto houver check sem executar:
+
+| Scanner | Sem ele |
+|---|---|
+| `ripgrep` | ~60 checks viram `skipped` — a maior perda isolada |
+| `gitleaks` | segredo commitado não é procurado (100+ regras) |
+| `trivy` | CVE de dependência e de imagem Docker não é procurado |
+| `osv-scanner` | CVE via base OSV, cobre ecossistemas que o trivy não |
+| `semgrep` | SAST: injeção, path traversal, crypto fraca |
+
+Os de linguagem (`govulncheck`, `pip-audit`, `cargo-audit`) só importam se o
+projeto for Go, Python ou Rust.
+
+No Windows, o instalador grava o diretório no PATH mas o **shell aberto não
+recebe a mudança**. O blindar lê o PATH persistente e usa a ferramenta mesmo
+assim — você não precisa reabrir o terminal para o scan valer.
+
 ### Prompt para instalar pelo Claude Code
 
 Cole isto numa sessão do Claude Code, em qualquer pasta:
@@ -103,6 +121,9 @@ Instale a skill blindar nesta máquina e deixe pronta para uso:
    plataforma e o que eu perco sem ela. Não instale nada sem eu confirmar.
 4. Se `ripgrep` faltar, avise que é a mais importante: sem ela dezenas de checks
    viram `skipped`, e skipped não é aprovação.
+   Depois dela, os scanners que mais pesam são `gitleaks` (segredo commitado),
+   `trivy` (CVE de dependência e de imagem) e `osv-scanner`. Sem eles o doctor
+   NÃO diz "ambiente completo" — e está certo em não dizer.
 5. Opcional: clone https://github.com/pretinhuu1-boop/ancorar para
    ~/.claude/skills/ancorar — é a skill irmã que verifica o SERVIDOR (firewall,
    TLS, backup, DNS). Sem ela o host nunca é verificado.

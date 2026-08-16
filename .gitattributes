@@ -3,6 +3,13 @@
 # com "\r: command not found".
 * text=auto
 
+# VERSION: LF. Cai no `text=auto` e vira CRLF no working tree do Windows, então
+# quem lê com `cat` recebe "0.73.0\r". Os dois leitores de hoje usam
+# `tr -d '[:space:]'` e não se importam — mas o valor vira BLINDAR_SKILL_VERSION,
+# que entra na chave do cache de veredito e na comparação do check de update. Um
+# \r ali invalidaria todo cache e faria "0.73.0" parecer diferente de "0.73.0".
+VERSION text eol=lf
+
 # Shell/POSIX: SEMPRE LF (rodam em Linux/macOS/CI e no Git Bash).
 *.sh   text eol=lf
 *.bash text eol=lf

@@ -151,7 +151,26 @@ if [ -d ".ancorar/results" ] && command -v node >/dev/null 2>&1; then
     // "skipped" no ancorar NÃO é aprovação — é ausência de alvo ou de config.
     if (pulou) console.log("  (pulado != aprovado: sem alvo ou sem config para aquele check)");
     for (const r of ruins.slice(0, 10)) console.log("  ✗ " + r);
-  ' || true
+    // Exit 3 = NÃO VERIFICADO: rodou e não mediu NADA. Ver o bloco abaixo.
+    if (ok === 0 && falhou === 0) process.exit(3);
+  '
+  [ $? -eq 3 ] && NADA_MEDIDO=1
+fi
+
+# ─── 5. Nada medido não é host aprovado ───
+# Contra host inalcançável o ancorar pulava os 16 checks, imprimia "fase 3 ok" e
+# a ponte saía 0. Quem chamasse em CI — ou o gate de release — leria isso como
+# "servidor verificado". O texto na tela já dizia "pulado != aprovado", mas o
+# código de saída dizia o contrário, e é o código de saída que as máquinas leem.
+#
+# É a mesma regra que vale para o projeto, aplicada ao host: ausência de sinal
+# nunca é aprovação. Se não mediu, o estado é NÃO VERIFICADO.
+if [ "${NADA_MEDIDO:-0}" = "1" ]; then
+  echo ""
+  echo "✗ NÃO VERIFICADO: nenhum check do host passou nem falhou — todos pularam."
+  echo "  Host inalcançável, credencial ausente ou ancorar sem configuração."
+  echo "  Isto NÃO é 'host aprovado'. É host que ninguém olhou."
+  exit 3
 fi
 
 exit $FALHOU
