@@ -28,7 +28,7 @@ NO_TTL=$(wc -l < "$TMP" || echo 0)
 if [ "$NO_TTL" -gt 0 ]; then
   while IFS=: read -r file line content; do
     [ -z "$file" ] && continue
-    add_finding "high" "Redis SET sem TTL (memory leak): $(echo "$content" | xargs | cut -c1-80)" "$file" "$line"
+    add_finding "high" "Redis SET sem TTL (memory leak): $(trim_ws "$content" | cut -c1-80)" "$file" "$line"
   done < "$TMP"
   log_fail "$NO_TTL chave(s) sem TTL"
   FAIL=1

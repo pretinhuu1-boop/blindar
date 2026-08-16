@@ -19,7 +19,7 @@ rg -n "\[[\"']__proto__[\"']\]|\.__proto__\s*=|constructor\s*\[[\"']prototype[\"
   grep -vE "Object\.create\(null\)|@blindar:keep|hasOwnProperty" > "$TMP" || true
 while IFS=: read -r file line content; do
   [ -z "$file" ] && continue
-  add_finding "high" "Escrita em __proto__/constructor.prototype — prototype pollution: $(echo "$content" | xargs | cut -c1-70)" "$file" "$line"
+  add_finding "high" "Escrita em __proto__/constructor.prototype — prototype pollution: $(trim_ws "$content" | cut -c1-70)" "$file" "$line"
 done < "$TMP"
 rm -f "$TMP"
 

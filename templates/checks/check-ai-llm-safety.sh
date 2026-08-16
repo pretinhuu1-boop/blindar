@@ -49,7 +49,7 @@ INJECTION=$(wc -l < "$TMP" || echo 0)
 if [ "$INJECTION" -gt 0 ]; then
   while IFS=: read -r file line content; do
     [ -z "$file" ] && continue
-    add_finding "crit" "userInput concat em system prompt: $(echo "$content" | xargs | cut -c1-80)" "$file" "$line"
+    add_finding "crit" "userInput concat em system prompt: $(trim_ws "$content" | cut -c1-80)" "$file" "$line"
   done < "$TMP"
   log_fail "$INJECTION prompt injection direta"
   FAIL=1

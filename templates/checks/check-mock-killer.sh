@@ -42,7 +42,7 @@ CONSOLE_COUNT=$(wc -l < "$TMP" || echo 0)
 if [ "$CONSOLE_COUNT" -gt 0 ]; then
   while IFS=: read -r file line content; do
     [ -z "$file" ] && continue
-    add_finding "high" "console em produção: $(echo "$content" | xargs)" "$file" "$line"
+    add_finding "high" "console em produção: $(trim_ws "$content")" "$file" "$line"
   done < "$TMP"
   log_fail "$CONSOLE_COUNT console.* em código de produção"
 else
@@ -60,7 +60,7 @@ TODO_COUNT=$(wc -l < "$TMP" || echo 0)
 if [ "$TODO_COUNT" -gt 0 ]; then
   while IFS=: read -r file line content; do
     [ -z "$file" ] && continue
-    add_finding "med" "TODO sem issue: $(echo "$content" | xargs)" "$file" "$line"
+    add_finding "med" "TODO sem issue: $(trim_ws "$content")" "$file" "$line"
   done < "$TMP"
   log_warn "$TODO_COUNT TODO/FIXME sem issue link (use TODO(issue-#123): ...)"
 else
@@ -79,7 +79,7 @@ MOCK_COUNT=$(wc -l < "$TMP" || echo 0)
 if [ "$MOCK_COUNT" -gt 0 ]; then
   while IFS=: read -r file line content; do
     [ -z "$file" ] && continue
-    add_finding "high" "mock em produção: $(echo "$content" | xargs)" "$file" "$line"
+    add_finding "high" "mock em produção: $(trim_ws "$content")" "$file" "$line"
   done < "$TMP"
   log_fail "$MOCK_COUNT mocks em código de produção"
 fi
@@ -93,7 +93,7 @@ EMPTY_CLICK=$(wc -l < "$TMP" || echo 0)
 if [ "$EMPTY_CLICK" -gt 0 ]; then
   while IFS=: read -r file line content; do
     [ -z "$file" ] && continue
-    add_finding "crit" "Botão sem handler real: $(echo "$content" | xargs)" "$file" "$line"
+    add_finding "crit" "Botão sem handler real: $(trim_ws "$content")" "$file" "$line"
   done < "$TMP"
   log_fail "$EMPTY_CLICK botão(ões) com onClick vazio — BLOQUEIA release"
 fi

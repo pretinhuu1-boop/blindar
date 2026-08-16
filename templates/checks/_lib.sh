@@ -38,6 +38,23 @@ log_section() { echo ""; echo "${BOLD}═══ $* ═══${RESET}"; }
 # ─── Findings array (acumula no script) ───
 declare -a FINDINGS=()
 
+# Apara espaço em volta e colapsa espaço interno.
+#
+# Substitui o idioma `$(echo "$x" | xargs)`, que estava em 38 lugares e fazia
+# DUAS coisas erradas com o conteúdo varrido do projeto-alvo:
+#
+#   1. xargs INTERPRETA aspas. `if (x === "admin")` virava `if (x === admin)` —
+#      a mensagem do finding mostrava código adulterado, sem as aspas que são
+#      justamente o que importa numa comparação de string.
+#   2. Aspa não fechada (comum em trecho cortado por `cut`) faz o xargs gritar
+#      "unmatched double quote" e devolver a linha truncada. Um único run contra
+#      projeto real produziu 466 desses.
+#
+# `tr`+`sed` não interpretam nada: tratam a entrada como texto, que é o que ela é.
+trim_ws() {
+  printf '%s' "$1" | tr -s '[:space:]' ' ' | sed -e 's/^ //' -e 's/ $//'
+}
+
 # Severidade fora do enum é finding INVISÍVEL. Todo consumidor casa a string
 # exata: check-termination conta `.findings_by_severity.crit`, o release-gate
 # faz `select(.severity=="crit")`, o check-evidence testa `=== "crit"`. Um

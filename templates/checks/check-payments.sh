@@ -71,7 +71,7 @@ FLOAT_MONEY=$(wc -l < "$TMP" || echo 0)
 if [ "$FLOAT_MONEY" -gt 0 ]; then
   while IFS=: read -r file line content; do
     [ -z "$file" ] && continue
-    add_finding "high" "Money em Float (use BigInt cents): $(echo "$content" | xargs)" "$file" "$line"
+    add_finding "high" "Money em Float (use BigInt cents): $(trim_ws "$content")" "$file" "$line"
   done < "$TMP"
   log_warn "$FLOAT_MONEY campo(s) money em Float"
 fi

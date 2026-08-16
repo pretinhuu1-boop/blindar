@@ -80,7 +80,7 @@ if [ "$DISTINCT" -gt 1 ]; then
   log_info "  $PAIRS"
   add_finding "high" "paridade de ambientes quebrada: engines distintas entre ambientes — ${PAIRS%;}. Suite verde em SQLite não prova comportamento em PostgreSQL (tipos, FK, timezone divergem)" ".env*" ""
 else
-  log_pass "todos os $FOUND ambientes declaram a mesma engine ($(echo "$ENGINES" | xargs))"
+  log_pass "todos os $FOUND ambientes declaram a mesma engine ($(trim_ws "$ENGINES"))"
 fi
 
 # ─── Deriva de VERSÃO da mesma engine entre arquivos de compose ───
@@ -92,7 +92,7 @@ if command -v rg >/dev/null 2>&1; then
   VCOUNT=$(echo "$VERSIONS" | tr ' ' '\n' | grep -c '[0-9]' | tail -1)
   VCOUNT=$(echo "$VCOUNT" | tr -d ' ')
   if [ "$VCOUNT" -gt 1 ]; then
-    add_finding "med" "versões distintas de PostgreSQL entre arquivos de compose ($(echo "$VERSIONS" | xargs)) — comportamento de query planner e sintaxe podem divergir entre ambientes" "docker-compose*.yml" ""
+    add_finding "med" "versões distintas de PostgreSQL entre arquivos de compose ($(trim_ws "$VERSIONS")) — comportamento de query planner e sintaxe podem divergir entre ambientes" "docker-compose*.yml" ""
     log_warn "deriva de versão do Postgres: $VERSIONS"
   fi
   rm -f "$COMPOSE_TMP"

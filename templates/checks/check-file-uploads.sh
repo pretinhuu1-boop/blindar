@@ -38,7 +38,7 @@ BACKEND_UPLOAD=$(wc -l < "$TMP" || echo 0)
 if [ "$BACKEND_UPLOAD" -gt 0 ]; then
   while IFS=: read -r file line content; do
     [ -z "$file" ] && continue
-    add_finding "med" "Upload via backend (preferir presigned URL): $(echo "$content" | xargs | cut -c1-80)" "$file" "$line"
+    add_finding "med" "Upload via backend (preferir presigned URL): $(trim_ws "$content" | cut -c1-80)" "$file" "$line"
   done < "$TMP"
   log_warn "$BACKEND_UPLOAD upload(s) via backend — preferir S3 presigned"
 fi
@@ -64,7 +64,7 @@ PUBLIC_ACL=$(wc -l < "$TMP" || echo 0)
 if [ "$PUBLIC_ACL" -gt 0 ]; then
   while IFS=: read -r file line content; do
     [ -z "$file" ] && continue
-    add_finding "crit" "Bucket public-read: $(echo "$content" | xargs)" "$file" "$line"
+    add_finding "crit" "Bucket public-read: $(trim_ws "$content")" "$file" "$line"
   done < "$TMP"
   log_fail "$PUBLIC_ACL bucket public-read em código"
   FAIL=1
@@ -81,6 +81,26 @@ if [ "$NO_SIZE" -gt 0 ]; then
   add_finding "med" "presigned URL sem ContentLength cap (atacante manda GB)" "" ""
 fi
 rm -f "$TMP"
+
+# 5. Foto de usuário servida com o EXIF intacto (privacidade / LGPD)
+# Foto de celular carrega GPS com precisão de metros, além de modelo do
+# aparelho e horário. Servir o arquivo como veio publica a casa de quem enviou.
+# Não é hipótese: é o default de toda câmera de celular.
+# `-l` sozinho: `-c` junto de `-l` faz o ripgrep devolver vazio (flags conflitantes).
+log_info "Buscando upload de imagem sem remoção de metadado..."
+ACEITA_IMAGEM=$(rg -l "image/(jpeg|png|webp|heic)|\.(jpe?g|png|webp|heic)\b" \
+  --type ts --type js --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | head -1)
+if [ -n "${ACEITA_IMAGEM:-}" ]; then
+  # Quem já trata: sharp (rotate/toBuffer descarta EXIF por default), Pillow sem
+  # exif=, exiftool, ou remoção explícita.
+  TRATA=0
+  rg -ql "sharp\(|exiftool|piexif|strip_exif|removeExif|withMetadata\(false\)|ImageMagick|-strip" \
+    "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null && TRATA=1
+  if [ "$TRATA" -eq 0 ]; then
+    add_finding "high" "aceita upload de imagem e não há remoção de metadado (EXIF) — foto de celular carrega GPS com precisão de metros; servir o arquivo como veio publica onde a pessoa mora" "" ""
+    FAIL=1
+  fi
+fi
 
 if [ "$FAIL" -eq 1 ]; then
   emit_result "$BLINDAR_AGENT" "failed" 1

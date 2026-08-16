@@ -38,7 +38,7 @@ scan() { # severidade  padrão  mensagem
   mv "$tmp.f" "$tmp" 2>/dev/null || true
   while IFS=: read -r file line content; do
     [ -z "${file:-}" ] && continue
-    add_finding "$sev" "$msg — $(echo "$content" | xargs | cut -c1-160)" "$file" "$line"
+    add_finding "$sev" "$msg — $(trim_ws "$content" | cut -c1-160)" "$file" "$line"
   done < "$tmp"
   rm -f "$tmp"
 }

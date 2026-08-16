@@ -74,7 +74,7 @@ if [ "$PG_COUNT" -gt 0 ] && [ "$SQLITE_COUNT" -gt 0 ]; then
   log_fail "DRIFT: PostgreSQL declarado na infra ($PG_COUNT sinais) mas SQLite ativo no runtime ($SQLITE_COUNT sinais)"
   while IFS=: read -r file line content; do
     [ -z "$file" ] && continue
-    add_finding "crit" "engine drift: infra declara PostgreSQL mas o runtime abre SQLite aqui — $(echo "$content" | xargs)" "$file" "$line"
+    add_finding "crit" "engine drift: infra declara PostgreSQL mas o runtime abre SQLite aqui — $(trim_ws "$content")" "$file" "$line"
   done < "$SQLITE_EVIDENCE"
   log_info "Declaração de Postgres encontrada em:"
   head -5 "$PG_EVIDENCE" | while IFS= read -r l; do log_info "  $l"; done

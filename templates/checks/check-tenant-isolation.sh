@@ -53,7 +53,7 @@ UNSAFE=$(wc -l < "$TMP" || echo 0)
 if [ "$UNSAFE" -gt 0 ]; then
   while IFS=: read -r file line content; do
     [ -z "$file" ] && continue
-    add_finding "crit" "queryRawUnsafe (alto risco SQL injection): $(echo "$content" | xargs | cut -c1-80)" "$file" "$line"
+    add_finding "crit" "queryRawUnsafe (alto risco SQL injection): $(trim_ws "$content" | cut -c1-80)" "$file" "$line"
   done < "$TMP"
   log_fail "$UNSAFE \$queryRawUnsafe — revisar URGENTE"
 fi

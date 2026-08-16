@@ -33,7 +33,7 @@ IMG_NO_ALT=$(wc -l < "$TMP" || echo 0)
 if [ "$IMG_NO_ALT" -gt 0 ]; then
   while IFS=: read -r file line content; do
     [ -z "$file" ] && continue
-    add_finding "high" "<img> sem alt: $(echo "$content" | xargs | cut -c1-80)" "$file" "$line"
+    add_finding "high" "<img> sem alt: $(trim_ws "$content" | cut -c1-80)" "$file" "$line"
   done < "$TMP"
   log_fail "$IMG_NO_ALT <img> sem alt — WCAG 1.1.1 violation"
 fi

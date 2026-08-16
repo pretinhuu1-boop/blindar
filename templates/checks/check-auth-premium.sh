@@ -47,7 +47,7 @@ HS256=$(wc -l < "$TMP" || echo 0)
 if [ "$HS256" -gt 0 ]; then
   while IFS=: read -r file line content; do
     [ -z "$file" ] && continue
-    add_finding "med" "JWT HS256 (preferir RS256/EdDSA): $(echo "$content" | xargs | cut -c1-80)" "$file" "$line"
+    add_finding "med" "JWT HS256 (preferir RS256/EdDSA): $(trim_ws "$content" | cut -c1-80)" "$file" "$line"
   done < "$TMP"
 fi
 rm -f "$TMP"
@@ -60,7 +60,7 @@ LS_TOKEN=$(wc -l < "$TMP" || echo 0)
 if [ "$LS_TOKEN" -gt 0 ]; then
   while IFS=: read -r file line content; do
     [ -z "$file" ] && continue
-    add_finding "crit" "Token em localStorage (XSS lê): $(echo "$content" | xargs | cut -c1-80)" "$file" "$line"
+    add_finding "crit" "Token em localStorage (XSS lê): $(trim_ws "$content" | cut -c1-80)" "$file" "$line"
   done < "$TMP"
   log_fail "$LS_TOKEN token(s) em localStorage — usar httpOnly cookie"
   FAIL=1

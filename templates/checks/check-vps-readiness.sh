@@ -14,7 +14,7 @@ COMPOSE=""
 for c in docker-compose.yml docker-compose.yaml compose.yml compose.yaml; do
   [ -f "$c" ] && COMPOSE="$COMPOSE $c"
 done
-COMPOSE=$(echo "$COMPOSE" | xargs)
+COMPOSE=$(trim_ws "$COMPOSE")
 
 if [ -z "${COMPOSE:-}" ]; then
   log_info "sem docker-compose — skipped"
@@ -33,7 +33,7 @@ for f in $COMPOSE; do
   #    Serviço da mesma stack alcança pela rede interna do compose, sem publicar.
   while IFS=: read -r line content; do
     [ -z "${line:-}" ] && continue
-    add_finding "high" "porta de banco publicada no host: $(echo "$content" | xargs) — o bind default do Docker é 0.0.0.0 e a regra publicada passa por cima do firewall de host. Serviço da mesma stack não precisa disso" "$f" "$line"
+    add_finding "high" "porta de banco publicada no host: $(trim_ws "$content") — o bind default do Docker é 0.0.0.0 e a regra publicada passa por cima do firewall de host. Serviço da mesma stack não precisa disso" "$f" "$line"
   done <<EOF
 $(grep -nE '^[[:space:]]*-[[:space:]]*"?[0-9]+:(5432|3306|27017|6379|5433)"?[[:space:]]*$' "$f" 2>/dev/null)
 EOF
@@ -41,7 +41,7 @@ EOF
   # 2. Tag flutuante: o que subiu hoje não é o que sobe no próximo deploy.
   while IFS=: read -r line content; do
     [ -z "${line:-}" ] && continue
-    add_finding "med" "imagem sem tag fixa: $(echo "$content" | xargs) — deploy deixa de ser reprodutível e o rollback não tem para onde voltar" "$f" "$line"
+    add_finding "med" "imagem sem tag fixa: $(trim_ws "$content") — deploy deixa de ser reprodutível e o rollback não tem para onde voltar" "$f" "$line"
   done <<EOF
 $(grep -nE 'image:[[:space:]]*["'"'"']?[A-Za-z0-9._/-]+(:latest)?["'"'"']?[[:space:]]*$' "$f" 2>/dev/null | grep -vE 'image:[[:space:]]*["'"'"']?[A-Za-z0-9._/-]+:[A-Za-z0-9._-]+' ; grep -nE 'image:[[:space:]]*[^[:space:]]*:latest' "$f" 2>/dev/null)
 EOF

@@ -25,7 +25,7 @@ TECH_LEAK=$(wc -l < "$TMP" || echo 0)
 if [ "$TECH_LEAK" -gt 0 ]; then
   while IFS=: read -r file line content; do
     [ -z "$file" ] && continue
-    add_finding "med" "Possível erro técnico vazando pra UI: $(echo "$content" | xargs | cut -c1-80)" "$file" "$line"
+    add_finding "med" "Possível erro técnico vazando pra UI: $(trim_ws "$content" | cut -c1-80)" "$file" "$line"
   done < "$TMP"
 fi
 rm -f "$TMP"
@@ -67,7 +67,7 @@ DISCRIMINATORY=$(wc -l < "$TMP" || echo 0)
 if [ "$DISCRIMINATORY" -gt 0 ]; then
   while IFS=: read -r file line content; do
     [ -z "$file" ] && continue
-    add_finding "low" "Termo problemático: $(echo "$content" | xargs | cut -c1-80)" "$file" "$line"
+    add_finding "low" "Termo problemático: $(trim_ws "$content" | cut -c1-80)" "$file" "$line"
   done < "$TMP"
 fi
 rm -f "$TMP"
