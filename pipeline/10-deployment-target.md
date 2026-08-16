@@ -55,24 +55,35 @@ sobre o compose e alimenta o gate `DEPLOYMENT` da
 [Fase 06b](06b-release-gates.md). Lembrando que aquele gate só chega a `PASS`
 com rollback documentado — é aqui que essa documentação nasce.
 
-## Passo 4 — Handoff
+## Passo 4 — Verificar o host (⭐ v0.66)
 
-O `.blindar/deployment-plan.json` fica disponível. **Ninguém é chamado.**
+```bash
+bash scripts/ancorar-bridge.sh --host meu.servidor.com
+```
 
-A skill irmã [`ancorar`](https://github.com/pretinhuu1-boop/ancorar) cobre a
-outra metade — o que só se prova no host: firewall, certificado, backup fresco,
-DNS, vizinhos de container. Ela lê o que quiser e roda por conta própria, em
-modo supervisionado com dry-run.
+A [ponte](../scripts/ancorar-bridge.sh) emite o plano, encontra o
+[`ancorar`](https://github.com/pretinhuu1-boop/ancorar) e roda as fases de
+**leitura** dele: baseline de segurança do host (16 checks por SSH), verdade de
+runtime e regressão de co-inquilinos.
 
-A dependência é **ancorar → blindar**, nunca o contrário. O `blindar` não
-invoca o `ancorar` e não escreve em `.ancorar/`. O único ponto de contato é o
-`scripts/smoke-run.sh`, que o `ancorar` consome via `--url` de forma read-only
-— e que por isso é **API pública**: mudar sua assinatura é breaking change.
+**As fases que mutam ficam com o operador.** Provisionar, migrar dado, virar
+tráfego e decommissionar mudam o servidor; a ponte recusa e diz o comando certo.
+Automatizá-las daqui trocaria o *supervisionado + dry-run* do ancorar pelo
+*auto* do blindar.
+
+Sem o ancorar instalado, o plano é emitido e a ponte avisa — **ausência de
+verificação, não aprovação**.
+
+O blindar lê `.ancorar/results/` e nunca escreve lá. O `scripts/smoke-run.sh`
+segue sendo **API pública** consumida pelo ancorar na fase 7: mudar sua
+assinatura é breaking change.
 
 ## Anti-padrões
 
 - ❌ Executar deploy nesta fase.
-- ❌ Chamar o `ancorar`, ou escrever em `.ancorar/`.
+- ❌ Invocar fase do ancorar que **muta** o host a partir daqui, ou passar
+  `ANCORAR_APPLY`. Ler o resultado dele é certo; decidir por ele não é.
+- ❌ Escrever em `.ancorar/`.
 - ❌ Emitir plano sem o bloco de volta.
 - ❌ Duplicar os checks de host do `ancorar` dentro do `blindar`.
 - ❌ Declarar alvo `vps` e deixar porta de banco publicada — em VPS a regra

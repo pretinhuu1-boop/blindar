@@ -193,6 +193,23 @@ for g in $GATES; do
     status="PASS WITH WARNINGS"
     evid="sem caminho de rollback documentado"
   fi
+  # O host é metade do DEPLOYMENT e o blindar não enxerga essa metade: firewall
+  # ativo, certificado válido, backup fresco, DNS e vizinho de container só se
+  # veem no servidor. Quem verifica é a skill irmã `ancorar`, e o blindar só LÊ
+  # o que ela produziu — nunca escreve em .ancorar/.
+  # Host não verificado NÃO é host aprovado, pela mesma regra do NOT VERIFIED.
+  if [ "$g" = "DEPLOYMENT" ] && [ "$status" = "PASS" ]; then
+    if [ -d ".ancorar/results" ]; then
+      ANC_FAIL=$(grep -l '"status"[[:space:]]*:[[:space:]]*"failed"' .ancorar/results/*.json 2>/dev/null | wc -l | tr -d ' ')
+      if [ "${ANC_FAIL:-0}" -gt 0 ]; then
+        status="BLOCKED"
+        evid="ancorar reprovou $ANC_FAIL check(s) no host — o código passa, o servidor não"
+      fi
+    else
+      status="PASS WITH WARNINGS"
+      evid="código pronto, mas o HOST nunca foi verificado (sem .ancorar/results) — rode: bash scripts/ancorar-bridge.sh --host <host>"
+    fi
+  fi
 
   case "$status" in
     BLOCKED) BLOCKED_N=$((BLOCKED_N+1)) ;;

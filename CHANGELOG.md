@@ -3,6 +3,47 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.66.0] — 2026-08-16
+
+### O host entra no veredito
+
+O `blindar` cobre o **código**. Firewall ativo, certificado válido, backup
+fresco, DNS apontando certo e vizinho de container saudável só se veem **no
+servidor** — e isso é da skill irmã `ancorar`. Até aqui, o `DEPLOYMENT` podia
+dar `PASS` com o servidor sem firewall.
+
+- **`scripts/ancorar-bridge.sh`** (novo): emite o plano de deploy, encontra o
+  `ancorar` e invoca as fases de **leitura** dele (0, 1, 3, 7, 8, 10) — baseline
+  de segurança do host por SSH, verdade de runtime e regressão de co-inquilinos.
+
+- **Recusa explícita das fases que mutam** (2, 4, 5, 6, 9): provisionar, migrar
+  dado, virar tráfego e decommissionar mudam o servidor. Automatizá-las daqui
+  trocaria o *supervisionado + dry-run* do `ancorar` pelo *auto* do `blindar` —
+  o oposto do que cada ferramenta escolheu ser. A recusa aponta o comando certo,
+  não é silenciosa.
+
+- **O gate `DEPLOYMENT` passa a ler o host**:
+
+  | Estado | Gate |
+  |---|---|
+  | `ancorar` reprovou algum check | **BLOCKED** — o código passa, o servidor não |
+  | sem `.ancorar/results` | **PASS WITH WARNINGS** — host nunca verificado |
+  | `ancorar` aprovou | PASS |
+
+  Host não verificado **não é** host aprovado — mesma regra do `NOT VERIFIED`.
+
+- **Degradação honesta**: sem o `ancorar` instalado, o plano é emitido e a ponte
+  avisa que ninguém verificou o servidor, com o comando de instalação. Sai 3, e
+  a mensagem diz explicitamente que isso é ausência de verificação.
+
+O `blindar` **lê** `.ancorar/results/` e nunca escreve lá. O
+`scripts/smoke-run.sh` segue sendo **API pública** consumida pelo `ancorar` na
+fase 7: mudar sua assinatura é breaking change.
+
+Isto revisa a decisão da v0.56, que dizia "não criar adaptador". A distinção que
+faltava não era entre chamar e não chamar — era entre **ler** e **decidir**.
+Ler o veredito do host é do blindar; decidir mudar o servidor é do operador.
+
 ## [0.65.0] — 2026-08-16
 
 ### `seo-foundation` — a fundação, não o metadado

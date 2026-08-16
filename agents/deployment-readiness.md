@@ -38,9 +38,34 @@ Logo:
 | Default | AUTO | SUPERVISIONADO + dry-run |
 | Escreve em | `.blindar/` | `.ancorar/` |
 
-**Não** crie adaptador que invoque o `ancorar` daqui. Isso inverteria a seta e
-quebraria o contrato dele. O `deployment-plan.json` é artefato passivo: fica
-disponível, e o `ancorar` (ou qualquer outro executor) lê se quiser.
+### A ponte (⭐ v0.66)
+
+[`scripts/ancorar-bridge.sh`](../scripts/ancorar-bridge.sh) faz a integração, com
+uma divisão que respeita o que cada ferramenta escolheu ser:
+
+| Fases do ancorar | | A ponte |
+|---|---|---|
+| 0, 1, 3, 7, 8, 10 | **leitura pura** — não tocam o host | **invoca** |
+| 2, 4, 5, 6, 9 | provisionam, migram dado, viram tráfego, decommissionam | **recusa**, e diz como rodar pelo ancorar |
+
+Automatizar as que mutam daqui trocaria o *supervisionado + dry-run* do ancorar
+pelo *auto* do blindar — o oposto do que cada um escolheu ser. A recusa é
+explícita e aponta o comando certo, não silenciosa.
+
+O blindar **lê** `.ancorar/results/` e nunca escreve lá.
+
+### O host entra no gate
+
+O `DEPLOYMENT` da [Fase 06b](../pipeline/06b-release-gates.md) passa a
+considerar o veredito do host:
+
+| Estado | Gate |
+|---|---|
+| ancorar reprovou algum check | **BLOCKED** — o código passa, o servidor não |
+| sem `.ancorar/results` | **PASS WITH WARNINGS** — host nunca verificado |
+| ancorar aprovou | PASS |
+
+Host não verificado **não é** host aprovado — mesma regra do `NOT VERIFIED`.
 
 Consequência prática: `scripts/smoke-run.sh` é **API pública** consumida por
 outra skill. Mudar sua assinatura é breaking change e vai para o
