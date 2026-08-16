@@ -94,6 +94,7 @@ PAIRS=(
   "check-decision-log.sh         | project-adr-bad         | project-adr-good"
   "check-defense-theater.sh      | project-theater-bad     | project-theater-good"
   "check-vps-readiness.sh        | project-vps-bad         | project-vps-good"
+  "check-git-hygiene.sh         | project-githyg-bad      | project-githyg-good"
   # blindar-learn:insert (mantenha — scripts/blindar-learn.sh insere novos pares acima desta linha)
 )
 

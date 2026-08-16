@@ -4,7 +4,8 @@ description: |
   Audita, blinda, otimiza e prepara o projeto para produção. Detecta primeiro a
   natureza do trabalho — GREENFIELD (criar do zero), HARDEN (blindar existente),
   FEATURE (acrescentar capacidade sem estragar o resto), EVOLVE (já em produção,
-  incremental e reversível) ou RECOVERY (quebrado, estabilizar antes) — e só então roda o pipeline: launcher (5 perguntas + menu
+  incremental e reversível), RECOVERY (quebrado, estabilizar antes) ou COLLAB
+  (o repositório é o problema: git, CI, docs e revisão para a equipe) — e só então roda o pipeline: launcher (5 perguntas + menu
   de 19 módulos) → baseline → discovery → sec.html → rounds pequenos (1 PR cada)
   → adversarial review → production checklist → release gates → relatório.
   Mantém sec.html como dashboard vivo. Release decidida por 11 gates
@@ -27,6 +28,8 @@ triggers:
   - "implementa"
   - "adiciona"
   - "cria a tela de"
+  - "organiza o git"
+  - "preparar para a equipe"
 ---
 
 # blindar — orquestrador
@@ -57,7 +60,9 @@ Quando esta skill for invocada (`blindar`, `blinda este projeto`, etc.), você (
    - Recomendação de próxima ação
 
 **Você NÃO pode**:
-- Rodar agentes individualmente sem o orquestrador
+- Rodar agentes individualmente **fora** do orquestrador (invocando o `.sh`
+  direto). Para tarefa pontual existe o caminho sancionado abaixo — que passa
+  pelo orquestrador e marca o resultado como parcial.
 - Pular passos da sequência acima
 - "Decidir" que algum agente não é necessário
 - Apresentar findings sem antes rodar o orquestrador
@@ -66,6 +71,26 @@ Quando esta skill for invocada (`blindar`, `blinda este projeto`, etc.), você (
 - Pular `proactive-analysis` se ANTHROPIC_API_KEY existe
 
 **Se algo falhar**: reporte exit code + arquivo de log, NÃO tente "consertar" rodando outras coisas.
+
+### Execução avulsa (⭐ v0.63) — tarefa pontual
+
+Quando o operador quer **uma coisa só** ("roda só o anti-mock aqui", "checa só a
+paridade de ambientes"), não faz sentido esperar o orquestrador inteiro:
+
+```bash
+bash scripts/blindar-run.sh --only mock-killer,environment-parity
+```
+
+Roda em segundos em vez de minutos, e continua passando pelo orquestrador — o
+result é gravado no formato normal e o schema é validado.
+
+**A trava que faz isso ser seguro**: o run parcial nunca pode ser confundido com
+cobertura completa. O `coverage_pct` continua medido contra o total
+**disponível**, não contra a lista filtrada — rodar 1 agente de 130 mostra
+**0%**, não 100%. E o `run-report.json` carrega `partial: true`, `only_agents`
+e `not_run_by_filter`.
+
+Um resultado parcial **não é veredito de release**. Para isso, run completo.
 
 ### Precedência: sequência mandatória × launcher
 
@@ -142,6 +167,7 @@ relatório.
 | `feature` ⭐ v0.62 | pedido é **acrescentar capacidade** | [`FEATURE.md`](pipeline/FEATURE.md) | nasce dentro das regras; checks no fim rodam sobre o **diff** (`--since`), não sobre o projeto inteiro |
 | `evolve` | já está em produção | 00 → 09 | `supervised` forçado, round ≤40 LOC, migration destrutiva proibida |
 | `recovery` | sistema quebrado | [`RECOVERY.md`](pipeline/RECOVERY.md) | suite vermelha é a **entrada**, não o abort; uma correção por vez |
+| `collab` ⭐ v0.63 | o **repositório** é o problema | [`COLLAB.md`](pipeline/COLLAB.md) | git, CI, docs e revisão para a equipe; `.gitignore` antes do primeiro commit |
 
 Precedência da detecção: `recovery` > `greenfield` > `evolve`/`feature` >
 `harden`. Não se blinda escombro, não se audita o vazio, não se experimenta em
@@ -287,6 +313,7 @@ Pipelines alternativos (não numerados — substituem o fluxo acima conforme o
 |---|---|---|
 | **GREENFIELD** ⭐ v0.51 | [`pipeline/GREENFIELD.md`](pipeline/GREENFIELD.md) | `operation_mode: greenfield` |
 | **FEATURE** ⭐ v0.62 | [`pipeline/FEATURE.md`](pipeline/FEATURE.md) | `operation_mode: feature` |
+| **COLLAB** ⭐ v0.63 | [`pipeline/COLLAB.md`](pipeline/COLLAB.md) | `operation_mode: collab` |
 | **RECOVERY** ⭐ v0.51 | [`pipeline/RECOVERY.md`](pipeline/RECOVERY.md) | `operation_mode: recovery` |
 
 ## Hierarquia de agentes (⭐ v0.57)

@@ -1,6 +1,6 @@
 ---
 phase: 00-mode-select
-title: Seleção de modo de operação — GREENFIELD / HARDEN / FEATURE / EVOLVE / RECOVERY
+title: Seleção de modo — GREENFIELD / HARDEN / FEATURE / EVOLVE / RECOVERY / COLLAB
 duration_estimate: 20s–1min
 output: .blindar/config.yml (operation_mode)
 runs_before: 00-launcher.md
@@ -82,7 +82,20 @@ destrutiva proibida) à disciplina de construção. Feature em sistema com usuá
 é as duas coisas ao mesmo tempo — grave `operation_mode: feature` e
 `production: true` na evidência.
 
-### 5º — HARDEN (default)
+### 5º — COLLAB (o repositório é o problema, não o código)
+
+Casa se **qualquer uma**:
+
+- Não há **nenhum** commit, ou há um único "initial commit" com o projeto todo.
+- `.env` versionado, ou sem `.gitignore`.
+- Sem CI que guarde o merge.
+- O operador pediu para "organizar o git", "preparar para a equipe", "deixar
+  pronto para outras pessoas mexerem".
+
+Segue por [`COLLAB.md`](COLLAB.md). Trata do **repositório e do processo**; o
+código é dos outros modos. Termina entregando ao `harden` ou ao `feature`.
+
+### 6º — HARDEN (default)
 
 Nenhuma das anteriores. Projeto existente, saudável, e o pedido é de
 **auditoria/blindagem**, não de construção.
@@ -102,6 +115,7 @@ Modo detectado: HARDEN
   G) GREENFIELD — criar do zero: arquitetura → stack → implementação → produção
   H) HARDEN     — blindar projeto existente (default, pipeline completo)
   F) FEATURE    — acrescentar capacidade a projeto saudável, sem estragar o resto
+  C) COLLAB     — o repositório é o problema: git, CI, docs, trabalho em equipe
   E) EVOLVE     — já está em produção: incremental, compatível, reversível
   R) RECOVERY   — está quebrado: estabilizar primeiro, blindar depois
 
@@ -144,7 +158,7 @@ restaura o serviço. Não refatore durante incêndio.
 Acrescente ao `.blindar/config.yml` (o launcher grava o resto):
 
 ```yaml
-operation_mode: harden   # greenfield | harden | feature | evolve | recovery
+operation_mode: harden   # greenfield | harden | feature | evolve | recovery | collab
 operation_mode_source: detected   # detected | operator
 operation_mode_evidence: "suite verde (42 testes), sem marcadores de produção"
 ```
@@ -163,6 +177,7 @@ Atualize também `.blindar/state.json` com `"operation_mode"`.
 |---|---|
 | GREENFIELD | `pipeline/GREENFIELD.md` (o launcher roda depois, já com o alvo definido) |
 | FEATURE | `pipeline/FEATURE.md` (+ travas do EVOLVE se estiver em produção) |
+| COLLAB | `pipeline/COLLAB.md` (depois reavalia: normalmente `harden`) |
 | HARDEN | `pipeline/00-launcher.md` |
 | EVOLVE | `pipeline/00-launcher.md`, forçando `mode: supervised` |
 | RECOVERY | `pipeline/RECOVERY.md` |
