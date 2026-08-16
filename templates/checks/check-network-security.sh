@@ -77,7 +77,7 @@ UNSAFE_COUNT=$(wc -l < "$TMP" || echo 0)
 if [ "$UNSAFE_COUNT" -gt 0 ]; then
   while IFS=: read -r file line content; do
     [ -z "$file" ] && continue
-    add_finding "high" "CSP unsafe-*: $(echo "$content" | xargs | cut -c1-80)" "$file" "$line"
+    add_finding "high" "CSP unsafe-*: $(trim_ws "$content" | cut -c1-80)" "$file" "$line"
   done < "$TMP"
   log_warn "$UNSAFE_COUNT CSP com unsafe-* (revisar)"
 fi

@@ -31,7 +31,7 @@ while IFS= read -r file; do
   rg -q "$VALIDATOR" "$file" 2>/dev/null && continue      # tem validador? então ok
   LINE=$(rg -n "$SINK" "$file" 2>/dev/null | head -1 | cut -d: -f1)
   CONTENT=$(rg -n "$SINK" "$file" 2>/dev/null | head -1 | cut -d: -f2-)
-  add_finding "high" "Redirect client-side com input do usuário sem allowlist — open redirect: $(echo "$CONTENT" | xargs | cut -c1-60)" "$file" "${LINE:-}"
+  add_finding "high" "Redirect client-side com input do usuário sem allowlist — open redirect: $(trim_ws "$CONTENT" | cut -c1-60)" "$file" "${LINE:-}"
 done < "$TMP"
 rm -f "$TMP"
 

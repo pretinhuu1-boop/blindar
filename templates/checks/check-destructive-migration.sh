@@ -71,7 +71,7 @@ for m in $MIGRATIONS; do
 
   while IFS=: read -r line content; do
     [ -z "${line:-}" ] && continue
-    add_finding "crit" "migration destrutiva sem rollback: $(echo "$content" | xargs) — o deploy volta o código, não o dado apagado. Declare o down/downgrade, ou justifique com '@blindar:destructive-ok <motivo>'" "$m" "$line"
+    add_finding "crit" "migration destrutiva sem rollback: $(trim_ws "$content") — o deploy volta o código, não o dado apagado. Declare o down/downgrade, ou justifique com '@blindar:destructive-ok <motivo>'" "$m" "$line"
   done <<EOF
 $HITS
 EOF

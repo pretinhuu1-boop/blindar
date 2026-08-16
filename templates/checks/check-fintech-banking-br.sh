@@ -156,7 +156,7 @@ if [ "${WEAK_JWT:-0}" -gt 0 ]; then
     [ -z "$file" ] && continue
     # Só conta como HIGH se aparecer perto de openfinance / fapi / pix
     if grep -qE "(openfinance|open-banking|fapi|pix|bacen)" "$file" 2>/dev/null; then
-      add_finding "high" "JWT com alg fraco em contexto financeiro (use PS256/ES256): $(echo "$content" | xargs)" "$file" "$line"
+      add_finding "high" "JWT com alg fraco em contexto financeiro (use PS256/ES256): $(trim_ws "$content")" "$file" "$line"
     fi
   done < "$TMP"
   log_warn "$WEAK_JWT ocorrência(s) JWT alg fraco verificadas — HIGH se em contexto Open Finance"
@@ -174,7 +174,7 @@ FLOAT_COUNT=$(wc -l < "$TMP" | tr -d ' ')
 if [ "${FLOAT_COUNT:-0}" -gt 0 ]; then
   while IFS=: read -r file line content; do
     [ -z "$file" ] && continue
-    add_finding "high" "Valor monetário em float (use BIGINT cents / Decimal): $(echo "$content" | xargs)" "$file" "$line"
+    add_finding "high" "Valor monetário em float (use BIGINT cents / Decimal): $(trim_ws "$content")" "$file" "$line"
   done < "$TMP"
   log_warn "$FLOAT_COUNT campo(s) money em float — HIGH"
 fi

@@ -288,6 +288,10 @@ TOTAL_START=$(date +%s)
 # Escreve: result_json (já feito pelo próprio check) + linha no stdout no formato:
 #   "module|agent|kind|status|findings"
 # Logs vão pro stderr.
+# Linhas de progresso saem por printf de string JÁ MONTADA, não por echo: em
+# --parallel os workers do xargs -P escrevem concorrente no mesmo stderr, e o
+# echo com expansão de cor pode virar mais de uma write(), entrelaçando as
+# linhas. Observado num run real: "requer Claud✗  mock-killer → failed".
 run_one_check() {
   local module_id="$1"
   local agent="$2"
@@ -297,7 +301,8 @@ run_one_check() {
   # script arbitrário. Só aceita [a-z0-9-].
   case "$agent" in
     ''|*[!a-z0-9-]*)
-      [ "$JSON_ONLY" -eq 0 ] && echo "${Y}⏭${RST}  '$agent' — nome de agente inválido, ignorado" >&2
+      [ "$JSON_ONLY" -eq 0 ] && printf '%s
+' "${Y}⏭${RST}  '$agent' — nome de agente inválido, ignorado" >&2
       echo "$module_id|$agent|invalid|skipped|0"
       return 0 ;;
   esac
@@ -315,7 +320,8 @@ run_one_check() {
   fi
 
   if [ -z "$script" ]; then
-    [ "$JSON_ONLY" -eq 0 ] && echo "${Y}⏭${RST}  $agent (module $module_id) — playbook-only, requer Claude" >&2
+    [ "$JSON_ONLY" -eq 0 ] && printf '%s
+' "${Y}⏭${RST}  $agent (module $module_id) — playbook-only, requer Claude" >&2
     cat > "$result_json" <<EOF
 {"schema":"blindar/check-result@v1","agent":"check-$agent","status":"deferred","kind":"playbook-only","module":"$module_id","findings_count":0,"findings":[],"message":"Agente disponível só como playbook em agents/$agent.md — requer Claude pra executar"}
 EOF
@@ -323,7 +329,8 @@ EOF
     return 0
   fi
 
-  [ "$JSON_ONLY" -eq 0 ] && echo "${B}▶${RST}  $agent (module $module_id, $kind)..." >&2
+  [ "$JSON_ONLY" -eq 0 ] && printf '%s
+' "${B}▶${RST}  $agent (module $module_id, $kind)..." >&2
 
   # Remove resultado de run anterior: se o check morrer sem escrever, o status
   # vira "errored" em vez de reler um JSON stale como se fosse desta execução.
@@ -354,7 +361,8 @@ EOF
     deferred) ico="${Y}⏭${RST}" ;;
     *) ico="${R}!${RST}"; status="errored" ;;
   esac
-  [ "$JSON_ONLY" -eq 0 ] && echo "$ico  $agent → $status ($findings findings)" >&2
+  [ "$JSON_ONLY" -eq 0 ] && printf '%s
+' "$ico  $agent → $status ($findings findings)" >&2
   echo "$module_id|$agent|$kind|$status|$findings"
   return 0
 }

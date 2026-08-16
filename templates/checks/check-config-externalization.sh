@@ -32,7 +32,7 @@ URL_COUNT=$(wc -l < "$TMP" || echo 0)
 if [ "$URL_COUNT" -gt 0 ]; then
   while IFS=: read -r file line content; do
     [ -z "$file" ] && continue
-    add_finding "med" "URL hardcoded (mover pra ENV): $(echo "$content" | xargs | cut -c1-80)" "$file" "$line"
+    add_finding "med" "URL hardcoded (mover pra ENV): $(trim_ws "$content" | cut -c1-80)" "$file" "$line"
   done < "$TMP"
   log_warn "$URL_COUNT URL(s) de produção hardcoded"
 fi

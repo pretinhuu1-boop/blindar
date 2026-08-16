@@ -28,7 +28,7 @@ rg -n "(res\.(json|send)|Response\.json|NextResponse\.json|reply\.send)\s*\([^)]
   grep -v "@blindar:keep" > "$TMP" || true
 while IFS=: read -r file line content; do
   [ -z "$file" ] && continue
-  add_finding "high" "System prompt exposto na resposta HTTP — LLM07: $(echo "$content" | xargs | cut -c1-70)" "$file" "$line"
+  add_finding "high" "System prompt exposto na resposta HTTP — LLM07: $(trim_ws "$content" | cut -c1-70)" "$file" "$line"
 done < "$TMP"
 rm -f "$TMP"
 
@@ -39,7 +39,7 @@ rg -n "(console\.(log|info|debug)|logger\.(info|debug|log))\s*\([^)]*\b($SPVAR)\
   grep -v "@blindar:keep" > "$TMP" || true
 while IFS=: read -r file line content; do
   [ -z "$file" ] && continue
-  add_finding "med" "System prompt logado — vaza instruções pro log (LLM07): $(echo "$content" | xargs | cut -c1-70)" "$file" "$line"
+  add_finding "med" "System prompt logado — vaza instruções pro log (LLM07): $(trim_ws "$content" | cut -c1-70)" "$file" "$line"
 done < "$TMP"
 rm -f "$TMP"
 

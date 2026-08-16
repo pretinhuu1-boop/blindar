@@ -40,7 +40,7 @@ if [ -n "$ROBOTS" ]; then
   BLOQUEIOS=$(printf '%s\n' "$CONTEUDO" | grep -inE '^[[:space:]]*Disallow:[[:space:]]*/?(\*\.(css|js)|_next|_nuxt|assets|static|build|dist|css|js)/?[[:space:]]*$' | head -4)
   while IFS=: read -r ln txt; do
     [ -z "${ln:-}" ] && continue
-    add_finding "high" "robots.txt bloqueia recurso de renderização ($(echo "$txt" | xargs)) — o Google renderiza a página como um navegador; sem CSS e JS ele vê um site quebrado e avalia como tal" "$ROBOTS" "$ln"
+    add_finding "high" "robots.txt bloqueia recurso de renderização ($(trim_ws "$txt")) — o Google renderiza a página como um navegador; sem CSS e JS ele vê um site quebrado e avalia como tal" "$ROBOTS" "$ln"
   done <<EOF
 $BLOQUEIOS
 EOF

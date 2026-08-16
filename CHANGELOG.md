@@ -3,6 +3,51 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.67.0] — 2026-08-16
+
+Três pendências anotadas durante a execução real, todas fechadas.
+
+### `xargs` como "aparar espaços" adulterava o conteúdo
+
+O idioma `$(echo "$x" | xargs)` estava em **38 lugares, 23 checks**, e fazia
+duas coisas erradas com o texto varrido do projeto-alvo:
+
+1. **xargs interpreta aspas.** `if (x === "admin")` virava
+   `if (x === admin)` — a mensagem do finding mostrava código adulterado, sem
+   justamente as aspas que importam numa comparação de string.
+2. **Aspa não fechada** (comum em trecho cortado por `cut`) faz o xargs gritar
+   `unmatched double quote` e devolver a linha truncada. Um único run contra
+   projeto real produziu **466** desses.
+
+Substituído por `trim_ws()` no `_lib.sh`, com `tr`+`sed`, que tratam a entrada
+como texto — porque é o que ela é.
+
+### Linhas de progresso se entrelaçavam em paralelo
+
+Em `--parallel`, os workers do `xargs -P` escrevem concorrente no mesmo stderr,
+e `echo` com expansão de cor pode virar mais de uma `write()`. Observado num run
+real: `requer Claud✗  mock-killer → failed`. As quatro linhas de progresso
+passam a sair por `printf` de string já montada — uma `write()` só.
+
+### Foto de usuário servida com o EXIF intacto
+
+`check-file-uploads` ganha a regra 5 (**high**): projeto que aceita upload de
+imagem e não remove metadado. Foto de celular carrega **GPS com precisão de
+metros** — servir o arquivo como veio publica onde a pessoa mora. Não é
+hipótese: é o default de toda câmera de celular.
+
+Reconhece quem já trata (`sharp`, `exiftool`, `piexif`, `-strip`,
+`withMetadata(false)`).
+
+Esta é a contrapartida legítima da decisão da v0.64: **remover proveniência C2PA
+de mídia** ficou de fora do blindar por ocultar origem; **remover EXIF/GPS de
+upload de usuário** entra, porque protege quem enviou.
+
+### Bug encontrado ao testar
+
+`rg -cl` devolve **vazio** — `-c` e `-l` são flags conflitantes. A primeira
+versão da regra 5 não disparava por isso. `-l` sozinho funciona; `-ql` também.
+
 ## [0.66.0] — 2026-08-16
 
 ### O host entra no veredito

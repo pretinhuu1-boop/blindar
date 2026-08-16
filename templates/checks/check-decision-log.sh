@@ -25,7 +25,7 @@ for d in docs/adr docs/adrs docs/decisions docs/architecture/decisions; do
     LOG_FILES="$LOG_FILES $found"
   fi
 done
-LOG_FILES=$(echo "$LOG_FILES" | xargs)
+LOG_FILES=$(trim_ws "$LOG_FILES")
 
 # ─── 2. Sem log: só cobra se o projeto TEM decisões a registrar ───
 if [ -z "${LOG_FILES:-}" ]; then
@@ -43,7 +43,7 @@ if [ -z "${LOG_FILES:-}" ]; then
   [ -d "k8s" ] || [ -d "kubernetes" ] || [ -d "helm" ] && add_signal "k8s"
 
   if [ "$SIGNALS" -ge 2 ]; then
-    add_finding "med" "projeto tem decisões arquiteturais a registrar ($(echo "$SIGNAL_LIST" | xargs)) mas não há decision log. Sem o motivo escrito, a escolha é refeita — e desfeita — a cada sessão. Crie docs/decisions.md" "docs/" ""
+    add_finding "med" "projeto tem decisões arquiteturais a registrar ($(trim_ws "$SIGNAL_LIST")) mas não há decision log. Sem o motivo escrito, a escolha é refeita — e desfeita — a cada sessão. Crie docs/decisions.md" "docs/" ""
     log_warn "sem decision log, com $SIGNALS sinais arquiteturais:$SIGNAL_LIST"
     emit_result "$BLINDAR_AGENT" "failed" 1
     exit 1

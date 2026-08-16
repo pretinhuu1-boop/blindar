@@ -86,7 +86,7 @@ if [ "${CC_INPUTS:-0}" -gt 0 ]; then
   while IFS=: read -r file line content; do
     [ -z "$file" ] && continue
     if ! echo "$content" | grep -qiE "autocomplete[\s=]+['\"]?(cc-number|cc-exp|cc-csc|cc-name)"; then
-      add_finding "med" "Input de cartão sem autocomplete cc-* (bloqueia auto-fill): $(echo "$content" | xargs)" "$file" "$line"
+      add_finding "med" "Input de cartão sem autocomplete cc-* (bloqueia auto-fill): $(trim_ws "$content")" "$file" "$line"
       NO_AUTOCOMPLETE=$((NO_AUTOCOMPLETE + 1))
     fi
   done < "$TMP"
