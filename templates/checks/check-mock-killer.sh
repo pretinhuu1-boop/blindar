@@ -19,7 +19,7 @@ fi
 # todos inválidos → não sobra caminho válido → varre nada, sai 2, check passa
 # sempre. O fallback de grep do _lib.sh aceita a forma solta por compat, então
 # o bug só aparece COM ripgrep instalado.
-IGNORE_GLOBS=(
+IGNORE_GLOBS=(-g '!.next' -g '!.nuxt' -g '!out' -g '!.svelte-kit' 
   -g '!node_modules' -g '!vendor' -g '!dist' -g '!build' -g '!.next' -g '!coverage'
   -g '!.blindar' -g '!.git'
   -g '!**/*.gen.ts' -g '!**/*.generated.ts' -g '!**/*.test.*' -g '!**/*.spec.*'

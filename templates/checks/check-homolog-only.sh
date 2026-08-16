@@ -19,7 +19,7 @@ if [ -z "$DEPLOY_FILES" ] && ! ls .env.production .env.homolog >/dev/null 2>&1; 
   emit_result "$BLINDAR_AGENT" "skipped" 0; exit 0
 fi
 
-IGNORE=(-g '!node_modules' -g '!dist' -g '!.git' -g '!**/*.test.*')
+IGNORE=(-g '!.next' -g '!.nuxt' -g '!out' -g '!.svelte-kit' -g '!node_modules' -g '!dist' -g '!.git' -g '!**/*.test.*')
 load_intelligence_globs "$BLINDAR_AGENT"
 FAIL=0
 

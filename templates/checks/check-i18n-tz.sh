@@ -7,7 +7,7 @@ source "$(dirname "$0")/_lib.sh"
 
 log_section "Check: i18n-tz (TIMESTAMPTZ, BigInt cents, locales sync, IANA tz)"
 
-IGNORE=(-g '!node_modules' -g '!dist' -g '!build' -g '!**/*.test.*')
+IGNORE=(-g '!.next' -g '!.nuxt' -g '!out' -g '!.svelte-kit' -g '!node_modules' -g '!dist' -g '!build' -g '!**/*.test.*')
 load_intelligence_globs "$BLINDAR_AGENT"
 FAIL=0
 

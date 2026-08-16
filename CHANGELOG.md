@@ -3,6 +3,43 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.61.0] — 2026-08-16
+
+### Build varrido como se fosse fonte
+
+O diagnóstico do primeiro projeto real mostrou 15 crit — mas **10 eram do
+`observability` dentro de `frontend/.next`**, e os 3 do `prototype-pollution`
+acusavam o devtools do próprio Next.js. Ruído de build reportado como crítico.
+
+A distinção que faltava: varrer o artefato construído atrás de **segredo** é
+legítimo — segredo é injetado em build time e pode não existir no fonte. Varrer
+atrás de **padrão de código** é ruído, porque o fonte é a verdade e o bundle
+carrega código de terceiros.
+
+`.next`, `.nuxt`, `out` e `.svelte-kit` entram na exclusão de **42 checks**.
+Ficam de fora, de propósito: `runtime-secrets`, `pii-encryption`,
+`govtech-acessibilidade`, `bundle-size` e `cdn-strategy`, que miram o artefato.
+
+Efeito colateral: o run do projeto real caiu de **20 para 11 minutos**.
+
+### Mapa de usuários
+
+- **`agents/iam-architecture.md`** (novo): responde "quem existe e o que cada um
+  pode". O `blindar` auditava autorização sem nunca produzir o **alvo** — o
+  `access-control` verifica se a rota checa permissão, e ninguém dizia quais
+  papéis deveriam existir. Sem alvo escrito, a auditoria compara a implementação
+  contra nada.
+
+  Ordem obrigatória: **detectar → propor → perguntar**. Perguntar primeiro
+  desperdiça o operador com o que o código já responde.
+
+  Traz arquitetura de referência de 7 papéis com matriz de acesso, e as quatro
+  perguntas que mudam o modelo de dados (MASTER impersona? STAFF vê colega?
+  CLIENT é do tenant ou da plataforma? quem apaga de verdade?).
+
+  Regra da matriz: recurso **ausente** não é "sem acesso", é **não decidido** —
+  e não decidido vira permitido na primeira implementação apressada.
+
 ## [0.60.0] — 2026-08-16
 
 ### Path POSIX chegando em binário nativo do Windows

@@ -7,7 +7,7 @@ log_section "Check: prototype pollution (JS)"
 
 if ! command -v rg >/dev/null 2>&1; then emit_result "$BLINDAR_AGENT" "skipped" 0; exit 0; fi
 
-IGNORE=(-g '!node_modules' -g '!dist' -g '!build' -g '!.blindar' -g '!.git'
+IGNORE=(-g '!.next' -g '!.nuxt' -g '!out' -g '!.svelte-kit' -g '!node_modules' -g '!dist' -g '!build' -g '!.blindar' -g '!.git'
         -g '!**/*.test.*' -g '!**/*.spec.*')
 load_intelligence_globs "$BLINDAR_AGENT"
 
