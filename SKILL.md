@@ -59,12 +59,45 @@ Quando esta skill for invocada (`blindar`, `blinda este projeto`, etc.), você (
    registrada no passo 1. Se for mais antigo, o orquestrador morreu antes de
    escrever o report — trate como exit 4 (ERRORED), reporte e PARE. Nunca
    apresente um report de execução anterior como se fosse desta.
-5. **Se `deferred > 0`**: para CADA entrada de `results` com
-   `"status":"deferred"`, leia `agents/<agent>.md`, execute o playbook contra o
-   projeto e grave `.blindar/results/check-<agent>.json` (schema
-   `blindar/check-result@v1`, status real: passed/failed/skipped + findings).
-   A invocação só está completa depois disso — **deferred não é opcional**; é a
-   sua fila de trabalho. Exceção: usuário pediu explicitamente pra pular.
+5. **Se `deferred > 0`** — sua fila de trabalho, **não é opcional**.
+
+   **Rode em SUBAGENTES PARALELOS, um por agente**, não em sequência no seu
+   próprio contexto. Num projeto real isso foram **49 playbooks**: executá-los
+   em fila enche a janela e os últimos recebem menos atenção que os primeiros —
+   e ninguém percebe, porque o relatório sai igual. Contexto isolado por agente
+   é o que mantém o quadragésimo nono tão cuidadoso quanto o primeiro.
+
+   Dispare em lotes (6–8 por vez). Cada subagente recebe:
+
+   ```
+   Execute o playbook agents/<agent>.md contra o projeto em <caminho>.
+
+   Leia o playbook inteiro e siga o procedimento dele. Depois grave
+   .blindar/results/check-<agent>.json no schema blindar/check-result@v1:
+     { "schema":"blindar/check-result@v1", "agent":"check-<agent>",
+       "ran_at":"<ISO-8601 UTC>", "git_sha":"<sha curto ou unknown>",
+       "status":"passed|failed|skipped", "exit_code":0,
+       "duration_sec":0, "missing_tool":null,
+       "findings_count":N, "findings":[{"severity":"crit|high|med|low",
+       "message":"...","file":"...","line":"..."}] }
+
+   Regras que não se negociam:
+   - severity SÓ pode ser crit|high|med|low. "critical"/"medium" não são
+     contados por ninguém e deixam o portão de release passar.
+   - todo finding crit/high precisa de `file` preenchido — ou, se for achado
+     de runtime, a medição na mensagem. Achado sem onde verificar não é
+     acionável nem auditável.
+   - não achou nada = "passed" com findings []. NÃO invente achado para
+     parecer útil, e não use "skipped" para o que você examinou.
+   - "skipped" é só para o que NÃO SE APLICA a este projeto, e a mensagem
+     precisa dizer por quê.
+   Responda só com o caminho do arquivo gravado.
+   ```
+
+   Ao final, confira que cada `deferred` virou arquivo. Agente que não gravou
+   result **não foi executado** — trate como `errored`, nunca como aprovado.
+
+   Exceção: o operador pediu explicitamente para pular.
 6. Ler `.blindar/proactive-analysis.md` se existir (análise consultiva nas 8 dimensões)
 7. Apresentar ao usuário:
    - Resumo numérico (passed/failed/skipped/deferred/cobertura%), incluindo os
@@ -185,6 +218,30 @@ nunca um prompt monolítico. Ver [`MULTI-AI.md`](MULTI-AI.md).
 
 Em Claude Code: paralelo real via Workflow API.
 Em outras AIs: role-play sequencial, contexto isolado por turno.
+
+## O hub (⭐ v0.69)
+
+Um comando resolve. O `blindar` roteia o pedido antes de agir:
+
+```
+                    ┌─ servidor?      → ancorar-bridge.sh (skill irmã, fases de leitura)
+  blindar  ─────────┼─ criar skill?   → skill-builder (docs/agentic-harness/)
+                    └─ este projeto?  → os 6 modos abaixo
+```
+
+Você chama `blindar` e ele **audita, constrói, acrescenta, evolui, conserta,
+organiza o repositório, verifica o servidor e cria a próxima skill**. Nada de
+lembrar qual ferramenta chamar.
+
+Dois repositórios no total: este e o
+[`ancorar`](https://github.com/pretinhuu1-boop/ancorar), que fica separado
+porque tem código próprio (16 checks de host, SSH, 10 fases) e um contrato de
+supervisão diferente — absorvê-lo seria duplicar. O `install.sh` oferece clonar
+os dois.
+
+O molde para criar skills vive **aqui dentro**, em
+[`docs/agentic-harness/`](docs/agentic-harness/): é markdown puro, sem código,
+e separá-lo custava um repositório sem entregar nada.
 
 ## Modos de operação (⭐ v0.51)
 

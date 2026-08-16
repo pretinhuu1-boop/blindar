@@ -23,6 +23,31 @@ autonomia total produz risco.
 
 ---
 
+## Passo 0 — O pedido é sobre um projeto?
+
+O `blindar` é o ponto de entrada único. Nem todo pedido é trabalho sobre código,
+e mandar tudo para os 6 modos faria o operador procurar outra ferramenta — que é
+exatamente o que o hub existe para evitar.
+
+Roteie **antes** de detectar modo:
+
+| O pedido é… | Vai para | Exemplo |
+|---|---|---|
+| verificar o **servidor** | [`ancorar-bridge.sh`](../scripts/ancorar-bridge.sh) | "o host está seguro?", "checa a VPS", "firewall/TLS/backup do servidor" |
+| **criar uma skill** nova | [`skill-builder`](../agents/skill-builder.md) | "cria uma skill que faz X", "quero um agente para Y" |
+| trabalho sobre **este projeto** | Passo 1, abaixo | todo o resto |
+
+Duas notas que evitam erro comum:
+
+- **"verifica o deploy" é ambíguo.** Se for sobre o artefato e o `docker-compose`,
+  é projeto (módulo 7 + `check-vps-readiness`). Se for sobre o servidor em si —
+  firewall, certificado, DNS, vizinhos — é `ancorar`. Na dúvida, pergunte: *"o
+  código ou a máquina?"*
+- **Servidor sem o `ancorar` instalado**: a ponte emite o plano e avisa. Isso é
+  **ausência de verificação, não aprovação** — e o gate `DEPLOYMENT` reflete.
+
+---
+
 ## Passo 1 — Detecção (determinística, nesta ordem)
 
 A ordem é precedência: a primeira que casar vence. Não continue avaliando.
