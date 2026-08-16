@@ -12,7 +12,7 @@ if ! command -v rg >/dev/null 2>&1; then
   exit 0
 fi
 
-IGNORE=(-g '!node_modules' -g '!dist' -g '!build' -g '!**/*.test.*')
+IGNORE=(-g '!.next' -g '!.nuxt' -g '!out' -g '!.svelte-kit' -g '!node_modules' -g '!dist' -g '!build' -g '!**/*.test.*')
 load_intelligence_globs "$BLINDAR_AGENT"
 FAIL=0
 

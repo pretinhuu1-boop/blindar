@@ -25,7 +25,7 @@ if [ "$HAS_SCHEDULER" -eq 0 ]; then
   exit 0
 fi
 
-IGNORE=(-g '!node_modules' -g '!dist' -g '!build' -g '!**/*.test.*')
+IGNORE=(-g '!.next' -g '!.nuxt' -g '!out' -g '!.svelte-kit' -g '!node_modules' -g '!dist' -g '!build' -g '!**/*.test.*')
 load_intelligence_globs "$BLINDAR_AGENT"
 FAIL=0
 

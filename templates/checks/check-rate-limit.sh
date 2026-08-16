@@ -6,7 +6,7 @@ log_section "Check: rate-limit"
 
 if ! command -v rg >/dev/null 2>&1; then emit_result "$BLINDAR_AGENT" "skipped" 0; exit 0; fi
 
-IGNORE=(-g '!node_modules' -g '!dist' -g '!**/*.test.*')
+IGNORE=(-g '!.next' -g '!.nuxt' -g '!out' -g '!.svelte-kit' -g '!node_modules' -g '!dist' -g '!**/*.test.*')
 load_intelligence_globs "$BLINDAR_AGENT"
 
 HAS_RL=$(rg -c "(rate-limit|rateLimit|@upstash/ratelimit|express-rate-limit|@nestjs/throttler)" --type ts --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0)

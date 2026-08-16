@@ -12,7 +12,7 @@ done
 
 if [ "$HAS_EMAIL" -eq 0 ]; then emit_result "$BLINDAR_AGENT" "skipped" 0; exit 0; fi
 
-IGNORE=(-g '!node_modules' -g '!dist' -g '!**/*.test.*')
+IGNORE=(-g '!.next' -g '!.nuxt' -g '!out' -g '!.svelte-kit' -g '!node_modules' -g '!dist' -g '!**/*.test.*')
 load_intelligence_globs "$BLINDAR_AGENT"
 ENV="${BLINDAR_ENV:-${NODE_ENV:-development}}"
 

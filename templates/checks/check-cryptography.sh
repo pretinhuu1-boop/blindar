@@ -5,7 +5,7 @@ source "$(dirname "$0")/_lib.sh"
 log_section "Check: cryptography (algoritmos fracos, salt, IV)"
 
 if ! command -v rg >/dev/null 2>&1; then emit_result "$BLINDAR_AGENT" "skipped" 0; exit 0; fi
-IGNORE=(-g '!node_modules' -g '!dist' -g '!.blindar' -g '!.git' -g '!**/*.test.*')
+IGNORE=(-g '!.next' -g '!.nuxt' -g '!out' -g '!.svelte-kit' -g '!node_modules' -g '!dist' -g '!.blindar' -g '!.git' -g '!**/*.test.*')
 load_intelligence_globs "$BLINDAR_AGENT"
 FAIL=0
 

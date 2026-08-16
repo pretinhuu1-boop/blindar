@@ -28,7 +28,7 @@ if [ "$GATEWAY_DETECTED" -eq 0 ]; then
 fi
 
 FAIL=0
-IGNORE=(-g '!node_modules' -g '!dist' -g '!build' -g '!**/*.test.*' -g '!**/*.spec.*' -g '!**/__mocks__/**')
+IGNORE=(-g '!.next' -g '!.nuxt' -g '!out' -g '!.svelte-kit' -g '!node_modules' -g '!dist' -g '!build' -g '!**/*.test.*' -g '!**/*.spec.*' -g '!**/__mocks__/**')
 load_intelligence_globs "$BLINDAR_AGENT"
 
 # 1. CVV armazenado (CRIT — PCI violation)

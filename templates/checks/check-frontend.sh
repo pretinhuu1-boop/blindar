@@ -13,7 +13,7 @@ for sig in "next.config" "vite.config" "vue.config" "svelte.config" "astro.confi
 done
 [ "$HAS_UI" -eq 0 ] && { emit_result "$BLINDAR_AGENT" "skipped" 0; exit 0; }
 
-IGNORE=(-g '!node_modules' -g '!dist' -g '!.blindar' -g '!.git' -g '!**/*.test.*')
+IGNORE=(-g '!.next' -g '!.nuxt' -g '!out' -g '!.svelte-kit' -g '!node_modules' -g '!dist' -g '!.blindar' -g '!.git' -g '!**/*.test.*')
 load_intelligence_globs "$BLINDAR_AGENT"
 
 # 1. CSP nonce-based ou hash? (não unsafe-inline)

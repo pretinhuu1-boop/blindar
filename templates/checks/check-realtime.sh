@@ -12,7 +12,7 @@ for lib in "socket.io" ws "@nestjs/websockets" "graphql-ws" yjs liveblocks; do
 done
 if [ "$HAS_WS" -eq 0 ]; then emit_result "$BLINDAR_AGENT" "skipped" 0; exit 0; fi
 
-IGNORE=(-g '!node_modules' -g '!dist' -g '!**/*.test.*')
+IGNORE=(-g '!.next' -g '!.nuxt' -g '!out' -g '!.svelte-kit' -g '!node_modules' -g '!dist' -g '!**/*.test.*')
 load_intelligence_globs "$BLINDAR_AGENT"
 
 # 1. io.on connection sem auth
