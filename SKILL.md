@@ -36,6 +36,7 @@ triggers:
 
 ## EXECUÇÃO MANDATÓRIA — LEIA ANTES DE TUDO
 
+
 Quando esta skill for invocada (`blindar`, `blinda este projeto`, etc.), você (Claude) DEVE executar EXATAMENTE esta sequência, sem pular, sem perguntar antes de cada passo, sem alternativas:
 
 0. **Checagem de versão (1× por dia).** Rode
@@ -209,6 +210,7 @@ Exit codes:
 
 ## Módulo 16 — Product Evolution (opt-in, escopo separado)
 
+
 Quando o usuário pedir **auditoria de produto/evolução** (não hardening),
 rode o orquestrador dedicado:
 
@@ -227,6 +229,7 @@ São escopos diferentes: hardening = "seguro pra produção"; evolution = "o que
 
 ## Princípio fundador: SECURITY-FIRST
 
+
 **Segurança é a fundação.** Toda decisão (back, front, banco, infra, CI)
 passa pelo crivo de segurança antes de ser considerada "completa".
 
@@ -243,6 +246,7 @@ Aplicação prática:
 
 ## Princípio: SEMPRE MULTI-AGENTE
 
+
 Mesmo em AI single-threaded (ChatGPT, Gemini, etc.), o pipeline é
 **simulado multi-agente por turnos sequenciais isolados** —
 nunca um prompt monolítico. Ver [`MULTI-AI.md`](MULTI-AI.md).
@@ -251,6 +255,7 @@ Em Claude Code: paralelo real via Workflow API.
 Em outras AIs: role-play sequencial, contexto isolado por turno.
 
 ## O hub (⭐ v0.69)
+
 
 Um comando resolve. O `blindar` roteia o pedido antes de agir:
 
@@ -275,6 +280,7 @@ O molde para criar skills vive **aqui dentro**, em
 e separá-lo custava um repositório sem entregar nada.
 
 ## Modos de operação (⭐ v0.51)
+
 
 Antes do launcher, a Fase [`00-mode-select`](pipeline/00-mode-select.md)
 detecta **a natureza do trabalho** e confirma com o operador. O modo altera
@@ -303,6 +309,7 @@ Configurado em `operation_mode` (ortogonal a `mode`, que é auto/supervised/chos
 
 ## Comportamento
 
+
 Invocado → detecta **modo de operação** → roda **launcher curto** (5 perguntas
 + menu) → depois executa o que foi escolhido conforme o modo:
 
@@ -329,38 +336,24 @@ E exibe o menu numerado de **19 módulos** (próxima seção). Aceita "tudo",
 Grava `.blindar/config.yml` com as escolhas. Pula automaticamente em
 `--resume` ou `--headless` (CI/cron).
 
-## Menu de módulos (19 numerados)
+## Referência (carregue sob demanda)
 
-| # | Módulo | Quando default ON | Agentes |
-|---|---|---|---|
-| 1 | Baseline & Discovery | sempre | [`strategic-scanner`](agents/strategic-scanner.md) |
-| 2 | Segurança aplicacional core + AI/LLM + Tenant isolation + File uploads + MLOps | sempre | [`access-control`](agents/access-control.md), [`cryptography`](agents/cryptography.md), [`business-logic`](agents/business-logic.md), [`runtime-secrets`](agents/runtime-secrets.md), [`security`](agents/security.md), [`auth-premium`](agents/auth-premium.md), [`ai-llm-safety`](agents/ai-llm-safety.md), [`tenant-isolation-tests`](agents/tenant-isolation-tests.md), [`file-uploads`](agents/file-uploads.md), [`mlops`](agents/mlops.md) |
-| 3 | Frontend hardening (CSP/XSS/SRI/Trusted Types) | se UI detectada | [`frontend`](agents/frontend.md) |
-| 4 | Rede & API + Payments + Realtime + API Gateway + GraphQL + gRPC | tipo ∈ SaaS/E-com/API | [`network-security`](agents/network-security.md), [`api-design`](agents/api-design.md), [`payments`](agents/payments.md), [`realtime`](agents/realtime.md), [`api-gateway`](agents/api-gateway.md), [`graphql`](agents/graphql.md), [`grpc-internal`](agents/grpc-internal.md) |
-| 5 | Supply chain & patch + SBOM/SLSA (compliance 2026) | sempre | [`supply-chain`](agents/supply-chain.md), [`patch-management`](agents/patch-management.md), [`sbom-slsa`](agents/sbom-slsa.md) |
-| 6 | Observabilidade & audit + Log lifecycle/retenção + Cost monitoring | tipo ∈ SaaS/E-com/API | [`observability`](agents/observability.md), [`log-ops-retention`](agents/log-ops-retention.md), [`cost-observability`](agents/cost-observability.md) |
-| 7 | Banco de dados + Backup & DR + **Migração de engine** + **Paridade de ambientes** + Multi-region + Data Warehouse/ETL | se DB detectado | [`backup-recovery`](agents/backup-recovery.md), [`db-architect`](agents/db-architect.md), [`db-migration-guardian`](agents/db-migration-guardian.md) ⭐, [`environment-parity`](agents/environment-parity.md) ⭐, [`multi-region`](agents/multi-region.md), [`data-warehouse-etl`](agents/data-warehouse-etl.md) |
-| 8 | Compliance: LGPD + GDPR + HIPAA + PCI-DSS + frameworks | sensibilidade ≠ Baixa OU compliance | [`compliance-lgpd-br`](agents/compliance-lgpd-br.md), [`compliance`](agents/compliance.md), [`compliance-gdpr`](agents/compliance-gdpr.md), [`compliance-hipaa`](agents/compliance-hipaa.md), [`compliance-pci-deep`](agents/compliance-pci-deep.md) |
-| 9 | Performance backend + Query + CDN strategy | tipo ∈ SaaS/E-com/API | [`performance`](agents/performance.md), [`db-architect`](agents/db-architect.md), [`cdn-strategy`](agents/cdn-strategy.md) |
-| 10 | Fluidez completa + SEO + Frontend gen + Search + Push + Mobile native + Analytics + Audio + Video | se UI detectada | [`frontend-performance`](agents/frontend-performance.md), [`responsive-a11y`](agents/responsive-a11y.md), [`pwa-installable`](agents/pwa-installable.md), [`i18n-tz`](agents/i18n-tz.md), [`state-cache-data`](agents/state-cache-data.md), [`onboarding-ux`](agents/onboarding-ux.md), [`seo-marketing-meta`](agents/seo-marketing-meta.md), [`frontend-generator`](agents/frontend-generator.md), [`search-quality`](agents/search-quality.md), [`push-notifications`](agents/push-notifications.md), [`mobile-native`](agents/mobile-native.md), [`embedded-analytics`](agents/embedded-analytics.md), [`audio-voice`](agents/audio-voice.md), [`video-streaming`](agents/video-streaming.md) |
-| 11 | Funcional E2E + Testing strategy + Visual regression | sempre | [`functional-e2e`](agents/functional-e2e.md), [`testing-strategy`](agents/testing-strategy.md), [`visual-regression`](agents/visual-regression.md) |
-| 12 | Anti-mock + Externalização + Content quality (gramática/tom/glossário) | sempre | [`mock-killer`](agents/mock-killer.md), [`config-externalization`](agents/config-externalization.md), [`content-quality`](agents/content-quality.md) |
-| 13 | Resiliência + escalabilidade + Process + Scheduled jobs + Chaos + Event-driven | rigor ≠ MVP | [`resilience`](agents/resilience.md), [`scalability`](agents/scalability.md), [`process-resilience`](agents/process-resilience.md), [`scheduled-jobs`](agents/scheduled-jobs.md), [`chaos-engineering`](agents/chaos-engineering.md), [`event-driven`](agents/event-driven.md) |
-| 14 | DX + Flags + Backoffice + Email + Docs + Reports + Architect + Delivery + Project bootstrap + **Governança de mudança** | sempre | [`devops`](agents/devops.md), [`feature-flags`](agents/feature-flags.md), [`backoffice-admin`](agents/backoffice-admin.md), [`email-deliverability`](agents/email-deliverability.md), [`documentation-live`](agents/documentation-live.md), [`execution-report`](agents/execution-report.md), [`architect`](agents/architect.md), [`delivery-bundle`](agents/delivery-bundle.md), [`project-bootstrap`](agents/project-bootstrap.md), [`risk-engine`](agents/risk-engine.md) ⭐, [`change-impact`](agents/change-impact.md) ⭐, [`decision-log`](agents/decision-log.md) ⭐ |
-| 15 | Pentest + adversarial review + **Runtime adversarial** | sempre | [`pentest`](agents/pentest.md), [`adversarial-reviewer`](agents/adversarial-reviewer.md), [`runtime-adversarial`](agents/runtime-adversarial.md) ⭐ |
-| 16 | Product Evolution (opt-in, escopo separado — requer `ANTHROPIC_API_KEY`) | só se pedido | [`api-frontend-coverage`](agents/api-frontend-coverage.md), [`user-journey-simulator`](agents/user-journey-simulator.md), [`feature-gap-analyzer`](agents/feature-gap-analyzer.md), [`growth-opportunities`](agents/growth-opportunities.md), [`product-critic`](agents/product-critic.md) |
-| 17 | Ataque — recon passivo externo (requer URL alvo) | se URL fornecida | [`attack-recon`](agents/attack-recon.md) |
-| 18 | Smoke / Runtime Truth + checks de infra (prova que a app SOBE) | sempre (self-skip sem docker/URL) | [`smoke-runtime`](agents/smoke-runtime.md) + 9 checks de infra/runtime |
-| 19 | Pentest ATIVO — payloads reais (requer `.blindar/.accept-authorization`) | só com autorização | [`pentest-active`](agents/pentest-active.md) |
+O que não é decisão de toda invocação vive em `reference/`. Carregue o arquivo
+quando a etapa pedir — não antes.
 
-> **Total**: 117 agentes em 19 módulos (90 checks determinísticos + 14 API-wrapped = 104 `check-*.sh`, + playbooks).
-> Contagem verificada por `ls agents/*.md` e `ls templates/checks/check-*.sh` em v0.58 —
-> os números anteriores (118/81) tinham derivado do real.
-> Fonte da verdade: [`pipeline/MODULE-MAP.json`](pipeline/MODULE-MAP.json).
+| Arquivo | Tem |
+|---|---|
+| [`reference/modulos-e-agentes.md`](reference/modulos-e-agentes.md) | menu dos 19 módulos, os 12 leads, roster completo |
+| [`reference/camada-deterministica.md`](reference/camada-deterministica.md) | checks executáveis, instalador, intelligence system, markers inline |
+| [`reference/apoio.md`](reference/apoio.md) | frameworks de compliance, templates, runbooks, stacks, tendências |
+| [`reference/operacao.md`](reference/operacao.md) | sync dev↔instalada, auto-update, origem |
+| [`docs/agentic-harness/`](docs/agentic-harness/) | o molde para criar skill nova |
 
-**Módulos não-negociáveis** (sempre rodam, mesmo em "MVP"): **1, 2, 11, 12, 15** (+ 18, que self-skipa quando não há runtime pra subir).
+A fonte da verdade de módulos → agentes continua sendo
+[`pipeline/MODULE-MAP.json`](pipeline/MODULE-MAP.json), lido em tempo de execução.
 
 ## Modos de execução
+
 
 | Modo | Comportamento | Quando usar |
 |---|---|---|
@@ -373,6 +366,7 @@ crit não-confirmado) — não bypassa qualidade.
 
 ## Smart loop
 
+
 - Termination padrão: **0 crit + ≤2 high após adversarial**
 - **Auto-skip**: se um módulo não tem ATKs aplicáveis (ex: módulo 8 LGPD num
   CLI), pula com 1 round vazio em vez de loopar
@@ -380,6 +374,7 @@ crit não-confirmado) — não bypassa qualidade.
 - **Resume**: estado em `.blindar/state.json` permite retomar de onde parou
 
 ## Defaults (não negocia)
+
 
 | Parâmetro | Valor |
 |---|---|
@@ -395,6 +390,7 @@ crit não-confirmado) — não bypassa qualidade.
 
 ## 10 princípios não-negociáveis
 
+
 1. **Security-first em ties** — ver acima
 2. Round pequeno + mergível (1 vetor, ≤ 80 LOC, ≤ 1h)
 3. `sec.html` é o ledger vivo — atualizado a cada round
@@ -409,6 +405,7 @@ crit não-confirmado) — não bypassa qualidade.
 12. Nenhum agente novo sem bug real observado em produção
 
 ## Pipeline (sequencial, com launcher na frente)
+
 
 | Fase | Arquivo | Duração |
 |---|---|---|
@@ -437,222 +434,8 @@ Pipelines alternativos (não numerados — substituem o fluxo acima conforme o
 | **COLLAB** ⭐ v0.63 | [`pipeline/COLLAB.md`](pipeline/COLLAB.md) | `operation_mode: collab` |
 | **RECOVERY** ⭐ v0.51 | [`pipeline/RECOVERY.md`](pipeline/RECOVERY.md) | `operation_mode: recovery` |
 
-## Hierarquia de agentes (⭐ v0.57)
-
-117 especialistas chapados não convergem sozinhos: cada um está certo dentro do
-próprio escopo e cego fora dele. `performance` quer Redis; `security` exige
-Redis com auth, TLS e rede isolada; `db-architect` argumenta que o índice que
-falta resolve o mesmo problema sem introduzir serviço. Nenhum está errado — e
-sem árbitro vence quem rodou por último.
-
-Cada `agents/*.md` declara `lead:` e `authority:` no frontmatter. É **camada de
-metadata**: nenhum arquivo foi movido, nenhum agente foi fundido.
-
-| Lead | Agentes | Lead | Agentes |
-|---|---|---|---|
-| `security-lead` | 20 | `runtime-lead` | 8 |
-| `chief-architect` | 16 | `platform-lead` | 7 |
-| `frontend-lead` | 16 | `data-lead` | 7 |
-| `sre-lead` | 12 | `privacy-lead` | 7 |
-| `product-lead` | 10 | `ai-lead` | 6 |
-| `release-lead` | 5 | `qa-lead` | 3 |
-
-[`chief-architect`](agents/chief-architect.md) arbitra entre os leads, por
-precedência declarada: perda de dado > segurança > reversibilidade >
-simplicidade operacional > o que já existe. Ele **não implementa**.
-
-### Autoridade
-
-| `authority` | Pode | Agentes |
-|---|---|---|
-| `read-only` | só analisar | 4 |
-| `plan` | planejar | 6 |
-| `implement` | alterar código | 92 |
-| `validate` | testar | 4 |
-| `adversary` | tentar quebrar | 7 |
-| `gate` | **bloquear entrega, sem editar** | 4 |
-
-`gate` é exceção por construção — se quase todo agente pode bloquear, ninguém
-bloqueia de fato. Somar autoridade de decisão à de execução é como uma decisão
-ruim vira fato consumado antes de ser revista.
-
-Validado por [`tests/agents-registry.test.mjs`](tests/agents-registry.test.mjs)
-nos dois sentidos: toda entrada do `MODULE-MAP` resolve para playbook ou check,
-e todo playbook é ativado por algum módulo. Metadata que ninguém valida
-apodrece em silêncio — o teste nasceu achando 2 agentes sem frontmatter e 2
-playbooks que nenhum módulo executava.
-
-## Roster de agentes
-
-Agentes de **segurança** (sempre carregados primeiro):
-
-| Categoria | Agente |
-|---|---|
-| Controle de acesso (auth/MFA/RBAC) | [`agents/access-control.md`](agents/access-control.md) |
-| Criptografia (TLS / at-rest / secrets) | [`agents/cryptography.md`](agents/cryptography.md) |
-| Segurança aplicacional geral | [`agents/security.md`](agents/security.md) |
-| **Strategic Scanner** (Fase 0) | [`agents/strategic-scanner.md`](agents/strategic-scanner.md) |
-| Lógica de negócio (ASVS V11) | [`agents/business-logic.md`](agents/business-logic.md) |
-| Secrets em runtime (memória/env/log) | [`agents/runtime-secrets.md`](agents/runtime-secrets.md) |
-| Frontend / CSP / XSS | [`agents/frontend.md`](agents/frontend.md) |
-| Rede em código (WAF/rate-limit/IaC) | [`agents/network-security.md`](agents/network-security.md) |
-| Observabilidade / audit / logs (conteúdo) | [`agents/observability.md`](agents/observability.md) |
-| Log em disco: rotação / retenção / guardas (continente) | [`agents/log-ops-retention.md`](agents/log-ops-retention.md) |
-| Backup / DR / recuperação | [`agents/backup-recovery.md`](agents/backup-recovery.md) |
-| Patch management (OS/runtime/deps) | [`agents/patch-management.md`](agents/patch-management.md) |
-| Supply chain / lockfiles / CI | [`agents/supply-chain.md`](agents/supply-chain.md) |
-| Pentest automatizado (SAST/DAST/SCA) | [`agents/pentest.md`](agents/pentest.md) |
-
-Agentes de **não-segurança** (carregados sob demanda):
-
-| Categoria | Agente |
-|---|---|
-| Performance (backend / gargalo medido) | [`agents/performance.md`](agents/performance.md) |
-| Fluidez frontend (Web Vitals / CWV) | [`agents/frontend-performance.md`](agents/frontend-performance.md) |
-| **Responsivo + a11y (mobile-first/WCAG AA)** ⭐ v0.8 | [`agents/responsive-a11y.md`](agents/responsive-a11y.md) |
-| **Funcional E2E (cada botão funciona)** ⭐ v0.8 | [`agents/functional-e2e.md`](agents/functional-e2e.md) |
-| **Anti-mock & cleanup** ⭐ v0.8 | [`agents/mock-killer.md`](agents/mock-killer.md) |
-| Resiliência (threads/breakers/pools) | [`agents/resilience.md`](agents/resilience.md) |
-| Escalabilidade (10x carga) | [`agents/scalability.md`](agents/scalability.md) |
-| Compliance genérico | [`agents/compliance.md`](agents/compliance.md) |
-| LGPD / ANPD (Brasil) | [`agents/compliance-lgpd-br.md`](agents/compliance-lgpd-br.md) |
-| DevOps / CI/CD / boot scripts | [`agents/devops.md`](agents/devops.md) |
-| Adversarial review (Fase 5) | [`agents/adversarial-reviewer.md`](agents/adversarial-reviewer.md) |
-
-## Frameworks de referência
-
-Mapeamento de controles, **não agentes**:
-
-| Framework | Quando usar |
-|---|---|
-| [`frameworks/iso-27001.md`](frameworks/iso-27001.md) | Certificação corporativa, mais aceito globalmente |
-| [`frameworks/nist-csf.md`](frameworks/nist-csf.md) | Operacional/estratégico + família SP 800 |
-| [`frameworks/cis-controls.md`](frameworks/cis-controls.md) | Mais acionável; bom pra começar |
-| [`frameworks/owasp-asvs.md`](frameworks/owasp-asvs.md) | **Régua de verificação por requisito** — L1/L2/L3 |
-| [`frameworks/pci-dss.md`](frameworks/pci-dss.md) | Condicional — só processadores de cartão |
-| [`frameworks/soc2.md`](frameworks/soc2.md) | SaaS / cloud / B2B |
-| [`frameworks/cobit.md`](frameworks/cobit.md) | ⚠ stub — governança corporativa (pouco em código) |
-
-Metodologias de pentest (PTES, OWASP WSTG, NIST SP 800-115, OSSTMM, CREST)
-estão referenciadas em [`agents/pentest.md`](agents/pentest.md), não em
-arquivos separados — todas tratam de **como testar**, não **o que
-implementar**.
-
-Discovery (Fase 2) detecta se projeto declara um framework alvo
-(`.compliance-target`, `README`, `package.json`) e gera coverage report
-no relatório final (Fase 6).
-
-## Deterministic Layer (⭐ v0.22)
-
-Camada de scripts shell que **materializa agentes em checks executáveis**
-+ CI workflow que bloqueia merge. Resolve "blindar não garante 100% no
-modo AUTO" — agora roda **independente da diligência do LLM**.
-
-Templates em [`templates/checks/`](templates/checks/). Instalador:
-
-```bash
-cd seu-projeto
-bash ~/.claude/skills/blindar/scripts/install-deterministic-checks.sh
-```
-
-Resultado no projeto-alvo:
-- `scripts/blindar/*.sh` — 8 checks executáveis (secrets, mock-killer,
-  config-ext, deps audit, prisma schema, payments, file-uploads, tenant-isolation)
-- `.github/workflows/blindar.yml` — CI obrigatório
-- `.husky/pre-commit + pre-push` — gates locais
-- `.blindar/results/*.json` — output auditável + agregado
-- `scripts/blindar/check-termination.sh` — decisão matemática de release
-
-Doc completa: [`docs/deterministic-layer.md`](docs/deterministic-layer.md).
-
-## Intelligence System (⭐ v0.20)
-
-Registry compartilhado de exceções/whitelist que TODOS os agentes
-consultam pra evitar falso positivo. Vive em
-`.blindar/intelligence.yml` no projeto-alvo.
-
-Schema formal: [`schemas/intelligence.schema.json`](schemas/intelligence.schema.json).
-
-Por que existe: cada projeto tem casos legítimos onde uma "regra" não
-aplica (ex: tabela `feature_flags` legitimamente não tem `tenant_id`).
-Sem este registry, agentes geram ruído contínuo.
-
-Cada agente declara sua seção. Exemplos:
-
-```yaml
-schema: blindar/intelligence@v1
-mock-killer:
-  ignore_paths: ["**/*.gen.ts", "**/__mocks__/**"]
-db-architect:
-  global_tables: [feature_flags, system_logs, migrations]
-content-quality:
-  protected_terms: ["Stripe", "WhatsApp", "MASTER"]
-architect:
-  router_mode: { auto_detect: true }
-```
-
-### Inline markers no código
-
-Sem precisar editar YAML:
-
-```ts
-// @blindar:keep -- log intencional pra debug
-console.warn('Falha de DB');
-
-// @blindar:hardcode-ok -- código HTTP padrão
-if (res.status === 429) backoff();
-```
-
-```sql
--- @blindar:global -- tabela legitimamente sem tenant_id
-CREATE TABLE feature_flags ( ... );
-```
-
-### Learning mode
-
-Quando ativado em `intelligence.yml`:
-
-```yaml
-global:
-  learning_mode: true
-```
-
-Operador aprova override 1x interativamente → blindar grava em
-`intelligence.yml` automaticamente. Próximas execuções respeitam sem
-perguntar de novo.
-
-## Templates
-
-- [`templates/sec.html`](templates/sec.html) — dashboard single-file
-- [`templates/execution-report.html`](templates/execution-report.html) — relatório técnico cumulativo
-- [`templates/client-report.html`](templates/client-report.html) — relatório do cliente
-- [`templates/frontend-preview.html`](templates/frontend-preview.html) ⭐ v0.20 — preview/aprovação de frontend
-- [`templates/accept-risk.md`](templates/accept-risk.md) — riscos aceitos
-- [`templates/role-hierarchy.md`](templates/role-hierarchy.md) — template de roles
-- [`templates/pr-message.md`](templates/pr-message.md) — formato de PR
-
-## Runbooks (fora de código, para projetos-alvo)
-
-- [`runbooks/antimalware.md`](runbooks/antimalware.md) — EDR/AV (infra)
-- [`runbooks/network-segmentation.md`](runbooks/network-segmentation.md) — físico
-- [`runbooks/security-awareness.md`](runbooks/security-awareness.md) — treinamento
-- [`runbooks/pentest-schedule.md`](runbooks/pentest-schedule.md) — pentest humano
-
-Esses arquivos cobrem o que ISO 27001 / NIST CSF exigem mas que **não cabe
-em PR**: antivírus em laptop, treinamento de RH, pentest manual humano.
-
-## Adaptação por stack
-
-[`stacks.md`](stacks.md) — categorias extras por stack (Python/Node/Go/Rust/SPA/Mobile).
-
-## Tendências 2026 (curadoria semestral)
-
-[`docs/trends-2026.md`](docs/trends-2026.md) — React Compiler v1, RSC default,
-Edge runtime, performance budget 400KB, headers HTTP, supply chain SHA-pin,
-ANPD 2026 (crianças/IA/scraping/SCC/breach 3d). Agentes relevantes consultam
-ao rodar.
-
 ## Quality gates (sem exceção)
+
 
 | Gate | Verificação | Bloqueia |
 |---|---|---|
@@ -666,6 +449,7 @@ ao rodar.
 | **Security-first** | PR não-security não pode degradar defesa existente | merge |
 
 ## Termination
+
 
 Duas condições, ambas necessárias. A contagem é **necessária, não suficiente**.
 
@@ -706,6 +490,7 @@ para alguma coisa?".
 
 ## Princípio de evidência (⭐ v0.57)
 
+
 Toda afirmação precisa de onde ser verificada. Não "PostgreSQL está
 configurado", mas "PostgreSQL em `docker-compose.yml:3`, usado por
 `src/db.ts:1`, migration `002`, conexão confirmada em `pg_stat_activity`".
@@ -724,6 +509,7 @@ existe".
 
 ## Quando NÃO rodar
 
+
 - Suite atual já vermelha → reporta e para
 - Sem CI configurado → para e adiciona CI mínima primeiro
 - Repo sujo (git status com mudanças) → reporta e para
@@ -732,6 +518,7 @@ existe".
 Em todos: 1 reporte claro do que falta, sem tentar adivinhar.
 
 ## Anti-padrões (NUNCA)
+
 
 - PR > 200 LOC ou > 5 arquivos → quebra em 2 rounds
 - Implementação sem teste
@@ -742,62 +529,8 @@ Em todos: 1 reporte claro do que falta, sem tentar adivinhar.
 - Schema `sec.html` mudando entre rounds (schema é commitado uma vez)
 - **Categoria não-security vencendo de security em empate** (security-first)
 
-## Sincronização dev ↔ instalada
-
-Se você desenvolve o blindar num repo separado (ex: `Documents/Axial/Blidar`),
-a cópia instalada em `~/.claude/skills/blindar` é um **artefato** — nunca edite
-lá. Após qualquer mudança no dev:
-
-```bash
-bash scripts/sync-skill.sh          # aplica (copia tracked + remove órfãos + verifica)
-bash scripts/sync-skill.sh --check  # só reporta drift (exit 1 se divergiu)
-```
-
-O script usa o file-set tracked do git como fonte da verdade e preserva o
-estado de runtime da instalada (`.git/`, `.blindar/`, `.last-check`).
-
-## Auto-update
-
-**Passo 0 da sequência mandatória**, uma vez por dia (cache de 24h em
-`.last-check`). Roda `scripts/check-update.sh --quiet` — ou `check-update.ps1
--Quiet` no PowerShell.
-
-**Pergunta, não atualiza sozinho.** Exit 10 significa versão nova: mostre local
-× nova e deixe o operador decidir. Atualizar sem perguntar troca o código sob os
-pés de quem está no meio de um trabalho.
-
-O comando de atualização sai do próprio script, porque depende de como a skill
-foi instalada: clone → `git pull --ff-only`; artefato do `sync-skill.sh` (sem
-`.git`) → reinstalar pelo `install.sh`. Dizer o comando errado é pior que não
-dizer, porque o operador tenta e acha que quebrou.
-
-Sem rede: sai 0 e segue. Falha de checagem **nunca** vira bloqueio nem vira
-"está atualizado" — significa apenas que não deu para saber.
-
-Desativar: `BLINDAR_SKIP_UPDATE_CHECK=1`. Forçar: `--force` / `-Force`.
-
 ## Versão deste skill
+
 
 Ver [`VERSION`](VERSION) e [`CHANGELOG.md`](CHANGELOG.md).
 
-## Para humanos
-
-- [`README.md`](README.md) — apresentação, instalação, uso
-- [`USAGE.md`](USAGE.md) — guia completo passo-a-passo
-- [`CHECKLIST.md`](CHECKLIST.md) — validação pós-download
-- [`MULTI-AI.md`](MULTI-AI.md) — como rodar em qualquer AI
-- [`ROADMAP.md`](ROADMAP.md) — o que ainda não está pronto, honestamente
-
-## Para AIs (você que está lendo isso)
-
-- [`AI-ENTRYPOINT.md`](AI-ENTRYPOINT.md) — **leia primeiro**, decision tree
-- [`CONTRACT.md`](CONTRACT.md) — estrutura `.blindar/` no projeto-alvo
-- [`schemas/`](schemas/) — JSON schemas pra output validável
-- Estado no projeto-alvo: `.blindar/state.json` (ver CONTRACT.md)
-
-## Origem
-
-Skill extraído de execução real: 118 rounds, 68 ATKs fechados, 24 findings
-adversariais fixados. Regras refletem bugs reais que já aconteceram.
-
-Se parece dogmático demais, é porque foi pago em PR-vermelho-mergeado.
