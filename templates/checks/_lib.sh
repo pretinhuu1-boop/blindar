@@ -232,6 +232,23 @@ fi
 # então ele volta a varrer o cwd. Nenhum check pipa dados PRA dentro do rg
 # (auditado: 0 ocorrências de `| rg` e `rg <<<`), então isto é seguro.
 # O caminho de fallback (grep, abaixo) já resolvia isso com `paths=(".")`.
+# ─── Piso de exclusão: uma definição, DOIS consumidores ───
+# O wrapper do ripgrep e o fallback de grep varriam árvores diferentes: o
+# fallback excluía `dist` e o ripgrep não; o ripgrep excluía `coverage` e
+# minificados e o fallback não. O mesmo check via coisas diferentes conforme a
+# máquina tivesse ripgrep — e a divergência só aparece onde ninguém testa.
+#
+# Derivar os dois formatos da MESMA lista torna a divergência impossível por
+# construção, que é melhor que um teste conferindo se elas continuam iguais.
+#
+# Aqui entra só o que NUNCA é alvo legítimo de auditoria. `dist`, `build` e
+# `.next` ficam de FORA de propósito: varrer o bundle construído é exatamente o
+# certo para runtime-secrets e pii-encryption, que procuram segredo assado no
+# artefato entregue ao cliente.
+BLINDAR_IGNORE_DIRS="node_modules .git .blindar .blindar.* coverage"
+BLINDAR_IGNORE_FILES="*.min.js *.min.css *.map"
+export BLINDAR_IGNORE_DIRS BLINDAR_IGNORE_FILES
+
 if type -P rg >/dev/null 2>&1; then
   BLINDAR_RG_BIN="$(type -P rg)"
   export BLINDAR_RG_BIN
@@ -259,10 +276,10 @@ if type -P rg >/dev/null 2>&1; then
   # `.next` ficam de FORA deste piso de propósito: varrer o bundle construído é
   # exatamente o certo para runtime-secrets e pii-encryption, que procuram
   # segredo assado no artefato do cliente.
-  BLINDAR_RG_BASE_IGNORE=(
-    -g '!node_modules' -g '!.git' -g '!.blindar' -g '!.blindar.*'
-    -g '!coverage' -g '!**/*.min.js' -g '!**/*.min.css' -g '!**/*.map'
-  )
+  BLINDAR_RG_BASE_IGNORE=()
+  for _d in $BLINDAR_IGNORE_DIRS;  do BLINDAR_RG_BASE_IGNORE+=(-g "!$_d"); done
+  for _f in $BLINDAR_IGNORE_FILES; do BLINDAR_RG_BASE_IGNORE+=(-g "!**/$_f"); done
+  unset _d _f
   export BLINDAR_RG_BASE_IGNORE
   rg() {
     MSYS2_ARG_CONV_EXCL='*' MSYS_NO_PATHCONV=1 \
@@ -356,7 +373,10 @@ if ! type -P rg >/dev/null 2>&1; then
     # em pipe (execFileSync/pipeline) → rg leria o pipe vazio e não acharia nada.
     # Checks que precisam filtrar um pipe usam `| grep`, não `| rg`.
     [ ${#paths[@]} -eq 0 ] && paths=(".")
-    local base=(-r --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=dist --exclude-dir=.blindar)
+    local base=(-r)
+    local _d _f
+    for _d in $BLINDAR_IGNORE_DIRS;  do base+=(--exclude-dir="$_d"); done
+    for _f in $BLINDAR_IGNORE_FILES; do base+=(--exclude="$_f"); done
     if [ "$fixed" -eq 1 ]; then base+=(-F); else base+=(-E); fi
     if [ "$want_count" -eq 1 ]; then
       # rg -c: só arquivos COM match. grep -rc emite contagem 0 (formato "path:0"
