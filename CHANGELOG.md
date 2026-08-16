@@ -3,6 +3,57 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.64.0] — 2026-08-16
+
+### `check-invisible-unicode` — o caractere que você não vê
+
+Três vetores publicados, nenhum coberto antes:
+
+1. **Trojan Source (CVE-2021-42574)** — controles bidi de override fazem o
+   arquivo **renderizar diferente do que compila**. Você revisa uma coisa e
+   mergeia outra, e o diff no GitHub mostra a versão renderizada. **crit**.
+2. **Contrabando para LLM** — tag chars `U+E0020–E007F` são invisíveis em
+   qualquer editor e chegam intactos ao modelo. É carregador de prompt
+   injection que nenhuma revisão humana pega. **high**.
+3. **Homóglifo** — `А В Е К М Н О Р С Т Х` cirílicos são indistinguíveis das
+   latinas; serve para spoofing de identificador e de domínio. **high**.
+
+Mais o efeito comum: zero-width em texto de usuário quebra busca, `LIKE` no
+banco, copiar-colar e leitor de tela.
+
+### O trabalho real foi o falso positivo
+
+Um check que remove "tudo que é invisível" quebra persa, emoji e árabe. A
+detecção vai em Node porque o que separa achado de ruído é **contexto**, e
+contexto não cabe em regex:
+
+- ZWJ/ZWNJ são **ortografia** em persa (می‌روم) e devanágari
+- ZWJ e variation selector depois de emoji são parte do glifo visível
+  (👨‍👩‍👧, ❤️‍🔥) — removê-los altera o texto
+- Bandeiras usam tag chars de propósito (🏴󠁧󠁢󠁳󠁣󠁴󠁿)
+- Marca direcional é válida em prosa RTL; só **override e embedding** reordenam
+  span alheio
+- Homóglifo só é achado quando **mistura** com latino na mesma palavra — texto
+  em russo legítimo não mistura
+
+A fixture limpa carrega justamente esses casos, e passa com zero.
+
+### Dois bugs meus no caminho, ambos da mesma família
+
+- O `emitir` saía em JSON e o bash extraía por `sed`. A mensagem legítima contém
+  aspas (*parece "a"*), o escape do JSON quebrava a extração e **o achado sumia
+  em silêncio** — 3 detectados, 2 entregues. Trocado por TSV.
+- `achados.join("
+")` não terminava em newline, e o `while read` do bash
+  **descarta a última linha** sem terminador. O último achado sumia.
+
+Origem conceitual: `guillaumemeyer/watermarks-remover`, camada A (Unicode
+invisível). As camadas de remoção de watermark estatística e de proveniência
+C2PA **não** foram trazidas — existem para tornar impossível saber a origem do
+conteúdo, o que contradiz uma ferramenta cuja proposta é evidência e
+auditabilidade. A limpeza de **EXIF/GPS em upload de usuário** é o oposto disso
+(protege quem enviou) e fica para o `file-uploads`, sob o `privacy-lead`.
+
 ## [0.63.0] — 2026-08-16
 
 ### Execução avulsa — `--only`
