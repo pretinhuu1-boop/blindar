@@ -3,6 +3,49 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.65.0] — 2026-08-16
+
+### `seo-foundation` — a fundação, não o metadado
+
+Divisão com o `seo-marketing-meta`, que já existia: lá são os **metadados**
+(title, og:image, JSON-LD, noindex). Aqui é a **fundação** — o que está por
+baixo e, quando errado, faz o resto não importar. Sem sobreposição: o check novo
+não reverifica a existência de robots/sitemap, verifica o **conteúdo** deles.
+
+- **`check-seo-foundation.sh`** (novo): robots bloqueando recurso de
+  renderização (**high**), robots sem `Sitemap:` absoluto (**med**), ausência de
+  canonical (**high**), de página 404 própria (**med**), de normalização de
+  host/barra final (**med**) e de `llms.txt` (**low**). Par
+  `project-seofound-bad`/`-good`.
+- **`agents/seo-foundation.md`** (novo): cobre o que só se prova com o site no
+  ar — 404 devolvendo **404** e não soft-200, redirect **301** e não 302,
+  compressão realmente ativa no proxy, canonical resolvida, e sitemap contendo
+  **só URLs 200**.
+
+### O erro mais caro, e por que é `high`
+
+Bloquear CSS e JS no `robots.txt` "para economizar crawl". O Google **renderiza
+a página como um navegador**: sem folha de estilo e sem script, ele vê um site
+quebrado e avalia como tal. `Disallow: /_next` é o caso mais comum.
+
+### Três coisas que o arquivo nunca prova
+
+**Soft 404** — página de erro devolvendo `200`. O buscador indexa milhares de
+páginas de erro como se fossem conteúdo, e nada no repositório denuncia isso.
+
+**Sitemap** é uma declaração: "estas são minhas páginas boas". URL que
+redireciona, que dá 404 ou que está `noindex` **não pode estar lá** — e sitemap
+gerado automaticamente a partir de rotas inclui exatamente essas.
+
+**`hreflang` sem autorreferência** é ignorado, e o erro passa despercebido
+porque nada quebra visivelmente.
+
+### `llms.txt`
+
+Novo e ainda raro, o que o torna barato e diferenciador: markdown na raiz com o
+que um assistente precisa para responder sobre o negócio sem adivinhar pelo
+HTML.
+
 ## [0.64.0] — 2026-08-16
 
 ### `check-invisible-unicode` — o caractere que você não vê

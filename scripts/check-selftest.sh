@@ -96,6 +96,7 @@ PAIRS=(
   "check-vps-readiness.sh        | project-vps-bad         | project-vps-good"
   "check-git-hygiene.sh         | project-githyg-bad      | project-githyg-good"
   "check-invisible-unicode.sh    | project-unicode-bad     | project-unicode-good"
+  "check-seo-foundation.sh       | project-seofound-bad    | project-seofound-good"
   # blindar-learn:insert (mantenha — scripts/blindar-learn.sh insere novos pares acima desta linha)
 )
 
