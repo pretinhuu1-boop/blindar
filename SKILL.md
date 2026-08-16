@@ -138,6 +138,37 @@ O resultado entra no gate `DEPLOYMENT`: ancorar reprovando o host vira
 **BLOCKED**, e host nunca verificado vira warning. Host não verificado não é
 host aprovado.
 
+### Guard da lista CRITICAL (⭐ v0.70)
+
+```bash
+bash ~/.claude/skills/blindar/scripts/install-hooks.sh
+```
+
+Instala um hook `PreToolUse` que **pausa** comandos da lista CRITICAL do
+[`risk-engine`](agents/risk-engine.md): `DROP`/`TRUNCATE`, `DELETE` sem `WHERE`,
+`migrate reset`, `push --force` (mas não `--force-with-lease`), `reset --hard`,
+reescrita de histórico, `rm -rf` em raiz, remover volume do Docker.
+
+Existe porque hoje essa regra depende de **eu lembrar**. Hook não esquece — é o
+princípio que o `CLAUDE.md` do operador já registra.
+
+**Pausa, não proíbe.** A regra do risk-engine é pedir autorização; proibir
+tornaria impossível o trabalho legítimo (migração planejada, decommission
+autorizado) e o operador desligaria o hook inteiro — trocando uma pausa por
+nenhuma proteção. Cada pausa diz **o que se perde**, porque pausa sem custo
+explícito vira clique reflexo em "sim".
+
+**Falha aberta de propósito**: sem `node`, libera com aviso. Um guard que
+bloqueia todo comando porque uma dependência sumiu é desinstalado no primeiro
+minuto. É defesa em profundidade — o playbook continua valendo por cima.
+
+O mesmo script instala uma **allowlist só-leitura** (`git status`, `git diff`,
+`Read`, `Grep`…) que tira o atrito de comando inofensivo. Nada que altere estado
+entra nela. Use `--no-allowlist` para pular, `--user` para escopo global.
+
+O instalador **lê antes de escrever e faz merge** — `settings.json` costuma ter
+configuração sua, e substituir o arquivo apagaria hooks e permissões existentes.
+
 ### Execução avulsa (⭐ v0.63) — tarefa pontual
 
 Quando o operador quer **uma coisa só** ("roda só o anti-mock aqui", "checa só a

@@ -92,6 +92,10 @@ if [ ! -d "$ANCORAR_TARGET" ]; then
 fi
 
 echo ""
+echo "  Opcional, recomendado: instale o guard da lista CRITICAL no Claude Code."
+echo "  Ele PAUSA comandos que apagam dado ou reescrevem historico compartilhado."
+echo "    bash \"$TARGET/scripts/install-hooks.sh\" --user"
+echo ""
 echo "Proximo passo: leia CHECKLIST.md"
 echo "  cat \"$TARGET/CHECKLIST.md\""
 echo ""
