@@ -506,12 +506,18 @@ fi
 # Output: 1 linha resumo. Inválidos viram warning, não erro.
 VALIDATOR="$SKILL_DIR/scripts/validate-schemas.js"
 if command -v node >/dev/null 2>&1 && [ -f "$VALIDATOR" ] && [ -d "$SKILL_DIR/schemas" ]; then
-  VAL_OUT=$(node "$VALIDATOR" --input "$RESULTS_DIR" --quiet 2>&1 || true)
+  # Node é binário nativo no Windows: path POSIX (/c/...) viraria C:\c\...
+  VALIDATOR_NATIVE="$VALIDATOR"; RESULTS_DIR_NATIVE="$RESULTS_DIR"
+  if command -v cygpath >/dev/null 2>&1; then
+    VALIDATOR_NATIVE=$(cygpath -m "$VALIDATOR")
+    RESULTS_DIR_NATIVE=$(cygpath -m "$RESULTS_DIR")
+  fi
+  VAL_OUT=$(node "$VALIDATOR_NATIVE" --input "$RESULTS_DIR_NATIVE" --quiet 2>&1 || true)
   if echo "$VAL_OUT" | grep -q "^✓"; then
     log "${G}✓ Schemas válidos${RST}"
   elif echo "$VAL_OUT" | grep -q "^⚠"; then
     BAD_COUNT=$(echo "$VAL_OUT" | grep -oE '^⚠ [0-9]+' | grep -oE '[0-9]+' | head -1)
-    log "${Y}⚠ ${BAD_COUNT:-?} arquivo(s) com schema inválido${RST} (rode: node \"$VALIDATOR\" --input \"$RESULTS_DIR\")"
+    log "${Y}⚠ ${BAD_COUNT:-?} arquivo(s) com schema inválido${RST} (rode: node \"$VALIDATOR_NATIVE\" --input \"$RESULTS_DIR_NATIVE\")"
   fi
 fi
 
