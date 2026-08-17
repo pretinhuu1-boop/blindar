@@ -32,7 +32,7 @@ load_intelligence_globs "$BLINDAR_AGENT"
 # 1. console.log/debug/warn em código de produção
 log_info "Buscando console.log em código de prod..."
 TMP=$(mktemp)
-rg -n "console\.(log|debug|warn|trace)\(" --type ts --type js "${IGNORE_GLOBS[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
+rg -n "console\.(log|debug|warn|trace)\(" --type ts --type js --type py "${IGNORE_GLOBS[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
 
 # Filtra linhas com marker @blindar:keep
 grep -v "@blindar:keep" "$TMP" > "$TMP.filtered" || true
@@ -71,7 +71,7 @@ rm -f "$TMP"
 # 3. Mock/fake/stub fora de pasta de teste
 log_info "Buscando mocks em código de produção..."
 TMP=$(mktemp)
-rg -n "(mock|stub|fake|dummy)[A-Z]" --type ts "${IGNORE_GLOBS[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null > "$TMP" || true
+rg -n "(mock|stub|fake|dummy)[A-Z]" --type ts --type py "${IGNORE_GLOBS[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null > "$TMP" || true
 grep -v "@blindar:keep" "$TMP" > "$TMP.filtered" || true
 mv "$TMP.filtered" "$TMP"
 

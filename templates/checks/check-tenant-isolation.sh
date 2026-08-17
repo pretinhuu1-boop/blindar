@@ -32,7 +32,7 @@ load_intelligence_globs "$BLINDAR_AGENT"
 # 1. findMany/findFirst/findUnique sem where tenantId
 log_info "Buscando queries sem tenant_id..."
 TMP=$(mktemp)
-rg -n "\.(findMany|findFirst|findUnique|count|aggregate)\(\{" --type ts "${IGNORE[@]}" "${INTEL_GLOBS[@]}" -A 5 2>/dev/null | \
+rg -n "(\.(findMany|findFirst|findUnique|count|aggregate)\(\{|\.query\([A-Z]\w*\)|\.objects\.(filter|get|all)\()" --type ts --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" -A 5 2>/dev/null | \
   awk '/findMany|findFirst|findUnique|count|aggregate/ {
     block=$0; getline; for(i=0;i<5;i++) { block=block " " $0; getline }
     if (block !~ /tenantId|tenant_id|@blindar:global/) print FILENAME":"FNR": "block
@@ -48,7 +48,7 @@ rm -f "$TMP"
 # 2. queryRawUnsafe sem tenant param (alto risco)
 log_info "Buscando \$queryRawUnsafe perigosos..."
 TMP=$(mktemp)
-rg -n "\\\$queryRawUnsafe" --type ts "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
+rg -n "\\\$queryRawUnsafe" --type ts --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
 UNSAFE=$(wc -l < "$TMP" || echo 0)
 if [ "$UNSAFE" -gt 0 ]; then
   while IFS=: read -r file line content; do

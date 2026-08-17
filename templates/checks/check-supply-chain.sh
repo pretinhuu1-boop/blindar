@@ -8,7 +8,7 @@ is_nodejs || { emit_result "$BLINDAR_AGENT" "skipped" 0; exit 0; }
 
 # 1. Lockfile presente
 HAS_LOCK=0
-for lf in package-lock.json yarn.lock pnpm-lock.yaml bun.lockb; do
+for lf in package-lock.json yarn.lock pnpm-lock.yaml bun.lockb poetry.lock Pipfile.lock uv.lock pdm.lock requirements.lock; do
   [ -f "$lf" ] && HAS_LOCK=1
 done
 if [ "$HAS_LOCK" -eq 0 ]; then

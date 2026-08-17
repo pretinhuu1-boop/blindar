@@ -35,7 +35,7 @@ FAIL=0
 
 # 0. RE-SCOPING (v0.45): só faz sentido exigir DEK/KEK se o projeto lida com PII/
 # pacientes. Sem sinais, skip gracioso (antes disparava crit em TODO projeto).
-PII_SIGNAL=$(rg -l "(patient|paciente|prontuario|\bpii\b|\bphi\b|cpf|cns|dek_ciphertext)" --type ts --type sql "${RG_IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | head -1)
+PII_SIGNAL=$(rg -l "(patient|paciente|prontuario|\bpii\b|\bphi\b|cpf|cns|dek_ciphertext)" --type ts --type py --type sql "${RG_IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | head -1)
 if [ -z "$PII_SIGNAL" ]; then
   log_info "Sem sinais de PII/paciente — envelope encryption não se aplica — skip"
   emit_result "$BLINDAR_AGENT" "skipped" 0
@@ -43,9 +43,9 @@ if [ -z "$PII_SIGNAL" ]; then
 fi
 
 # 1. Existe módulo de crypto com envelope (generateDek + encryptField + unwrapDek)
-HAS_GENERATE_DEK=$(rg -l "generateDek|generate_dek" --type ts "${RG_IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l)
-HAS_ENCRYPT_FIELD=$(rg -l "encryptField|encrypt_field|encryptPii" --type ts "${RG_IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l)
-HAS_UNWRAP_DEK=$(rg -l "unwrapDek|unwrap_dek|decryptDek" --type ts "${RG_IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l)
+HAS_GENERATE_DEK=$(rg -l "generateDek|generate_dek" --type ts --type py "${RG_IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l)
+HAS_ENCRYPT_FIELD=$(rg -l "encryptField|encrypt_field|encryptPii" --type ts --type py "${RG_IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l)
+HAS_UNWRAP_DEK=$(rg -l "unwrapDek|unwrap_dek|decryptDek" --type ts --type py "${RG_IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l)
 
 if [ "$HAS_GENERATE_DEK" -eq 0 ] || [ "$HAS_ENCRYPT_FIELD" -eq 0 ] || [ "$HAS_UNWRAP_DEK" -eq 0 ]; then
   add_finding "crit" "Sem módulo DEK/KEK envelope encryption (generateDek + encryptField + unwrapDek) — PII em plaintext" "" "Criar lib/crypto.ts com AES-256-GCM envelope seguindo LGPD art. 46"
@@ -55,7 +55,7 @@ else
 fi
 
 # 2. Rotas de pacientes usam as funções de encrypt/decrypt
-ROUTES_ENCRYPT=$(rg -l "(encryptField|generateDek|decryptField|decryptPatientRow)" --type ts "${RG_IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | grep -iE "patient|paciente" | wc -l)
+ROUTES_ENCRYPT=$(rg -l "(encryptField|generateDek|decryptField|decryptPatientRow)" --type ts --type py "${RG_IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | grep -iE "patient|paciente" | wc -l)
 if [ "$ROUTES_ENCRYPT" -eq 0 ]; then
   add_finding "crit" "Rotas de pacientes não chamam encryptField/generateDek — PII gravado em plaintext" "" "Wiring DEK/KEK no handler POST/PATCH de patients"
   FAIL=1
@@ -64,7 +64,7 @@ else
 fi
 
 # 3. PII_MASTER_KEY referenciada no config
-HAS_KEK_CONFIG=$(rg -l "PII_MASTER_KEY|piiMasterKey" --type ts "${RG_IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | grep -iE "config|env|settings" | wc -l)
+HAS_KEK_CONFIG=$(rg -l "PII_MASTER_KEY|piiMasterKey" --type ts --type py "${RG_IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | grep -iE "config|env|settings" | wc -l)
 if [ "$HAS_KEK_CONFIG" -eq 0 ]; then
   add_finding "high" "PII_MASTER_KEY não referenciada no config — KEK não carregada em runtime" "src/config.ts" "Adicionar piiMasterKey: requiredInProd('PII_MASTER_KEY', '')"
 else
@@ -82,7 +82,7 @@ else
 fi
 
 # 5. HMAC search para telefone (buscabilidade sem expor PII)
-HAS_PHONE_HASH=$(rg -l "phoneSearchHash|phone_hash" --type ts "${RG_IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l)
+HAS_PHONE_HASH=$(rg -l "phoneSearchHash|phone_hash" --type ts --type py "${RG_IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l)
 if [ "$HAS_PHONE_HASH" -eq 0 ]; then
   add_finding "med" "Sem HMAC determinístico para busca por telefone — forced to scan plaintext ou abandonar busca" "" "Implementar phoneSearchHash() + coluna phone_hash + índice único"
 else
@@ -92,7 +92,7 @@ fi
 # 6. Confirma uso de AES-GCM (não ECB/CBC) no módulo de crypto próprio
 # Nota: check-cryptography.sh cobre cifras fracas no monorepo todo;
 # aqui verificamos apenas se o módulo DEK/KEK usa GCM especificamente.
-HAS_GCM=$(rg -l "aes-256-gcm" --type ts "${RG_IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l)
+HAS_GCM=$(rg -l "aes-256-gcm" --type ts --type py "${RG_IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l)
 if [ "$HAS_GCM" -eq 0 ]; then
   add_finding "high" "Módulo DEK/KEK não usa AES-256-GCM — verificar lib/crypto.ts" "" "Trocar modo para 'aes-256-gcm' com createCipheriv + getAuthTag"
 else

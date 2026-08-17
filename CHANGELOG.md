@@ -3,6 +3,95 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.78.0] — 2026-08-17
+
+### Python virou cidadão de primeira classe
+
+Num projeto Python, o blindar media **33 de 108** checks. Pior que o número:
+`check-security` saía `passed` com SQL concatenado, `shell=True`, `pickle.loads`
+e `yaml.load`; `check-cryptography` saía `passed` com `hashlib.md5` em senha e
+`random` gerando token; `cors-csrf` saía `passed` com `allow_origins=["*"]` e
+`allow_credentials=True`.
+
+Não era falta de check — era check existente que não olhava. O conceito estava
+certo, o vocabulário só falava JS.
+
+**Agora: 93 de 108 medem (86%).** Os outros 15 são frontend por natureza — SEO,
+a11y, bundle, PWA — e não se aplicam a um backend Python.
+
+O trabalho teve duas metades, e a segunda é a que importa:
+
+1. **36 checks passaram a olhar `.py`.** Mecânico, e sozinho não resolve nada.
+2. **Os padrões foram traduzidos.** `Depends()` e `login_required` como guarda de
+   auth, `@limiter.limit` do slowapi como rate limit, `.query(X).all()` como
+   listagem sem paginação, `hashlib.md5` como hash fraco, `session.delete()` e
+   `.objects.filter().delete()` como hard delete, `poetry.lock` e `uv.lock` como
+   lockfile, `test_*.py` como teste.
+
+Ampliar o `--type` sem traduzir teria sido a pior versão disso: cobertura no
+papel, zero na prática — o check varreria o arquivo Python, não acharia nada, e
+sairia `passed`.
+
+`check-soft-delete` e `check-audit-log` só começavam se existisse
+`prisma/schema.prisma`. Agora abrem também para SQLAlchemy e Django.
+
+### A mesma palavra com sentido diferente entre linguagens
+
+Ao ensinar Python ao `check-security`, adicionei `exec` ao padrão de `eval` —
+em Python `exec()` executa código arbitrário. Só que em JavaScript `.exec()` é
+o método de RegExp.
+
+Resultado medido: um arquivo com **uma única regex de validação de e-mail**,
+`RE.exec(req.query.email)`, passou a sair `failed` com dois críticos falsos —
+"RCE" e "command injection".
+
+A correção é a diferença sintática que separa os usos: em Python o perigoso é
+`exec(` **solto**; em JS o inofensivo é `.exec(`, sempre com ponto antes.
+
+Fica registrado como o custo real de ampliar padrão para outra linguagem: o
+ganho é real, o risco também, e quem separa os dois é o par de fixture rodando
+nas duas. Por isso `check-security`, `check-cryptography` e `check-cors-csrf`
+passaram a ter **dois pares** — um JS e um Python. Se a tradução de uma quebrar
+a outra, o gate barra.
+
+### `tests/fixture-secrets.test.mjs`
+
+Terceira vez nesta base: escrevo um segredo realista num fixture vulnerável, o
+gitleaks detecta — que é o ponto —, e o **Push Protection do GitHub recusa o
+push**. O trabalho já está commitado, então some meia hora entre descobrir e
+conseguir publicar.
+
+A tensão é real e não some: o fixture PRECISA de um segredo que o scanner
+detecte, senão não prova nada. Foi por ser mascarado demais que o
+`project-with-secrets` deixou um falso negativo do `check-secrets` viver meses.
+
+A saída é a categoria certa. O Push Protection bloqueia credencial de
+**provedor** — Stripe, AWS, GitHub, Slack, Google — porque essas valem dinheiro
+e podem ser revogadas. Segredo genérico ele aceita, e o gitleaks detecta igual:
+JWT de exemplo do jwt.io, ou `api_key_a1b2c3...`.
+
+O teste roda em 2 segundos e já achou uma segunda ocorrência que estava no
+repositório desde antes.
+### `scripts/monitor.sh`
+
+O gate leva ~50 minutos e só imprime no fim; um run passa de 10; o semgrep em
+container some por um minuto sem sinal. "Travou" e "está lento" se parecem
+exatamente igual até você medir.
+
+Mostra o run em andamento, o gate com pares e falhas, os containers **do
+blindar** — não os 24 da máquina — e os processos ativos. `--watch` atualiza.
+
+Ele mesmo mentiu na primeira vez que foi olhado: exibiu "há 357m" para um
+arquivo escrito 18 segundos antes. Num painel cuja única função é você confiar
+no que lê, número calculado errado é pior que número nenhum — a idade calculada
+virou hora de parede, que não tem aritmética para errar.
+
+### O registro aceita mais de um par por check
+
+Era erro registrar o mesmo check duas vezes, para não inflar o numerador. Mas
+dois pares com fixtures DIFERENTES são mais cobertura, não menos, e o numerador
+não infla porque o gate indexa por nome de check. Par idêntico repetido continua
+sendo erro.
 ## [0.77.0] — 2026-08-17
 
 ### O SAST voltou a rodar no Windows, por container

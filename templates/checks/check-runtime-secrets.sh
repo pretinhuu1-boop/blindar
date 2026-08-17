@@ -50,27 +50,27 @@ _localizados() { # severidade mensagem teto   (lê `arquivo:linha:...` na stdin)
 }
 
 # 1. process.env.X exposto pra client (NEXT_PUBLIC_ / VITE_ são OK; resto não)
-PUBLIC_LEAK_M=$(_grep_src 'process\.env\.[A-Z_]+' --type ts 2>/dev/null | grep -vE '(NEXT_PUBLIC_|VITE_|PUBLIC_|VUE_APP_|REACT_APP_)' | grep -E '(pages/|app/|components/|client/)')
+PUBLIC_LEAK_M=$(_grep_src 'process\.env\.[A-Z_]+' --type ts --type py 2>/dev/null | grep -vE '(NEXT_PUBLIC_|VITE_|PUBLIC_|VUE_APP_|REACT_APP_)' | grep -E '(pages/|app/|components/|client/)')
 _localizados "crit" "process.env não-público em arquivo client (vazará no bundle)" <<< "${PUBLIC_LEAK_M:-}" || true
 
 # 2. console.log / logger com objeto inteiro user/token/secret
-LOG_LEAK_M=$(_grep_src 'console\.(log|info|debug|error)\(.*\b(user|token|secret|password|apiKey|api_key)\b' --type ts --type js 2>/dev/null)
+LOG_LEAK_M=$(_grep_src 'console\.(log|info|debug|error)\(.*\b(user|token|secret|password|apiKey|api_key)\b' --type ts --type js --type py 2>/dev/null)
 _localizados "high" "console.log com objeto sensível (user/token/etc)" <<< "${LOG_LEAK_M:-}" || true
 
 # 3. throw new Error(secret/token/password)
-ERR_LEAK_M=$(_grep_src 'throw new Error\(.*\b(secret|token|password|apiKey)\b' --type ts --type js 2>/dev/null)
+ERR_LEAK_M=$(_grep_src 'throw new Error\(.*\b(secret|token|password|apiKey)\b' --type ts --type js --type py 2>/dev/null)
 _localizados "high" "Error message com valor de secret" <<< "${ERR_LEAK_M:-}" || true
 
 # 4. JSON.stringify(req) em log (vaza headers c/ Authorization)
-JSON_REQ_M=$(_grep_src 'JSON\.stringify\(req\b' --type ts --type js 2>/dev/null)
+JSON_REQ_M=$(_grep_src 'JSON\.stringify\(req\b' --type ts --type js --type py 2>/dev/null)
 _localizados "high" "JSON.stringify(req) — pode vazar Authorization header" <<< "${JSON_REQ_M:-}" || true
 
 # 5. Stack trace exposto em produção
-STACK_EXPOSED_M=$(_grep_src 'res\.(send|json)\(.*err\.(stack|message)' --type ts --type js 2>/dev/null)
+STACK_EXPOSED_M=$(_grep_src 'res\.(send|json)\(.*err\.(stack|message)' --type ts --type js --type py 2>/dev/null)
 _localizados "med" "res.send(err.stack) — esconder em prod" <<< "${STACK_EXPOSED_M:-}" || true
 
 # 6. Secret em URL/query string
-URL_SECRET_M=$(_grep_src '(url|href|fetch)\(.*\?.*\b(token|secret|api_key|password)=' --type ts --type js 2>/dev/null)
+URL_SECRET_M=$(_grep_src '(url|href|fetch)\(.*\?.*\b(token|secret|api_key|password)=' --type ts --type js --type py 2>/dev/null)
 _localizados "crit" "secret em query string — usar header Authorization" <<< "${URL_SECRET_M:-}" || true
 
 CRITS=$(printf '%s\n' "${FINDINGS[@]}" | grep -c '"severity":"crit"' 2>/dev/null)
