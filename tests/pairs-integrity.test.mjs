@@ -36,10 +36,18 @@ const usados = new Set();
 
 if (pares.length < 50) falhas.push(`só ${pares.length} pares lidos — o parser do registro quebrou?`);
 
+// Um check PODE ter mais de um par — é assim que ele se prova em mais de uma
+// linguagem: o `check-security` dispara tanto no fixture JS quanto no Python.
+// Isso é mais cobertura, não menos, e o numerador não infla porque `VERIFIED`
+// no gate é indexado por nome de check.
+//
+// O que continua sendo erro é o MESMO par repetido: aí sim é linha duplicada
+// sem ganho, e foi assim que a cobertura chegou a passar de 100% antes.
 const vistos = new Set();
 for (const p of pares) {
-  if (vistos.has(p.check)) falhas.push(`${p.check}: registrado duas vezes (infla o numerador)`);
-  vistos.add(p.check);
+  const chave = `${p.check}|${p.vuln}|${p.limpo}`;
+  if (vistos.has(chave)) falhas.push(`${p.check}: par idêntico registrado duas vezes (${p.vuln})`);
+  vistos.add(chave);
 
   if (!existsSync(join(raiz, 'templates', 'checks', p.check))) {
     falhas.push(`${p.check}: par registrado para check que não existe`);

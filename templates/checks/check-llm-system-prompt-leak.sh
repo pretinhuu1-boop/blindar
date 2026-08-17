@@ -24,7 +24,7 @@ SPVAR="systemPrompt|system_prompt|SYSTEM_PROMPT|SYSTEM_MESSAGE|systemMessage"
 # 1. System prompt devolvido numa resposta HTTP (vaza instruções internas ao cliente)
 TMP=$(mktemp)
 rg -n "(res\.(json|send)|Response\.json|NextResponse\.json|reply\.send)\s*\([^)]*\b($SPVAR)\b" \
-  --type ts --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | \
+  --type ts --type js --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | \
   grep -v "@blindar:keep" > "$TMP" || true
 while IFS=: read -r file line content; do
   [ -z "$file" ] && continue
@@ -35,7 +35,7 @@ rm -f "$TMP"
 # 2. System prompt logado (vaza pro sink de logs — LLM07 via observabilidade)
 TMP=$(mktemp)
 rg -n "(console\.(log|info|debug)|logger\.(info|debug|log))\s*\([^)]*\b($SPVAR)\b" \
-  --type ts --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | \
+  --type ts --type js --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | \
   grep -v "@blindar:keep" > "$TMP" || true
 while IFS=: read -r file line content; do
   [ -z "$file" ] && continue

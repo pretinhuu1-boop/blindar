@@ -69,7 +69,7 @@ fi
 
 # 7. Build com Date.now() / Math.random() (não-reprodutível)
 log_info "Verificando reproducibilidade do build..."
-NON_REPRO=$(rg -l "(Date\.now\(\)|Math\.random\(\))" --type ts scripts/build* 2>/dev/null | head -1)
+NON_REPRO=$(rg -l "(Date\.now\(\)|Math\.random\(\))" --type ts --type py scripts/build* 2>/dev/null | head -1)
 if [ -n "$NON_REPRO" ]; then
   add_finding "low" "Build script usa Date.now/Math.random — não-reprodutível" "$NON_REPRO" ""
 fi

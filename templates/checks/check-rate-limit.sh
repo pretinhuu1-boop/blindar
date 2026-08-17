@@ -9,8 +9,8 @@ if ! command -v rg >/dev/null 2>&1; then emit_result "$BLINDAR_AGENT" "skipped" 
 IGNORE=(-g '!.next' -g '!.nuxt' -g '!out' -g '!.svelte-kit' -g '!node_modules' -g '!dist' -g '!**/*.test.*')
 load_intelligence_globs "$BLINDAR_AGENT"
 
-HAS_RL=$(rg -c "(rate-limit|rateLimit|@upstash/ratelimit|express-rate-limit|@nestjs/throttler)" --type ts --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0)
-HAS_ROUTES=$(rg -c "(app\.(post|put|delete)|@Post\(|@Put\(|@Delete\()" --type ts "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0)
+HAS_RL=$(rg -c "(rate-limit|rateLimit|@upstash/ratelimit|express-rate-limit|@nestjs/throttler|slowapi|Limiter\(|flask-limiter|django-ratelimit|ratelimit\()" --type ts --type js --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0)
+HAS_ROUTES=$(rg -c "(app\.(post|put|delete)|@Post\(|@Put\(|@Delete\(|@(app|router)\.(post|put|delete)\(|methods\s*=\s*\[[\"'](POST|PUT|DELETE))" --type ts --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0)
 
 if [ "$HAS_ROUTES" -gt 0 ] && [ "$HAS_RL" -eq 0 ]; then
   add_finding "high" "Rotas POST/PUT/DELETE sem rate-limit detectável" "" ""
@@ -19,7 +19,7 @@ if [ "$HAS_ROUTES" -gt 0 ] && [ "$HAS_RL" -eq 0 ]; then
 fi
 
 # Endpoints sensíveis sem rate limit explícito (login, signup, reset, otp)
-SENSITIVE=$(rg -l "(login|signin|signup|register|reset.password|verify.otp|forgot.password)" --type ts "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0)
+SENSITIVE=$(rg -l "(login|signin|signup|register|reset.password|verify.otp|forgot.password)" --type ts --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0)
 # `-i` obrigatório: o padrão é minúsculo e o mundo real escreve `rateLimit`,
 # `RateLimit`, `rate_limit`. Sem isso, um fixture que importa `rateLimit` e
 # aplica `limiter` na rota de login era reportado como "endpoint sensível sem
@@ -47,7 +47,7 @@ while IFS= read -r _arq; do
   [ -z "$_arq" ] && continue
   _arq="${_arq#./}"; _arq="${_arq#.\\}"
   grep -liE "(login|signup|reset|otp)" "$_arq" >/dev/null 2>&1 && SENSITIVE_RL=$((SENSITIVE_RL + 1))
-done <<< "$(rg -li "rate.?limit" --type ts "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null || true)"
+done <<< "$(rg -li "(rate.?limit|limiter\.limit|@limiter|slowapi|Throttle)" --type ts --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null || true)"
 
 if [ "$SENSITIVE" -gt 0 ] && [ "$SENSITIVE_RL" -eq 0 ]; then
   add_finding "high" "Endpoint sensível (login/reset/otp) sem rate-limit dedicado" "" ""

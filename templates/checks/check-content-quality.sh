@@ -51,7 +51,7 @@ rm -f "$TMP"
 # 4. Concatenação que vira plural quebrado
 log_info "Buscando plural por concatenação..."
 TMP=$(mktemp)
-rg -n "['\"][a-z]+\s*['\"]\s*\+\s*\w+\s*\+\s*['\"]\s*s\b" --type ts "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
+rg -n "['\"][a-z]+\s*['\"]\s*\+\s*\w+\s*\+\s*['\"]\s*s\b" --type ts --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
 PLURAL_BROKEN=$(wc -l < "$TMP" || echo 0)
 if [ "$PLURAL_BROKEN" -gt 0 ]; then
   add_finding "med" "$PLURAL_BROKEN plural via concatenação — usar ICU MessageFormat" "" ""
@@ -64,7 +64,7 @@ TMP=$(mktemp)
 # `master/slave` sem escapar a barra: o ripgrep 13 rejeita `\/` como escape
 # inválido e o padrão inteiro morre — não só esse termo.
 rg -ni "\b(blacklist|whitelist|master/slave|slave|grandfather(ed)?|sanity check)\b" \
- --type ts --type md "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
+ --type ts --type py --type md "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
 DISCRIMINATORY=$(wc -l < "$TMP" || echo 0)
 if [ "$DISCRIMINATORY" -gt 0 ]; then
   while IFS=: read -r file line content; do

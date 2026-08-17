@@ -32,7 +32,7 @@ MISSING_HEADERS=()
 for header in "${REQUIRED_HEADERS[@]}"; do
   if ! rg -q "$header" $SEARCH_FILES 2>/dev/null; then
     # Verifica se usa Helmet (cobre vários)
-    if ! rg -q "helmet|@helmetjs" --type ts --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null; then
+    if ! rg -q "helmet|@helmetjs" --type ts --type js --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null; then
       MISSING_HEADERS+=("$header")
     fi
   fi
@@ -48,7 +48,7 @@ fi
 # 2. CORS com origin: '*' E credentials: true (browser bloqueia, mas vaza intencao)
 log_info "Buscando CORS errado..."
 TMP=$(mktemp)
-rg -n "origin\s*:\s*['\"]?\*['\"]?" --type ts --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" -A 3 2>/dev/null > "$TMP" || true
+rg -n "origin\s*:\s*['\"]?\*['\"]?" --type ts --type js --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" -A 3 2>/dev/null > "$TMP" || true
 if grep -q "credentials.*true" "$TMP"; then
   add_finding "high" "CORS origin '*' com credentials true (configuração perigosa)" "" ""
   log_fail "CORS mal configurado"
@@ -57,7 +57,7 @@ rm -f "$TMP"
 
 # 3. Rate limit em endpoints sensíveis
 log_info "Verificando rate limit em /auth/*..."
-HAS_RATELIMIT=$(rg -l "(rateLimit|@Throttle|express-rate-limit|@upstash/ratelimit|@fastify/rate-limit)" --type ts --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | head -1)
+HAS_RATELIMIT=$(rg -l "(rateLimit|@Throttle|express-rate-limit|@upstash/ratelimit|@fastify/rate-limit|slowapi|limiter\.limit|@limiter|flask-limiter|django-ratelimit)" --type ts --type js --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | head -1)
 if [ -z "$HAS_RATELIMIT" ]; then
   add_finding "high" "Rate limit não detectado — endpoints /auth/* vulneráveis a brute force" "" ""
   log_fail "Sem rate limit detectado"
@@ -72,7 +72,7 @@ fi
 # 5. CSP com 'unsafe-inline' ou 'unsafe-eval' (CRIT)
 log_info "Buscando CSP unsafe-*..."
 TMP=$(mktemp)
-rg -n "'unsafe-(inline|eval)'" --type ts --type js --type html "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
+rg -n "'unsafe-(inline|eval)'" --type ts --type js --type py --type html "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
 UNSAFE_COUNT=$(wc -l < "$TMP" || echo 0)
 if [ "$UNSAFE_COUNT" -gt 0 ]; then
   while IFS=: read -r file line content; do

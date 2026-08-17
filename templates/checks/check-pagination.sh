@@ -11,7 +11,7 @@ load_intelligence_globs "$BLINDAR_AGENT"
 
 # Prisma findMany sem take
 TMP=$(mktemp)
-rg -n "findMany\(\s*\{?" --type ts "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null > "$TMP" || true
+rg -n "(findMany\(\s*\{?|\.query\([A-Z]\w*\)\.all\(\)|\.objects\.all\(\)|session\.scalars\(select\()" --type ts --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null > "$TMP" || true
 NO_TAKE=0
 while IFS=: read -r file line content; do
   [ -z "$file" ] && continue

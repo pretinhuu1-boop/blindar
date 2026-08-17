@@ -31,7 +31,7 @@ if [ -z "$E2E_DIR" ]; then
 fi
 
 # 3. Conta testes
-TEST_COUNT=$(find "$E2E_DIR" -name "*.spec.*" -o -name "*.test.*" -o -name "*.cy.*" 2>/dev/null | wc -l)
+TEST_COUNT=$(find "$E2E_DIR" \( -name "*.spec.*" -o -name "*.test.*" -o -name "*.cy.*" -o -name "test_*.py" -o -name "*_test.py" \) 2>/dev/null | wc -l)
 if [ "$TEST_COUNT" -eq 0 ]; then
   add_finding "high" "Pasta $E2E_DIR existe mas zero testes" "$E2E_DIR" ""
   emit_result "$BLINDAR_AGENT" "failed" 1

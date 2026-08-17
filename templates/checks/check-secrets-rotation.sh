@@ -12,7 +12,7 @@ log_section "Check: secrets rotation"
 IGNORE=(-g '!.next' -g '!.nuxt' -g '!out' -g '!.svelte-kit' -g '!node_modules' -g '!.git' -g '!dist' -g '!build' -g '!.blindar')
 TMP=$(mktemp)
 rg -n "(sk_live_|pk_live_|ghp_|xox[baprs]-|AIza[0-9A-Za-z\-_]{35}|AKIA[0-9A-Z]{16})" \
-  --type ts --type js --type yaml --type env \
+  --type ts --type js --type py --type yaml --type env \
   "${IGNORE[@]}" 2>/dev/null > "$TMP" || true
 
 COUNT=$(wc -l < "$TMP" || echo 0)

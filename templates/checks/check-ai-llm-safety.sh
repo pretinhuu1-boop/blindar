@@ -33,7 +33,7 @@ FAIL=0
 # 1. LLM call sem max_tokens (DoS + custo)
 log_info "Buscando LLM call sem max_tokens..."
 TMP=$(mktemp)
-rg -n "(openai|anthropic|gemini)\.\w+\.create\(" --type ts "${IGNORE[@]}" "${INTEL_GLOBS[@]}" -A 10 2>/dev/null | \
+rg -n "(openai|anthropic|gemini)\.\w+\.create\(" --type ts --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" -A 10 2>/dev/null | \
   grep -B 10 "\}" | grep -v "max_tokens" > "$TMP" || true
 NO_MAX=$(grep -c "create" "$TMP" 2>/dev/null)
 if [ "$NO_MAX" -gt 0 ]; then
@@ -44,7 +44,7 @@ rm -f "$TMP"
 # 2. Concat de userInput em system prompt (prompt injection trivial)
 log_info "Buscando prompt injection direta..."
 TMP=$(mktemp)
-rg -n "['\"][Yy]ou are.*\\\$\{[^}]*input|['\"][Vv]oc[eê].*\\\$\{[^}]*input" --type ts "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
+rg -n "['\"][Yy]ou are.*\\\$\{[^}]*input|['\"][Vv]oc[eê].*\\\$\{[^}]*input" --type ts --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
 INJECTION=$(wc -l < "$TMP" || echo 0)
 if [ "$INJECTION" -gt 0 ]; then
   while IFS=: read -r file line content; do
@@ -59,7 +59,7 @@ rm -f "$TMP"
 # 3. Output do LLM em eval / queryRawUnsafe / innerHTML
 log_info "Buscando output LLM em eval..."
 TMP=$(mktemp)
-rg -n "(eval|new Function|queryRawUnsafe|innerHTML).*[Cc]ompletion|response\\.content" --type ts "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
+rg -n "(eval|new Function|queryRawUnsafe|innerHTML).*[Cc]ompletion|response\\.content" --type ts --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
 OUT_EVAL=$(wc -l < "$TMP" || echo 0)
 if [ "$OUT_EVAL" -gt 0 ]; then
   add_finding "crit" "Output LLM em eval/queryRawUnsafe/innerHTML — RCE/SQLi/XSS" "" ""
@@ -70,8 +70,8 @@ rm -f "$TMP"
 
 # 4. Sem rate limit por user em endpoints LLM
 log_info "Buscando rate limit em endpoints LLM..."
-LLM_ENDPOINTS=$(rg -l "openai|anthropic" --type ts "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | head -5)
-HAS_RATELIMIT=$(rg -l "(rateLimit|@Throttle|@upstash)" --type ts "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | head -1)
+LLM_ENDPOINTS=$(rg -l "openai|anthropic" --type ts --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | head -5)
+HAS_RATELIMIT=$(rg -l "(rateLimit|@Throttle|@upstash)" --type ts --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | head -1)
 if [ -n "$LLM_ENDPOINTS" ] && [ -z "$HAS_RATELIMIT" ]; then
   add_finding "high" "Endpoints LLM sem rate limit — 1 user queima sua conta" "" ""
 fi
@@ -79,7 +79,7 @@ fi
 # 5. PII em prompt sem redact
 log_info "Buscando PII em prompts..."
 TMP=$(mktemp)
-rg -n "(messages|prompt|content).*(\\\$\\{[^}]*(email|cpf|phone|name|password))" --type ts "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
+rg -n "(messages|prompt|content).*(\\\$\\{[^}]*(email|cpf|phone|name|password))" --type ts --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
 PII_PROMPT=$(wc -l < "$TMP" || echo 0)
 if [ "$PII_PROMPT" -gt 0 ]; then
   add_finding "high" "$PII_PROMPT prompt(s) com PII sem redact — LGPD/GDPR" "" ""
@@ -96,7 +96,7 @@ fi
 
 # 7. Tool destrutiva sem confirmação humana
 TMP=$(mktemp)
-rg -n "tools.*delete|tools.*destroy" --type ts "${IGNORE[@]}" "${INTEL_GLOBS[@]}" -A 15 2>/dev/null | \
+rg -n "tools.*delete|tools.*destroy" --type ts --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" -A 15 2>/dev/null | \
   grep -v "(requestUserConfirmation|confirm|approval)" > "$TMP" || true
 DANGEROUS_TOOLS=$(wc -l < "$TMP" || echo 0)
 if [ "$DANGEROUS_TOOLS" -gt 0 ]; then

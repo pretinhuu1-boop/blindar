@@ -47,7 +47,7 @@ log_info "Buscando telefone sem normalização..."
 TMP=$(mktemp)
 # Separador: `:` (TS `phone: string`) OU espaço (Prisma `phone String`). Só com
 # `\s*:\s*` e `String` maiúsculo o padrão não casava em lugar nenhum.
-rg -n "(phone|telefone)\s*(?::\s*|\s+)[Ss]tring" --type ts --type prisma "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
+rg -n "(phone|telefone)\s*(?::\s*|\s+)[Ss]tring" --type ts --type py --type prisma "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
 PHONES=$(wc -l < "$TMP" || echo 0)
 if [ "$PHONES" -gt 0 ]; then
   if ! grep -qE "libphonenumber" package.json 2>/dev/null; then
@@ -86,7 +86,7 @@ fi
 # 6. Date.now() sem timezone awareness em código
 log_info "Buscando new Date() problemas..."
 TMP=$(mktemp)
-rg -n "new Date\(['\"]?20[0-9]{2}-" --type ts --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
+rg -n "new Date\(['\"]?20[0-9]{2}-" --type ts --type js --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
 HARDCODED_DATES=$(wc -l < "$TMP" || echo 0)
 if [ "$HARDCODED_DATES" -gt 3 ]; then
   add_finding "low" "$HARDCODED_DATES new Date('YYYY-MM-DD') hardcoded — pode dar drift entre fusos" "" ""
