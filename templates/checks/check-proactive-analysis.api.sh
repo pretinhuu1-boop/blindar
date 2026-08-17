@@ -177,11 +177,25 @@ if [ -z "$PAYLOAD" ]; then
 fi
 
 # ─── Chama API ────────────────────────────────────────────────────────
-RESPONSE=$(curl -sS --max-time 120 https://api.anthropic.com/v1/messages \
-  -H "x-api-key: $ANTHROPIC_API_KEY" \
-  -H "anthropic-version: 2023-06-01" \
-  -H "content-type: application/json" \
-  -d "$PAYLOAD" 2>/dev/null)
+# Este check não passa pelo _api_wrapper.sh: monta e envia a requisição por conta
+# própria. A costura de teste precisa existir aqui também, senão ele é o único
+# dos catorze que sai do contrato — e "treze de catorze" é o tipo de lacuna que
+# ninguém lembra depois.
+#
+# A chave também sai do argv: `-H "x-api-key: ..."` deixa o segredo legível por
+# qualquer processo local via `ps` ou /proc/<pid>/cmdline. O wrapper já passava
+# por `--config -` (stdin) por esse motivo; aqui tinha ficado para trás.
+if [ -n "${BLINDAR_API_RESPONSE_FILE:-}" ] && [ -f "$BLINDAR_API_RESPONSE_FILE" ]; then
+  RESPONSE=$(cat "$BLINDAR_API_RESPONSE_FILE")
+  log_info "resposta da API lida de BLINDAR_API_RESPONSE_FILE (modo de teste)"
+else
+  RESPONSE=$(printf 'header = "x-api-key: %s"\n' "$ANTHROPIC_API_KEY" \
+    | curl -sS --max-time 120 --config - \
+      -H "anthropic-version: 2023-06-01" \
+      -H "content-type: application/json" \
+      -d "$PAYLOAD" \
+      "${BLINDAR_API_URL:-https://api.anthropic.com/v1/messages}" 2>/dev/null)
+fi
 
 if [ -z "$RESPONSE" ]; then
   log_warn "API call falhou (sem resposta)"
@@ -201,7 +215,7 @@ fi
 # ─── Extrai tool_use input ────────────────────────────────────────────
 RESULT_JSON=$(node -e "
   try {
-    const r = JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
+    const r = JSON.parse(require('fs').readFileSync(0,'utf8'));
     const toolUse = (r.content || []).find(c => c.type === 'tool_use');
     if (!toolUse) { process.exit(0); }
     console.log(JSON.stringify(toolUse.input));

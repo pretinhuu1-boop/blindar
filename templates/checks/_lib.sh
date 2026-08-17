@@ -136,6 +136,30 @@ emit_result() {
   local sha=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
   local findings_json="["$(IFS=,; echo "${FINDINGS[*]:-}")"]"
 
+  # ─── `passed` com achado crit/high é contradição ───
+  # Nada verificava isso. Cada check decidia o status por conta própria, com um
+  # `FAIL=1` espalhado por vários ramos, e bastava um ramo esquecer de marcar
+  # para o check somar `add_finding "high"` e emitir `passed` assim mesmo.
+  #
+  # Aconteceu: o check-sbom-slsa emitia `passed` carregando 1 high e 2 low —
+  # os findings apareciam no relatório e o status dizia que estava tudo bem.
+  # Quem lê o status (o gate, o agregado, o CI) via aprovação; quem lê a lista
+  # via problema. O gate acredita no status.
+  #
+  # Aqui é o ponto por onde TODO check passa, então a incoerência morre em um
+  # lugar só, em vez de depender de 107 autores lembrarem de marcar a flag.
+  # Med e low com `passed` continuam válidos: são informativos, não bloqueiam.
+  if [ "$status" = "passed" ] && [ "${#FINDINGS[@]}" -gt 0 ]; then
+    case "${FINDINGS[*]}" in
+      *'"severity":"crit"'*|*'"severity":"high"'*)
+        log_warn "$agent emitiu 'passed' com achado crit/high — corrigido para 'failed'."
+        log_warn "  Status é o que o gate lê. Achado grave com status aprovado esconde o achado."
+        status="failed"
+        [ "$exit_code" = "0" ] && exit_code=1
+        ;;
+    esac
+  fi
+
   # skipped por falta de ferramenta é DIFERENTE de skipped por não se aplicar.
   # O primeiro é ausência de cobertura e não pode ser lido como aprovação —
   # quem consome o result precisa conseguir distinguir os dois.

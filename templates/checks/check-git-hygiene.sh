@@ -24,7 +24,15 @@ if [ ! -d ".git" ] && [ ! -f "package.json" ] && [ ! -f "pyproject.toml" ] && \
 fi
 
 GITIGNORE=""
-[ -f ".gitignore" ] && GITIGNORE=$(cat .gitignore 2>/dev/null)
+# `tr -d '\r'` e não `cat`: num `.gitignore` escrito no Windows a linha é
+# "node_modules\r", e a âncora `$` do regex abaixo não casa antes do \r. O grep
+# do MSYS engole o \r em modo texto, o GNU grep do Linux não — então o MESMO
+# projeto passava aqui e reprovava no CI, com a mensagem "seu .gitignore não
+# exclui node_modules" sobre um .gitignore que exclui node_modules.
+#
+# Medido rodando o gate em container Linux: três checks reprovaram só por isso.
+# Projeto de equipe Windows com CI Linux é o caso comum, não a exceção.
+[ -f ".gitignore" ] && GITIGNORE=$(tr -d '\r' < .gitignore 2>/dev/null)
 
 # Um padrão está coberto pelo .gitignore?
 ignora() { # padrão

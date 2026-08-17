@@ -36,3 +36,10 @@ VERSION text eol=lf
 *.gif binary
 *.ico binary
 *.pdf binary
+
+# Fixtures: SEMPRE LF, em qualquer plataforma.
+# Sem isto o checkout no Windows entrega CRLF, o grep do MSYS engole o  e o
+# GNU grep do Linux nao — a mesma ancora `$` casava numa maquina e nao na outra.
+# Resultado medido: tres checks reprovaram no gate rodando em container Linux e
+# passavam no Windows. O gate tem que medir o check, nao o fim de linha.
+tests/fixtures/** text eol=lf

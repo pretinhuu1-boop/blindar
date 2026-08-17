@@ -27,6 +27,9 @@ PAIRS=(
   # proposito, entao o gitleaks nunca disparava nele. Sem disparo nao ha
   # contrato, e o falso negativo do scan do indice vazio viveu ali.
   "check-secrets.sh              | project-gitleaks-bad    | project-gitleaks-good"
+  "check-gitleaks.sh             | project-gitleaks-bad    | project-gitleaks-good"
+  "check-wave-guardian.sh        | project-wave-bad        | project-wave-good"
+  "check-functional-e2e.sh       | project-e2e-bad         | project-e2e-good"
   "check-cors-csrf.sh            | project-insecure-api    | project-secure-api"
   "check-rate-limit.sh           | project-insecure-api    | project-secure-api"
   "check-headers-security.sh     | project-insecure-api    | project-secure-api"
@@ -108,12 +111,46 @@ PAIRS=(
 # blindar agrega por status, não por exit code (checks só-med emitem failed+exit0).
 run_status() { # dir check → echo status
   local dir="$1" ck="$2"
+  # ─── Fixture cujo insumo É o .blindar ───
+  # Alguns checks leem a saída do próprio blindar (wave-guardian lê o
+  # run-report.json, e decide fechar ou não a onda a partir dele). O fixture
+  # desses precisa TRAZER um .blindar — e o `rm -rf` abaixo, que existe para não
+  # deixar result velho contaminar a rodada, apagava justamente o insumo.
+  #
+  # Sintoma: o fixture limpo do wave-guardian dava falso-positivo, porque o
+  # check encontrava o run-report ausente. O fixture estava certo; o gate é que
+  # destruía a pré-condição antes de medir.
+  local guardado=""
+  if [ -d "$dir/.blindar" ]; then
+    guardado=$(mktemp -d)
+    cp -r "$dir/.blindar/." "$guardado/" 2>/dev/null || true
+  fi
   rm -rf "$dir/.blindar"
+  if [ -n "$guardado" ]; then
+    mkdir -p "$dir/.blindar"
+    cp -r "$guardado/." "$dir/.blindar/" 2>/dev/null || true
+  fi
   ( cd "$dir" && bash "$CHECKS_DIR/$ck" >/dev/null 2>&1 ); local rc=$?
   local rf="$dir/.blindar/results/${ck%.sh}.json" st=""
-  [ -f "$rf" ] && st=$(grep -oE '"status"[[:space:]]*:[[:space:]]*"[a-z]+"' "$rf" | head -1 | sed -E 's/.*"([a-z]+)".*/\1/')
+  LAST_MISSING_TOOL=""
+  if [ -f "$rf" ]; then
+    st=$(grep -oE '"status"[[:space:]]*:[[:space:]]*"[a-z]+"' "$rf" | head -1 | sed -E 's/.*"([a-z]+)".*/\1/')
+    # Precisa sair daqui: as linhas seguintes apagam o .blindar.
+    LAST_MISSING_TOOL=$(grep -oE '"missing_tool"[[:space:]]*:[[:space:]]*"[^"]+"' "$rf" \
+      | head -1 | sed -E 's/.*:[[:space:]]*"([^"]+)".*/\1/')
+  fi
   [ -z "$st" ] && { if [ "$rc" -ne 0 ]; then st="failed"; else st="passed"; fi; }
+
+  # O `$dir` é o diretório REAL do fixture, versionado. Apagar o .blindar aqui
+  # sem devolver o que veio com ele destruiria o insumo do fixture no repositório
+  # — a primeira execução funcionaria e a segunda não, e o `git status` acusaria
+  # arquivo apagado que ninguém apagou de propósito.
   rm -rf "$dir/.blindar"
+  if [ -n "$guardado" ]; then
+    mkdir -p "$dir/.blindar"
+    cp -r "$guardado/." "$dir/.blindar/" 2>/dev/null || true
+    rm -rf "$guardado"
+  fi
   echo "$st"
 }
 
@@ -142,12 +179,21 @@ for row in "${PAIRS[@]}"; do
       continue
     fi
     if [ "$st" != "failed" ]; then local_ok=0; reason="não disparou no vulnerável ($vuln, status=$st)"; fi
-  else echo "${Y}SKIP${RST} $ck (fixture $vuln ausente)"; continue; fi
+  else
+    # Fixture some e o par vira SKIP silencioso: a cobertura cai e o gate segue
+    # verde. Aconteceu nesta sessao — apaguei project-deps-* achando que era meu
+    # e era do check-deps-sync. Par registrado sem fixture e regressao.
+    echo "${R}✗${RST} $ck  — fixture $vuln AUSENTE (par registrado sem fixture)"
+    FAIL=$((FAIL+1)); FAILED+=("$ck: fixture $vuln ausente"); continue
+  fi
   # 2) cala no limpo → status NÃO pode ser failed (passed/skipped ok)
   if [ -d "$FIXTURES_DIR/$clean" ]; then
     st=$(run_status "$FIXTURES_DIR/$clean" "$ck")
     if [ "$st" = "failed" ]; then local_ok=0; reason="falso-positivo no limpo ($clean, status=$st)"; fi
-  else echo "${Y}SKIP${RST} $ck (fixture $clean ausente)"; continue; fi
+  else
+    echo "${R}✗${RST} $ck  — fixture $clean AUSENTE (par registrado sem fixture)"
+    FAIL=$((FAIL+1)); FAILED+=("$ck: fixture $clean ausente"); continue
+  fi
 
   if [ "$local_ok" -eq 1 ]; then
     echo "${G}✓${RST} $ck  (dispara em $vuln, cala em $clean)"
@@ -176,21 +222,56 @@ is_gateable() {
   local f="$1" base
   base=$(basename "$f")
   case "$base" in *.api.sh) return 1 ;; esac              # 1
-  # Wrapper de scanner com par REGISTRADO conta: alguém provou que existe
-  # fixture onde ele dispara. Sem esta exceção o par entrava no numerador e não
-  # no denominador, e a cobertura saía 75/74 = 101% — métrica que passa de 100%
-  # não está medindo o que diz medir.
-  if echo "$base" | grep -qE "$SCANNER_WRAPPERS"; then
-    local _tem_par=1 _p
-    for _p in "${PAIRS[@]}"; do
-      case "${_p%%|*}" in *"$base"*) _tem_par=0; break ;; esac
-    done
-    [ "$_tem_par" -eq 0 ] || return 1
-  fi
+
+  # ─── Par registrado É a resposta ───
+  # As heurísticas abaixo servem para decidir sobre check SEM par: elas tentam
+  # adivinhar se daria para contratar. Quando o par existe e passa, não há o que
+  # adivinhar — alguém já provou que o check dispara no vulnerável e cala no
+  # limpo.
+  #
+  # Sem esta regra o check entrava no numerador (tem par verificado) e ficava
+  # fora do denominador (a heurística o recusava), e a cobertura saía 78/77 =
+  # 101%. Aconteceu duas vezes: com os wrappers de scanner e depois com o
+  # check-functional-e2e, que a regra do `npx` recusava. Métrica que passa de
+  # 100% não está medindo o que diz medir.
+  local _p
+  for _p in "${PAIRS[@]}"; do
+    case "${_p%%|*}" in *"$base"*) return 0 ;; esac
+  done
+
   grep -qE 'emit_result[^\n]*"failed"' "$f" || return 1   # 2
   grep -qE '\$HOME|\$\{HOME|\$APPDATA|\$\{APPDATA' "$f" && return 1  # 3
   grep -qE 'npx |curl |wget ' "$f" && return 1            # 4
+  echo "$base" | grep -qE "$SCANNER_WRAPPERS" && return 1 # 5
   return 0
+}
+
+# ─── Por que cada check fora do gate está fora ───
+# "32 excluídos" não é informação: é um número onde deveria haver um motivo.
+# Enquanto for um balde só, ninguém sabe se lá dentro tem check que PODERIA ter
+# contrato e só não tem — foi exatamente o caso do check-secrets, que passou
+# meses no balde carregando um falso negativo.
+#
+# Cada exclusão agora tem nome, e cada nome diz qual OUTRA coisa cobre aquele
+# check. Excluído sem cobertura alternativa é dívida declarada, não silêncio.
+motivo_exclusao() { # basename → motivo, ou vazio se é gate-ável
+  case "$1" in
+    *.api.sh)
+      echo "julgamento é do LLM — o CÓDIGO tem contrato em tests/api-contract.test.mjs" ;;
+    check-release-gates.sh|check-termination.sh)
+      echo "é o GATE, não um check: decide por exit code sobre os results dos outros" ;;
+    check-evidence.sh|check-mcp-recommended.sh|check-strategic-scanner.sh|check-content-quality.sh)
+      echo "informativo por desenho: nunca emite 'failed', então não há o que contratar" ;;
+    check-lighthouse.sh|check-visual-regression.sh|check-bundle-size.sh)
+      echo "só chega a veredito rodando serviço externo (Chrome, Chromatic, build real)" ;;
+    check-ai-powered-example.sh)
+      echo "template de exemplo para escrever check novo, não roda em auditoria" ;;
+    check-trivy.sh|check-osv-scanner.sh|check-semgrep.sh|check-deps-audit.sh)
+      echo "o veredito e do scanner: exige rede e base de CVE atualizada, e par de fixture aqui deixaria o gate lento e instavel" ;;
+    check-mcp-security.sh)
+      echo "lê config MCP em \$HOME — o veredito depende da máquina, não do projeto" ;;
+    *) echo "" ;;
+  esac
 }
 
 TOTAL_CHECKS=0
@@ -216,6 +297,36 @@ echo "${B}── cobertura de fixtures ──${RST}"
 echo "Gate-áveis com par verificado: ${VERIFIED_N}/${TOTAL_CHECKS} (${PCT}%)"
 echo "Sobre TODOS os checks:         ${VERIFIED_N}/${ALL_CHECKS} (${PCT_ALL}%)  — ${EXCLUDED} excluídos (.api.sh + scanners externos)"
 echo "Meta: 100% dos gate-áveis. Cada check novo DEVE entrar em PAIRS antes de mergear."
+
+# Cada check fora do gate, com o motivo e o que cobre ele no lugar.
+SEM_MOTIVO=()
+declare -A _POR_MOTIVO=()
+while IFS= read -r _f; do
+  _b=$(basename "$_f")
+  case " ${GATEABLE_LIST[*]} " in *" $_b "*) continue ;; esac
+  _m=$(motivo_exclusao "$_b")
+  if [ -z "$_m" ]; then SEM_MOTIVO+=("$_b")
+  else _POR_MOTIVO["$_m"]="${_POR_MOTIVO["$_m"]:-}${_b} "; fi
+done < <(find "$CHECKS_DIR" -maxdepth 1 -name 'check-*.sh' 2>/dev/null | sort)
+
+if [ "${#_POR_MOTIVO[@]}" -gt 0 ]; then
+  echo ""
+  echo "${B}── fora do gate, e por quê ──${RST}"
+  for _m in "${!_POR_MOTIVO[@]}"; do
+    _n=$(printf '%s' "${_POR_MOTIVO[$_m]}" | wc -w | tr -d ' ')
+    echo "  ${_n}×  $_m"
+    for _c in ${_POR_MOTIVO[$_m]}; do echo "        $_c"; done
+  done
+fi
+if [ "${#SEM_MOTIVO[@]}" -gt 0 ]; then
+  echo ""
+  echo "${R}${B}✗ ${#SEM_MOTIVO[@]} check(s) fora do gate SEM motivo declarado:${RST}"
+  for _c in "${SEM_MOTIVO[@]}"; do echo "    $_c"; done
+  echo "  Ou entra em PAIRS, ou ganha um motivo em motivo_exclusao(). Balde sem"
+  echo "  nome foi onde o falso negativo do check-secrets morou por meses."
+  FAIL=$((FAIL + ${#SEM_MOTIVO[@]}))
+  FAILED+=("${#SEM_MOTIVO[@]} check(s) fora do gate sem motivo declarado")
+fi
 if [ "${#NAOVER[@]}" -gt 0 ]; then
   echo ""
   echo "${Y}NÃO VERIFICADOS nesta máquina (${#NAOVER[@]}) — o par existe, a ferramenta não:${RST}"

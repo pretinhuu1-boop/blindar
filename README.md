@@ -283,6 +283,24 @@ blindar/
 
 ## Cobertura
 
+### O que é verificado sobre o próprio blindar
+
+Um check só entra no gate com **par de fixture**: precisa disparar num projeto
+vulnerável e calar num projeto limpo. Sem esse par não há contrato — e foi
+exatamente num check sem par que um falso negativo do scan de segredos viveu.
+
+| | |
+|---|---|
+| checks com par verificado | roda em `scripts/check-selftest.sh` |
+| checks `.api.sh` | contrato do **código** em `tests/api-contract.test.mjs`, sem gastar token: um servidor local devolve o que a API devolveria |
+| demais checks | cada um com **motivo declarado** no gate — e o gate reprova se aparecer check fora sem motivo |
+| Linux | gate e testes rodam em container, não só no Windows |
+
+A regra que sustenta tudo: **`skipped` não é aprovação, e ausência de medição
+não é ausência de problema.** Onde o blindar não mediu, ele diz que não mediu.
+
+### O que é coberto sobre o seu projeto
+
 **10 técnicas clássicas de segurança de TI**: 7 cobertas por agente
 (access, crypto, network, patch, backup, observability, pentest); 3 por
 runbook organizacional (antivírus, segmentação física, conscientização).

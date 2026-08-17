@@ -243,7 +243,7 @@ call_claude() {
 
   node -e "
     try {
-      const r = JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
+      const r = JSON.parse(require('fs').readFileSync(0,'utf8'));
       const t = (r.content || []).find(c => c.type === 'tool_use');
       if (!t) process.exit(0);
       console.log(JSON.stringify(t.input));
