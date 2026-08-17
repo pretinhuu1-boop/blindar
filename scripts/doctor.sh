@@ -164,7 +164,68 @@ if [ -d "$SKILL_DIR/templates/checks" ]; then
   for s in gitleaks trivy semgrep osv-scanner govulncheck pip-audit cargo-audit hunspell; do
     USADO=$(grep -l "command -v $s" "$SKILL_DIR"/templates/checks/check-*.sh 2>/dev/null | wc -l | tr -d ' ')
     [ "$USADO" = "0" ] && continue
+    # perda/como calculados ANTES do if: o ramo "instalado, quebrado" tambem
+    # precisa dizer o que se perde.
+    # tabela de perdas (usada nos dois ramos: ausente e instalado-mas-quebrado)
+    case "$s" in
+      gitleaks)    perda="segredo commitado não é procurado (100+ regras)"; como="brew install gitleaks | winget install gitleaks.gitleaks" ;;
+      trivy)       perda="CVE de dependência e de imagem Docker não é procurado"; como="brew install trivy | winget install AquaSecurity.Trivy" ;;
+      semgrep)     perda="SAST — injeção, path traversal, crypto fraca"; como="pipx install semgrep | brew install semgrep" ;;
+      osv-scanner) perda="CVE via base OSV (cobre ecossistemas que o trivy não)"; como="brew install osv-scanner | go install github.com/google/osv-scanner/cmd/osv-scanner@latest" ;;
+      govulncheck) perda="CVE de dependência Go"; como="go install golang.org/x/vuln/cmd/govulncheck@latest" ;;
+      pip-audit)   perda="CVE de dependência Python"; como="pipx install pip-audit" ;;
+      cargo-audit) perda="CVE de dependência Rust"; como="cargo install cargo-audit" ;;
+      hunspell)    perda="revisão ortográfica do texto de UI"; como="apt install hunspell | brew install hunspell" ;;
+    esac
+
     if command -v "$s" >/dev/null 2>&1; then
+      # ─── Responder `--version` não é saber varrer ───
+      # O semgrep no Windows é um wrapper que delega ao `semgrep-core` por RPC.
+      # Ele responde `--version` normalmente e falha em QUALQUER scan real com
+      # "semgrep-core rule validation failed", rc=2. Medido nesta máquina.
+      #
+      # Enquanto o doctor perguntava só a versão, ele exibia um ✓ verde para uma
+      # ferramenta que não roda — e o operador confiava. Presença de binário não
+      # é capacidade de medir; é a mesma diferença entre `skipped` e `passed`
+      # que este projeto persegue em todo lugar.
+      #
+      # A config do smoke é a MESMA que o `check-semgrep` usa. Se o doctor
+      # testasse com regra local e o check rodasse com pacote do registro, as
+      # duas respostas divergiriam — e divergência entre quem mede e quem
+      # reporta é o bug que este projeto persegue desde o começo. Uma pergunta,
+      # uma fonte: se o check vai falhar, o doctor falha aqui.
+      # Não é o doctor que decide: ele roda o PRÓPRIO check contra um projeto
+      # mínimo e lê o veredito. Qualquer smoke escrito à parte acabaria
+      # divergindo — foi o que aconteceu na primeira tentativa, com o doctor
+      # passando (regra local) e o check falhando (pacote do registro).
+      #
+      # Se o check sai `skipped` com `missing_tool`, a ferramenta está instalada
+      # e não entrega. É o estado que o operador precisa ver, e é exatamente o
+      # que ele veria no relatório do projeto dele.
+      _quebrado=""
+      if [ "$s" = "semgrep" ] && [ -f "$SKILL_DIR/templates/checks/check-semgrep.sh" ]; then
+        _sd=$(mktemp -d 2>/dev/null) && {
+          mkdir -p "$_sd/src"
+          printf 'const app = require("express")();\napp.get("/e", (q, r) => { eval(q.query.c); });\n' > "$_sd/src/a.js"
+          printf '{"name":"smoke","dependencies":{"express":"^4"}}\n' > "$_sd/package.json"
+          ( cd "$_sd" && bash "$SKILL_DIR/templates/checks/check-semgrep.sh" >/dev/null 2>&1 )
+          _st=$(grep -oE '"status"[[:space:]]*:[[:space:]]*"[a-z]+"' \
+                  "$_sd/.blindar/results/check-semgrep.json" 2>/dev/null \
+                | head -1 | sed -E 's/.*"([a-z]+)".*/\1/')
+          _mt=$(grep -oE '"missing_tool"[[:space:]]*:[[:space:]]*"[^"]+"' \
+                  "$_sd/.blindar/results/check-semgrep.json" 2>/dev/null \
+                | head -1 | sed -E 's/.*:[[:space:]]*"([^"]+)".*/\1/')
+          [ "$_st" = "skipped" ] && _quebrado="instalado, mas o check sai skipped (${_mt:-motivo não registrado})"
+          rm -rf "$_sd"
+        }
+      fi
+      if [ -n "$_quebrado" ]; then
+        linha "✗" "$R" "$s" "instalado, quebrado" "$_quebrado"
+        printf '                                     %s→ %s%s\n' "$Y" "$perda" "$RST"
+        printf '                                     %s→ no Windows: confira o diretório Scripts do Python no PATH%s\n' "$Y" "$RST"
+        FALTAM_SCANNERS=$((FALTAM_SCANNERS + USADO))
+        continue
+      fi
       linha "✓" "$G" "$s" "$($s --version 2>/dev/null | head -1 | tr -d '\r' | cut -c1-20)" ""
     else
       case "$s" in

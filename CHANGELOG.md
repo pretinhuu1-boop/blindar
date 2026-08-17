@@ -3,6 +3,36 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.76.0] — 2026-08-16
+
+### O doctor mostrava ✓ verde para um scanner que não varre
+
+`semgrep --version` responde `1.167.0` normalmente nesta máquina. Qualquer scan
+de verdade morre com `semgrep-core rule validation failed`, rc=2 — o binário é
+um wrapper que delega por RPC, e o `--version` nem chega lá.
+
+O doctor perguntava a versão e pintava de verde. O `check-semgrep` recebia o
+rc=2, rebaixava para um achado `med` "possível erro de config" e seguia — como o
+relatório vinha vazio, o check terminava em **`passed`**. O SAST inteiro não
+rodou e o status disse aprovado.
+
+Duas correções:
+
+1. **`check-semgrep`**: erro do scanner vira `skipped` com
+   `missing_tool=semgrep(rc=N)`. Erro é ausência de medição, não ausência de
+   achado. Antes de desistir, tenta rulesets explícitos, porque `--config=auto`
+   é o que falha nesta plataforma.
+2. **`doctor`**: não escreve smoke próprio — **roda o próprio check** contra um
+   projeto mínimo e lê o veredito. A primeira tentativa foi um smoke separado
+   com regra local, que passava enquanto o check falhava: exatamente a
+   divergência entre quem mede e quem reporta que este projeto persegue desde o
+   começo. Uma pergunta, uma fonte.
+
+O resultado nesta máquina passou de `✓ semgrep 1.167.0` para
+`✗ semgrep instalado, quebrado — o check sai skipped (semgrep(rc=2))`.
+
+Isso não conserta o semgrep no Windows. Conserta o blindar dizer que está tudo
+bem quando não está — que é a única parte que cabia a ele.
 ## [0.75.0] — 2026-08-16
 
 ### `check-horizontal-scale` — o que funciona com uma réplica e quebra com duas
