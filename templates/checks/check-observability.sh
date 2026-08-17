@@ -27,7 +27,17 @@ fi
 # 2. Health endpoints (live/ready/deep)
 log_info "Verificando health endpoints..."
 TMP=$(mktemp)
-rg -l "(\/health\/live|\/healthz|\/health\/ready|\/readyz)" --type ts --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null > "$TMP" || true
+# Sem `\/`. Escapar a barra é ideia de JavaScript, onde ela fecha o literal de
+# regex; em ERE/PCRE a barra não é especial. E o ripgrep 13 — o que vem no Debian
+# estável e no Ubuntu LTS — REJEITA `\/` com "regex parse error", enquanto o 15
+# aceita em silêncio.
+#
+# Medido em container Linux: com rg 13 este check dizia "sem health endpoints"
+# num projeto que tem /healthz e /health/ready. O `|| true` engolia o erro do
+# regex, o arquivo de saída ficava vazio, e ausência de resultado virava achado.
+# Quem tem ripgrep novo nunca via; quem tem o antigo achava que o projeto estava
+# errado.
+rg -l "(/health/live|/healthz|/health/ready|/readyz)" --type ts --type js "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null > "$TMP" || true
 HEALTH_COUNT=$(wc -l < "$TMP" || echo 0)
 if [ "$HEALTH_COUNT" -eq 0 ]; then
   add_finding "high" "Sem health endpoints (/health/live, /health/ready) — K8s não consegue monitorar" "" ""

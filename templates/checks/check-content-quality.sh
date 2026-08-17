@@ -61,7 +61,9 @@ rm -f "$TMP"
 # 5. Termos discriminatórios (alex.js style básico)
 log_info "Buscando termos discriminatórios..."
 TMP=$(mktemp)
-rg -ni "\b(blacklist|whitelist|master\/slave|slave|grandfather(ed)?|sanity check)\b" \
+# `master/slave` sem escapar a barra: o ripgrep 13 rejeita `\/` como escape
+# inválido e o padrão inteiro morre — não só esse termo.
+rg -ni "\b(blacklist|whitelist|master/slave|slave|grandfather(ed)?|sanity check)\b" \
  --type ts --type md "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
 DISCRIMINATORY=$(wc -l < "$TMP" || echo 0)
 if [ "$DISCRIMINATORY" -gt 0 ]; then

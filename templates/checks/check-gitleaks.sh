@@ -36,13 +36,28 @@ trap 'rm -f "$OUT_JSON"' EXIT
 HISTORY_SCAN="${BLINDAR_GITLEAKS_HISTORY:-1}"
 SCAN_ARGS=(--no-banner --report-format json --report-path "$OUT_JSON")
 
+# ─── O log dizia "working tree + history"; era só history ───
+# `gitleaks detect` num repo git varre os COMMITS. Arquivo no working tree que
+# ainda não foi commitado ele não vê. Medido: repo com histórico limpo e uma
+# chave em src/config.js sem commit saía `passed`, com o log afirmando que a
+# working tree tinha sido varrida.
+#
+# É o momento mais provável de auditar — antes de commitar — e era exatamente o
+# ponto cego. Mesma família do falso negativo do check-secrets: varrer o lugar
+# errado e chamar o silêncio de aprovação.
+#
+# Agora a working tree é SEMPRE varrida; o histórico entra a mais quando há
+# `.git`. Os dois relatórios são unidos com dedup por regra+arquivo+linha.
+OUT_HIST="${TMPDIR:-/tmp}/gitleaks-hist-$$.json"
+trap 'rm -f "$OUT_JSON" "$OUT_HIST"' EXIT
+
+log_info "Modo: working tree (sempre)"
+SCAN_CMD=(gitleaks detect --no-git --source . "${SCAN_ARGS[@]}" "${CONFIG_ARGS[@]}")
+
+SCAN_HIST=0
 if [ -d ".git" ] && [ "$HISTORY_SCAN" = "1" ]; then
-  log_info "Modo: repo git — escaneando working tree + history (BLINDAR_GITLEAKS_HISTORY=0 desliga)"
-  # detect padrão escaneia history quando há .git
-  SCAN_CMD=(gitleaks detect "${SCAN_ARGS[@]}" "${CONFIG_ARGS[@]}")
-else
-  log_info "Modo: working tree apenas (--no-git)"
-  SCAN_CMD=(gitleaks detect --no-git --source . "${SCAN_ARGS[@]}" "${CONFIG_ARGS[@]}")
+  log_info "Modo: + histórico do git (BLINDAR_GITLEAKS_HISTORY=0 desliga)"
+  SCAN_HIST=1
 fi
 
 # 4. Roda com timeout 120s (timeout pode não existir em macOS sem coreutils)
@@ -55,6 +70,30 @@ elif command -v gtimeout >/dev/null 2>&1; then
 else
   "${SCAN_CMD[@]}" >/dev/null 2>&1
   RC=$?
+fi
+
+# Histórico entra como scan SEPARADO e é unido ao da working tree. Erro aqui não
+# apaga o que a working tree já achou: um relatório parcial ainda é sinal, e o RC
+# abaixo continua responsável por dizer que o scan não completou.
+if [ "$SCAN_HIST" = "1" ]; then
+  HIST_CMD=(gitleaks detect --no-banner --report-format json --report-path "$OUT_HIST" "${CONFIG_ARGS[@]}")
+  if command -v timeout >/dev/null 2>&1; then timeout 120 "${HIST_CMD[@]}" >/dev/null 2>&1; RC_H=$?
+  else "${HIST_CMD[@]}" >/dev/null 2>&1; RC_H=$?; fi
+  [ "${RC_H:-0}" -gt 1 ] && [ "$RC" -le 1 ] && RC="$RC_H"
+  if [ -s "$OUT_HIST" ] && command -v node >/dev/null 2>&1; then
+    node -e '
+      const fs = require("fs");
+      const ler = (p) => { try { const j = JSON.parse(fs.readFileSync(p, "utf8") || "[]");
+                                 return Array.isArray(j) ? j : []; } catch (e) { return []; } };
+      const vistos = new Set(), saida = [];
+      for (const l of [...ler(process.argv[1]), ...ler(process.argv[2])]) {
+        const k = [l.RuleID, l.File, l.StartLine].join("::");
+        if (vistos.has(k)) continue;
+        vistos.add(k); saida.push(l);
+      }
+      fs.writeFileSync(process.argv[1], JSON.stringify(saida));
+    ' "$OUT_JSON" "$OUT_HIST" 2>/dev/null
+  fi
 fi
 
 # gitleaks exit codes: 0=clean, 1=leaks found, outros=erro

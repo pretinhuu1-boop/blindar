@@ -3,6 +3,194 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.74.0] — 2026-08-16
+
+A v0.73.0 provou que o blindar roda em outra máquina. Esta pergunta a seguinte:
+**roda em outro sistema operacional?** Ele nunca tinha rodado em Linux. Um
+container achou quatro coisas que o Windows escondia — e uma delas era um
+segundo falso negativo no scan de segredos.
+
+### O check-gitleaks também varria o lugar errado
+
+O log dizia "escaneando working tree + history". Era só history: `gitleaks
+detect` num repositório git varre os COMMITS. Arquivo no working tree que ainda
+não foi commitado ele não vê.
+
+Medido: repositório com histórico limpo e uma chave em `src/config.js` sem
+commit saía `passed` — com o log afirmando que a working tree tinha sido varrida.
+E auditar antes de commitar é o momento mais provável de auditar.
+
+Mesmo desenho do falso negativo do `check-secrets` na v0.73.0, em outro check.
+Agora a working tree é sempre varrida e o histórico entra a mais.
+
+### `passed` com achado crit/high era possível
+
+Nada verificava a coerência entre status e severidade. Cada check decidia
+sozinho, com um `FAIL=1` espalhado por vários ramos, e bastava um ramo esquecer
+de marcar para o check somar `add_finding "high"` e emitir `passed`.
+
+Aconteceu: o `check-sbom-slsa` emitia `passed` carregando 1 high e 2 low. Os
+achados apareciam na lista e o status dizia que estava tudo bem. Quem lê o status
+— o gate, o agregado, o CI — via aprovação.
+
+Agora a checagem vive no `emit_result`, por onde todo check passa: `passed` com
+crit ou high vira `failed`, com aviso. Med e low continuam válidos com `passed`,
+que é o caso informativo legítimo.
+
+### CRLF: o mesmo projeto passava aqui e reprovava no CI
+
+Três checks reprovaram no container Linux e passavam no Windows. Causa: um
+`.gitignore` escrito no Windows termina cada linha com CR + LF, então a linha é
+`node_modules` seguida de um carriage return — e a âncora `$` do regex não casa
+antes dele. O grep do MSYS descarta o CR em modo texto; o GNU grep do Linux não.
+
+A mensagem era "seu .gitignore não exclui node_modules" sobre um `.gitignore`
+que exclui node_modules. Equipe Windows com CI Linux é o caso comum, não a
+exceção.
+
+Corrigido no `check-git-hygiene`, que agora remove o CR ao ler, e nos 86 fixtures
+que estavam com CRLF — `.gitattributes` fixa `tests/fixtures/** text eol=lf`,
+para o gate medir o check e não o fim de linha.
+
+### O escape que só quebra em ripgrep antigo
+
+`check-observability` procurava `(\/health\/live|\/healthz|...)`. Escapar a barra é
+ideia de JavaScript, onde ela fecha o literal de regex — em ERE e PCRE a barra
+não é especial. O ripgrep 15 aceita; o **13**, que vem no Debian estável e no
+Ubuntu LTS, responde `regex parse error`.
+
+O erro ia para `/dev/null`, o `|| true` seguia, o arquivo de saída ficava vazio
+e ausência de resultado virava achado: o check dizia "sem health endpoints" num
+projeto que tem `/healthz` e `/health/ready`. Quem tinha ripgrep novo nunca via;
+quem tinha o antigo achava que o projeto é que estava errado.
+
+`tests/regex-portable.test.mjs` recusa esse escape em qualquer padrão de busca.
+
+### O falso positivo que o novo invariante desenterrou
+
+Assim que o `emit_result` passou a recusar `passed` com crit/high, o
+`check-rate-limit` reprovou no fixture limpo. O achado existia desde sempre — o
+check somava um `high` e emitia `passed` assim mesmo, então ninguém via.
+
+Eram dois defeitos na mesma linha: o padrão `rate.?limit` sem `-i` não casa
+`rateLimit`, e o `xargs grep` recebia do `rg -l` caminhos no formato
+`.\src\server.ts`, que o grep do MSYS não abre. Os dois davam contagem zero, e
+o check acusava "endpoint sensível sem rate-limit" num projeto com rate-limit no
+login.
+
+A incoerência entre status e achado estava escondendo o defeito no achado.
+
+### O gate destruía a pré-condição antes de medir
+
+`run_status` apaga `.blindar` antes de rodar o check, para result velho não
+contaminar a rodada. Só que alguns checks leem a saída do próprio blindar — o
+`wave-guardian` decide fechar a onda a partir do `run-report.json` — e o fixture
+deles precisa TRAZER um `.blindar`. O gate apagava justamente o insumo, e
+reportava falso-positivo sobre um fixture correto.
+
+Pior: `$dir` é o diretório versionado do fixture. A limpeza no fim apagava o
+arquivo do repositório — a primeira execução funcionava e a segunda não.
+
+### `tests/pairs-integrity.test.mjs`
+
+O gate leva ~25 minutos. Este confere o REGISTRO em 2 segundos: fixture
+referenciado que não existe, check que não existe, par duplicado, fixture órfão.
+
+Existe porque apaguei `project-deps-*` achando que era meu, e era do
+`check-deps-sync`. O gate imprimia `SKIP` e seguia verde: a cobertura caía e
+ninguém era avisado. Agora fixture ausente é **regressão**, não skip.
+### Os 14 checks de API nunca produziram um achado no Windows
+
+O wrapper lia a resposta com `readFileSync('/dev/stdin')`. No Windows o node
+resolve isso como caminho e procura `C:\dev\stdin` — ENOENT. O `catch` engolia,
+a extração do `tool_use` devolvia vazio, e **todo** check `.api.sh` emitia
+`skipped` com a mensagem "API não retornou tool_use estruturado", mesmo com
+chave válida e resposta correta.
+
+Quatorze agentes — pentest, adversarial-reviewer, architect, regulatory-mapper e
+companhia — que nunca deram um achado nesta plataforma. E `skipped` se parece
+com "não se aplica".
+
+Só apareceu quando o contrato dos `.api.sh` passou a rodar com resposta
+injetada. Enquanto o caminho dependia de uma chave de API de verdade, ninguém o
+exercitava — que é precisamente o motivo pelo qual ele precisava de contrato.
+
+### `validate.sh` aprovava JSON que não conseguiu abrir
+
+Sem `jq` e sem `python3` ele imprimia `[WARN] sem jq nem python3 — pulando parse
+check` e seguia para `[OK] JSON parsea sem erro`. JSON quebrado passava.
+
+A imagem `node:22-bookworm` não traz nenhum dos dois — foi assim que apareceu.
+Agora há um terceiro ramo em node, que é dependência essencial do blindar, e o
+caso "não consegui parsear" **falha** em vez de aprovar.
+### Os 14 checks `.api.sh` ganharam contrato
+
+Ficavam fora do gate com a justificativa "precisam de LLM, logo não têm veredito
+determinístico". Metade disso é verdade: o julgamento é do modelo. A outra metade
+não — o que o check faz com a resposta é código comum, e código comum tem
+contrato.
+
+Era código sem nenhum teste, no caminho mais escorregadio do projeto. Já quebrou
+ali: `IFS='||'` é um CONJUNTO `{|}`, então o campo vazio entre os dois pipes
+deslocava tudo e todos os findings de API saíam com mensagem vazia e file/line
+trocados.
+
+`tests/api-contract.test.mjs` sobe um servidor HTTP local que devolve o que a API
+devolveria (`BLINDAR_API_URL` passou a ser configurável) e verifica o que
+pertence ao blindar: crit/high vira `failed` com os findings íntegros, zero
+findings vira `passed`, severidade fora do enum cai para `low`, e resposta sem
+`tool_use` vira `skipped` — nunca `passed`.
+
+### "32 excluídos" virou 32 motivos
+
+Um número onde deveria haver uma razão. Enquanto for um balde só, ninguém sabe
+se lá dentro tem check que PODERIA ter contrato e só não tem — foi exatamente o
+caso do `check-secrets`, que passou meses no balde carregando um falso negativo.
+
+Cada exclusão agora tem nome e diz o que cobre aquele check no lugar. E o gate
+**reprova** se aparecer check fora do gate sem motivo declarado.
+
+### O check consultivo mandava a chave no argv
+
+`check-proactive-analysis` não passa pelo `_api_wrapper.sh`: monta e envia a
+requisição por conta própria — e enviava a chave em `-H "x-api-key: ..."`. O argv
+é legível por qualquer processo local via `ps` ou `/proc/<pid>/cmdline`. O
+wrapper já usava `--config -` (stdin) exatamente por isso; este ficou para trás.
+
+Apareceu ao dar contrato aos catorze: ele era o único que ainda batia na API de
+verdade durante o teste, porque não tinha a costura de injeção. "Treze de
+catorze" é o tipo de lacuna que ninguém lembra depois.
+
+### O gate agora conta certo
+
+`is_gateable` usava heurísticas para adivinhar se um check daria para contratar
+— e recusava o `check-functional-e2e` pela regra do `npx`, mesmo ele tendo par
+registrado e passando. Entrava no numerador e ficava fora do denominador:
+**78/77 = 101%**, a segunda vez que a métrica passou de 100%.
+
+A regra virou: **par registrado é a resposta.** As heurísticas servem para
+decidir sobre check SEM par; quando o par existe e passa, não há o que
+adivinhar.
+
+## A conta fecha
+
+| | |
+|---|---|
+| checks com par de fixture | **78** |
+| checks com motivo declarado | **29** |
+| checks sem conta | **0** |
+| total | **107** |
+
+Cobertura dos gate-áveis: **78/78 (100%)**. Os 14 `.api.sh` têm contrato do
+código em `tests/api-contract.test.mjs` — 122 asserções, sem gastar um token de
+API. Os outros 15 dizem por escrito por que estão fora, e o gate **reprova** se
+aparecer um sem motivo.
+
+Verificado nos dois sistemas: Windows e container Linux, gate e suíte completa.
+macOS continua **não verificado** — não há máquina para isso aqui, e dizer que
+funciona lá seria exatamente o tipo de afirmação que este projeto existe para
+não fazer.
+
 ## [0.73.0] — 2026-08-16
 
 Esta versão saiu de uma pergunta simples: o blindar funciona em outra máquina?

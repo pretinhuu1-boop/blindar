@@ -78,8 +78,29 @@ try:
     json.loads(raw.decode("utf-8-sig"))
 except Exception as e:
     sys.stderr.write("%s\n" % e); sys.exit(4)' "$FILE_NATIVE" 2>&1) || PARSE_RC=$?
+elif command -v node >/dev/null 2>&1; then
+  # node e' dependencia ESSENCIAL do blindar — sem ele o orquestrador nem
+  # resolve o MODULE-MAP. Entao este ramo sempre existe, e o ramo "nao verifiquei"
+  # abaixo vira caso de borda de verdade em vez de caminho comum.
+  #
+  # O `node:22-bookworm` nao traz jq nem python3: neste container o parse era
+  # PULADO e a linha "[OK] JSON parsea sem erro" saia mesmo assim, para um
+  # arquivo que ninguem abriu. JSON quebrado passava.
+  PARSE_ERR=$(node -e '
+    const fs = require("fs");
+    let raw;
+    try { raw = fs.readFileSync(process.argv[1]); }
+    catch (e) { process.stderr.write(String(e.message) + "\n"); process.exit(3); }
+    try { JSON.parse(raw.toString("utf8").replace(/^﻿/, "")); }
+    catch (e) { process.stderr.write(String(e.message) + "\n"); process.exit(4); }
+  ' "$FILE_NATIVE" 2>&1) || PARSE_RC=$?
 else
-  echo "[WARN] sem jq nem python3 — pulando parse check"
+  # Nao verificar NUNCA pode imprimir "[OK] JSON parsea sem erro". Ausencia de
+  # medicao nao e' aprovacao — e este script existe para dizer se o arquivo
+  # presta, entao nao poder dizer e' falha, nao silencio.
+  echo "[FAIL] sem jq, python3 nem node — nao consigo parsear $FILE"
+  echo "       Isto NAO e 'JSON valido': e verificacao que nao aconteceu."
+  exit 1
 fi
 
 if [ "$PARSE_RC" -eq 3 ]; then

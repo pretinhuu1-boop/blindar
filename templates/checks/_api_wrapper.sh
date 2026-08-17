@@ -147,12 +147,31 @@ blindar_api_check() {
   # processo local (`ps`, /proc/<pid>/cmdline) — num runner de CI compartilhado um
   # co-tenant capturava a chave. Demais headers/payload não são segredo.
   local response
-  response=$(printf 'header = "x-api-key: %s"\n' "$ANTHROPIC_API_KEY" \
-    | curl -sS --max-time 120 --config - \
-      -H "anthropic-version: 2023-06-01" \
-      -H "content-type: application/json" \
-      -d "$payload" \
-      https://api.anthropic.com/v1/messages 2>/dev/null)
+  # ─── Costura de teste: resposta injetada, sem rede ───
+  # O que vem DEPOIS desta chamada — parse do tool_use, normalização de
+  # severidade, decisão de status — é código comum do blindar, e era código sem
+  # nenhum teste. Já quebrou aqui: `IFS='||'` é um CONJUNTO {|}, então o campo
+  # vazio entre os dois pipes deslocava tudo e todo finding de API saía com
+  # mensagem vazia e file/line trocados.
+  #
+  # A primeira tentativa de testar isso foi um servidor HTTP local com
+  # BLINDAR_API_URL. Não serve: em ambiente com loopback bloqueado o teste falha
+  # por causa da rede, não do contrato — e teste que falha por motivo alheio ao
+  # que mede acaba sendo desligado. Ler de arquivo não depende de nada.
+  #
+  # Só lê o que o próprio processo apontou por env; nunca é caminho vindo do
+  # projeto auditado.
+  if [ -n "${BLINDAR_API_RESPONSE_FILE:-}" ] && [ -f "$BLINDAR_API_RESPONSE_FILE" ]; then
+    response=$(cat "$BLINDAR_API_RESPONSE_FILE")
+    log_info "resposta da API lida de BLINDAR_API_RESPONSE_FILE (modo de teste)"
+  else
+    response=$(printf 'header = "x-api-key: %s"\n' "$ANTHROPIC_API_KEY" \
+      | curl -sS --max-time 120 --config - \
+        -H "anthropic-version: 2023-06-01" \
+        -H "content-type: application/json" \
+        -d "$payload" \
+        "${BLINDAR_API_URL:-https://api.anthropic.com/v1/messages}" 2>/dev/null)
+  fi
 
   if [ -z "$response" ]; then
     log_warn "API call falhou (sem resposta)"
@@ -162,9 +181,18 @@ blindar_api_check() {
   fi
 
   # 10. Detecta refusal (security classifier)
+  # readFileSync(0) e nao '/dev/stdin': no Windows o node resolve esse caminho
+  # como C:\dev\stdin e falha com ENOENT. O catch engolia, a extracao do
+  # tool_use devolvia vazio, e TODO check .api.sh emitia `skipped` com a mensagem
+  # "API nao retornou tool_use estruturado" — mesmo com chave valida e resposta
+  # correta. Os 14 agentes de API nunca produziram um achado nesta plataforma, e
+  # `skipped` se parece com "nao se aplica".
+  #
+  # So apareceu quando o contrato dos .api.sh passou a rodar com resposta
+  # injetada. Enquanto dependia de chave de API, ninguem exercitava este caminho.
   local stop_reason
   stop_reason=$(echo "$response" | node -e "
-    try { const r=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); console.log(r.stop_reason||''); } catch(e){}" 2>/dev/null)
+    try { const r=JSON.parse(require('fs').readFileSync(0,'utf8')); console.log(r.stop_reason||''); } catch(e){}" 2>/dev/null)
 
   if [ "$stop_reason" = "refusal" ]; then
     log_warn "$agent → refusal pelo classifier de segurança"
@@ -192,9 +220,9 @@ blindar_api_check() {
   # 12. Extrai usage tokens pra telemetria
   local in_tok_actual out_tok_actual
   in_tok_actual=$(echo "$response" | node -e "
-    try { const r=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); console.log(r.usage?.input_tokens||0); } catch(e){console.log(0);}" 2>/dev/null)
+    try { const r=JSON.parse(require('fs').readFileSync(0,'utf8')); console.log(r.usage?.input_tokens||0); } catch(e){console.log(0);}" 2>/dev/null)
   out_tok_actual=$(echo "$response" | node -e "
-    try { const r=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); console.log(r.usage?.output_tokens||0); } catch(e){console.log(0);}" 2>/dev/null)
+    try { const r=JSON.parse(require('fs').readFileSync(0,'utf8')); console.log(r.usage?.output_tokens||0); } catch(e){console.log(0);}" 2>/dev/null)
 
   # Log telemetria
   blindar_log_cost "$agent" "$model" "${in_tok_actual:-0}" "${out_tok_actual:-0}"
@@ -203,7 +231,7 @@ blindar_api_check() {
   local result_json
   result_json=$(node -e "
     try {
-      const r = JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
+      const r = JSON.parse(require('fs').readFileSync(0,'utf8'));
       const toolUse = (r.content || []).find(c => c.type === 'tool_use');
       if (!toolUse) { process.exit(0); }
       console.log(JSON.stringify(toolUse.input));
