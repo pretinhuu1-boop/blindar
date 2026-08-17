@@ -252,6 +252,7 @@
         "resilience",
         "scalability",
         "process-resilience",
+        "horizontal-scale",
         "scheduled-jobs",
         "chaos-engineering",
         "event-driven",
