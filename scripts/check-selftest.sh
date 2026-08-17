@@ -28,6 +28,7 @@ PAIRS=(
   # contrato, e o falso negativo do scan do indice vazio viveu ali.
   "check-secrets.sh              | project-gitleaks-bad    | project-gitleaks-good"
   "check-gitleaks.sh             | project-gitleaks-bad    | project-gitleaks-good"
+  "check-horizontal-scale.sh     | project-hscale-bad      | project-hscale-good"
   "check-wave-guardian.sh        | project-wave-bad        | project-wave-good"
   "check-functional-e2e.sh       | project-e2e-bad         | project-e2e-good"
   "check-cors-csrf.sh            | project-insecure-api    | project-secure-api"
@@ -284,6 +285,29 @@ while IFS= read -r f; do
 done < <(find "$CHECKS_DIR" -maxdepth 1 -name 'check-*.sh' 2>/dev/null | sort)
 VERIFIED_N=${#VERIFIED[@]}
 PCT=0; [ "$TOTAL_CHECKS" -gt 0 ] && PCT=$(( VERIFIED_N * 100 / TOTAL_CHECKS ))
+
+# ─── A meta escrita passa a ser cobrada ───
+# A linha "Cada check novo DEVE entrar em PAIRS antes de mergear" já estava
+# impressa aqui, e não era verificada por ninguém. Escrever a regra e não cobrar
+# é a mesma coisa que não ter regra — só que com a aparência de ter.
+#
+# Foi medido: um check novo entrou na árvore no meio de uma rodada, a cobertura
+# caiu para 78/79 e o resumo continuou dizendo "todos os pares registrados
+# corretos". Estava certo sobre os pares registrados, e calado sobre o que não
+# foi registrado — que é justamente o buraco.
+SEM_PAR=()
+for _g in "${GATEABLE_LIST[@]}"; do
+  [ -n "${VERIFIED[$_g]:-}" ] || SEM_PAR+=("$_g")
+done
+if [ "${#SEM_PAR[@]}" -gt 0 ]; then
+  echo ""
+  echo "${R}${B}✗ ${#SEM_PAR[@]} check(s) gate-ável(is) sem par de fixture:${RST}"
+  for _c in "${SEM_PAR[@]}"; do echo "    $_c"; done
+  echo "  Gate-ável quer dizer que DÁ para contratar. Sem par, o check roda em"
+  echo "  produção sem ninguém nunca ter provado que ele dispara."
+  FAIL=$((FAIL + ${#SEM_PAR[@]}))
+  FAILED+=("${#SEM_PAR[@]} check(s) gate-ável(is) sem par de fixture")
+fi
 
 # Denominador honesto: além dos gate-áveis, reporta o total bruto. A lista de
 # exclusão acima é curada à mão, então "100%" sempre foi sobre um subconjunto

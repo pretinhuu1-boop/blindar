@@ -3,6 +3,67 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.75.0] — 2026-08-16
+
+### `check-horizontal-scale` — o que funciona com uma réplica e quebra com duas
+
+O `process-resilience` pergunta se **o processo** aguenta: health check, shutdown
+limpo, backpressure, deadlock. Todas as respostas dele continuam válidas com uma
+instância só.
+
+Este pergunta outra coisa: **o sistema aguenta ser mais de um?** É uma propriedade
+que não aparece em nenhuma instância isolada — cada réplica está perfeitamente
+saudável enquanto o conjunto está errado.
+
+O que torna essa família cara é como ela falha. Nada quebra em homologação,
+porque homologação roda uma instância. Quebra em produção, na primeira vez que
+alguém sobe a segunda — e quebra **de forma intermitente**, porque depende de
+qual réplica atendeu a requisição. O que chega ao suporte não é "quebrou":
+
+- "às vezes ele me desloga"
+- "o rate limit não está segurando direito"
+- "a mensagem do chat às vezes não chega pros outros"
+- "o arquivo que subi sumiu, mas depois voltou"
+
+Intermitente por roteamento é o pior tipo de bug para diagnosticar: não reproduz
+na máquina do desenvolvedor, não reproduz em staging, e o log de uma réplica só
+não conta a história.
+
+| # | O que | Sintoma com N réplicas |
+|---|---|---|
+| 1 | `express-session` sem `store` | usuário desloga ao ser roteado para outra instância |
+| 2 | rate limit sem store compartilhado | limite efetivo vira N× o configurado |
+| 3 | `socket.io` sem adapter Redis | metade da sala não recebe o broadcast |
+| 4 | upload em disco local | GET seguinte cai na outra réplica e dá 404 |
+| 5 | `Map`/`Set` como fonte da verdade | token revogado continua válido na outra réplica |
+| 6 | webhook sem idempotência | reenvio do provedor credita duas vezes |
+
+O item 2 merece destaque: é **pior que não ter rate limit**, porque parece ter.
+Passa no `check-rate-limit`, aparece configurado no código, e não protege.
+Proteção de fachada é pior que ausência de proteção, porque ninguém vai
+procurar.
+
+O 7º sinal — `sessionAffinity` / `ip_hash` na infra — não é defeito em si. É
+indício de que alguém já encontrou o item 1 e o contornou no balanceador.
+Funciona, e some no primeiro redeploy ou quando uma réplica cai.
+
+O que o check **não** decide é se você deveria escalar: uma instância só é
+decisão legítima. Ele diz se o código suporta a segunda — porque a hora de
+descobrir que não suporta não é durante o incidente.
+
+Balanceador, health check do LB e terminação TLS são máquina, não código: quem
+verifica é o `ancorar`.
+
+### A meta escrita passou a ser cobrada
+
+O gate já imprimia "Cada check novo DEVE entrar em PAIRS antes de mergear", e
+não verificava. Escrever a regra sem cobrar é o mesmo que não ter regra, só que
+com a aparência de ter.
+
+Medido nesta sessão: um check novo entrou na árvore no meio de uma rodada, a
+cobertura caiu para 78/79 e o resumo continuou dizendo "todos os pares
+registrados corretos" — certo sobre os registrados, calado sobre o que não foi
+registrado, que é justamente o buraco. Agora gate-ável sem par é **regressão**.
 ## [0.74.0] — 2026-08-16
 
 A v0.73.0 provou que o blindar roda em outra máquina. Esta pergunta a seguinte:
