@@ -92,6 +92,29 @@ else
   SG_RC=$?
 fi
 
+# ─── `--config=auto` quebra no Windows ───
+# O `auto` faz o semgrep negociar o conjunto de regras com o registro remoto e
+# validá-lo no `semgrep-core`. Nessa plataforma isso morre com
+# "RPC subprocess exited with code 1 / semgrep-core rule validation failed",
+# rc=2 — e o `--version` continua respondendo normalmente, então nem
+# `command -v` nem a versão denunciam.
+#
+# Ruleset explícito funciona: medido, 68 regras rodaram e acharam a concatenação
+# em query no mesmo arquivo em que o `auto` falhou.
+#
+# Cair para regra explícita é melhor que reprovar o SAST inteiro por causa da
+# plataforma. E se a segunda tentativa também falhar, o bloco abaixo trata como
+# não-verificado — nunca como "nada encontrado".
+if [ "$SG_RC" -ge 2 ] && [ "$SG_RC" -ne 124 ] && [ "$SEMGREP_CONFIG" = "auto" ]; then
+  log_warn "config 'auto' falhou (rc=$SG_RC) — tentando rulesets explícitos"
+  [ -s "$ERR" ] && log_info "motivo: $(head -c 160 "$ERR" | tr '\n' ' ')"
+  SEMGREP_CMD=(semgrep --config=p/security-audit --config=p/secrets
+               --json --no-git-ignore --disable-version-check "${TARGETS[@]}")
+  "${SEMGREP_CMD[@]}" > "$TMP" 2> "$ERR"
+  SG_RC=$?
+  [ "$SG_RC" -lt 2 ] && log_info "rulesets explícitos rodaram — SAST coberto"
+fi
+
 # Semgrep exit codes:
 #   0 = sucesso, nada encontrado
 #   1 = findings encontrados (ou erro de parse) — depende de --error
@@ -114,12 +137,30 @@ if [ ! -s "$TMP" ]; then
   exit 1
 fi
 
-# rc=2 = erro fatal do semgrep (config inválida, parse error etc).
-# Mas pode coexistir com JSON válido contendo erros — sinaliza e segue.
+# rc=2 = erro fatal do semgrep (config inválida, parse error, dependência do
+# wrapper faltando).
+#
+# Isto emitia `med` e SEGUIA. Como o relatório vinha vazio, o check terminava em
+# `passed` — o SAST inteiro não rodou e o status disse aprovado, com o motivo
+# rebaixado a "possível erro" no meio de uma lista de achados menores.
+#
+# Medido no Windows: o `semgrep.exe` é um wrapper que chama `pysemgrep` pelo
+# nome. Se o diretório de scripts do Python não está no PATH, o wrapper responde
+# `--version` normalmente e falha em qualquer scan de verdade — então nem o
+# `command -v` nem a versão denunciam. Só o rc do scan denuncia, e era ele que
+# estava sendo engolido.
+#
+# Erro do scanner é ausência de medição, não ausência de achado. Vira `skipped`
+# com `missing_tool`, que é o estado que diz "ninguém olhou".
 if [ "$SG_RC" -ge 2 ] && [ "$SG_RC" -ne 124 ]; then
-  log_warn "Semgrep retornou rc=$SG_RC (possível erro fatal). Veja .blindar/results/."
+  log_fail "Semgrep terminou com erro (rc=$SG_RC) — o SAST não completou"
   [ -s "$ERR" ] && log_warn "stderr: $(head -c 300 "$ERR")"
-  add_finding "med" "Semgrep retornou rc=$SG_RC — possível erro de config ou parse" "" ""
+  log_warn "isto NÃO é 'nenhuma vulnerabilidade': é análise que não aconteceu."
+  log_warn "no Windows, confira se o diretório Scripts do Python está no PATH"
+  log_warn "  (o semgrep.exe chama pysemgrep pelo nome e falha sem ele)"
+  BLINDAR_MISSING_TOOL="semgrep(rc=$SG_RC)"
+  emit_result "$BLINDAR_AGENT" "skipped" 0
+  exit 0
 fi
 
 # 5. Parse JSON — preferir node, fallback jq
