@@ -29,6 +29,7 @@ PAIRS=(
   "check-secrets.sh              | project-gitleaks-bad    | project-gitleaks-good"
   "check-gitleaks.sh             | project-gitleaks-bad    | project-gitleaks-good"
   "check-horizontal-scale.sh     | project-hscale-bad      | project-hscale-good"
+  "check-semgrep.sh              | project-sast-bad        | project-sast-good"
   "check-wave-guardian.sh        | project-wave-bad        | project-wave-good"
   "check-functional-e2e.sh       | project-e2e-bad         | project-e2e-good"
   "check-cors-csrf.sh            | project-insecure-api    | project-secure-api"
@@ -267,7 +268,7 @@ motivo_exclusao() { # basename → motivo, ou vazio se é gate-ável
       echo "só chega a veredito rodando serviço externo (Chrome, Chromatic, build real)" ;;
     check-ai-powered-example.sh)
       echo "template de exemplo para escrever check novo, não roda em auditoria" ;;
-    check-trivy.sh|check-osv-scanner.sh|check-semgrep.sh|check-deps-audit.sh)
+    check-trivy.sh|check-osv-scanner.sh|check-deps-audit.sh)
       echo "o veredito e do scanner: exige rede e base de CVE atualizada, e par de fixture aqui deixaria o gate lento e instavel" ;;
     check-mcp-security.sh)
       echo "lê config MCP em \$HOME — o veredito depende da máquina, não do projeto" ;;

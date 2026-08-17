@@ -115,6 +115,56 @@ if [ "$SG_RC" -ge 2 ] && [ "$SG_RC" -ne 124 ] && [ "$SEMGREP_CONFIG" = "auto" ];
   [ "$SG_RC" -lt 2 ] && log_info "rulesets explícitos rodaram — SAST coberto"
 fi
 
+# ─── Última tentativa: o semgrep oficial, dentro de um container ───
+# Quando nem `auto` nem ruleset explícito rodam, o problema é o binário desta
+# plataforma, não a configuração. A imagem oficial é Linux, onde o semgrep
+# funciona — e o wrapper quebrado do Windows sai inteiro do caminho.
+#
+# Medido nesta máquina: nativo rc=2 em qualquer scan; via container, 1074 regras
+# e os dois achados esperados (eval com input do usuário e concatenação em query)
+# no mesmo arquivo.
+#
+# Por que só agora, e não primeiro: container custa ~30s e um mount. Onde o
+# nativo funciona — Linux, macOS — ele é mais rápido e não exige Docker. O
+# fallback existe para a plataforma onde o caminho normal está quebrado, e não
+# para substituí-lo.
+#
+# Desligar: BLINDAR_SEMGREP_NO_DOCKER=1
+if [ "$SG_RC" -ge 2 ] && [ "$SG_RC" -ne 124 ] \
+   && [ "${BLINDAR_SEMGREP_NO_DOCKER:-0}" != "1" ] \
+   && command -v docker >/dev/null 2>&1; then
+  if docker info >/dev/null 2>&1; then
+    log_warn "semgrep nativo falhou (rc=$SG_RC) — tentando pela imagem oficial em container"
+    # cygpath -m: o Docker no Windows precisa de C:/... e o bash entrega /c/...
+    # Montar o caminho POSIX cria um bind vazio, e o scan varre nada e sai 0 —
+    # que seria pior que falhar, porque "nada encontrado" pareceria resultado.
+    _MNT="$PWD"
+    command -v cygpath >/dev/null 2>&1 && _MNT="$(cygpath -m "$PWD")"
+    MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*' \
+      docker run --rm -v "${_MNT}:/src" semgrep/semgrep \
+        semgrep --config="$SEMGREP_CONFIG" --json --no-git-ignore \
+        --disable-version-check /src > "$TMP" 2> "$ERR"
+    SG_RC=$?
+    # O container vê o projeto em /src; o relatório precisa apontar para o
+    # caminho que existe na máquina de quem lê, senão o achado é inacionável.
+    if [ "$SG_RC" -lt 2 ] && [ -s "$TMP" ] && command -v node >/dev/null 2>&1; then
+      node -e '
+        const fs = require("fs");
+        try {
+          const j = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+          for (const r of j.results || []) {
+            if (typeof r.path === "string") r.path = r.path.replace(/^\/src\/?/, "");
+          }
+          fs.writeFileSync(process.argv[1], JSON.stringify(j));
+        } catch (e) { /* deixa como veio: parse ruim é problema do bloco abaixo */ }
+      ' "$TMP" 2>/dev/null
+      log_info "semgrep rodou em container — SAST coberto"
+    fi
+  else
+    log_info "docker instalado mas o daemon não responde — sem fallback de container"
+  fi
+fi
+
 # Semgrep exit codes:
 #   0 = sucesso, nada encontrado
 #   1 = findings encontrados (ou erro de parse) — depende de --error

@@ -3,6 +3,51 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.77.0] — 2026-08-17
+
+### O SAST voltou a rodar no Windows, por container
+
+A v0.76.0 fez o blindar parar de mentir sobre o semgrep quebrado. Esta faz o
+semgrep funcionar.
+
+Não consertando o binário — o problema é o wrapper desta plataforma, que delega
+ao `semgrep-core` por RPC e morre com `rule validation failed` em qualquer scan.
+A imagem oficial é Linux, onde o semgrep funciona, e o wrapper sai inteiro do
+caminho.
+
+A ordem importa: nativo com `auto`, nativo com rulesets explícitos, e só então
+container. Onde o nativo funciona — Linux, macOS — ele continua sendo o
+primeiro, é mais rápido e não exige Docker. O fallback existe para a plataforma
+onde o caminho normal está quebrado, não para substituí-lo.
+
+Medido: nativo rc=2 em qualquer scan; via container, **1074 regras**, e os dois
+achados esperados no mesmo arquivo — `eval` com input do usuário e concatenação
+em query SQL.
+
+Duas armadilhas no caminho, as duas do tipo que passa despercebido:
+
+- **`cygpath -m` no mount.** O Docker no Windows precisa de `C:/...` e o bash
+  entrega `/c/...`. Montar o caminho POSIX cria um bind **vazio**: o scan varre
+  nada e sai 0. Seria pior que falhar, porque "nada encontrado" pareceria
+  resultado.
+- **Caminho do achado.** O container vê o projeto em `/src`, então o relatório
+  apontava para `/src/src/api.js` — um arquivo que não existe na máquina de quem
+  lê. Achado que você não consegue abrir é quase inacionável.
+
+### `check-semgrep` saiu da lista de exclusão
+
+Ele estava lá como "o veredito é do scanner, exige rede e base de CVE". Com o
+fallback, o comportamento virou determinístico o bastante para ter contrato:
+dispara em `eval` com input do usuário e SQL concatenado, cala em query
+parametrizada.
+
+O primeiro fixture "limpo" não era limpo — o semgrep achou um XSS real,
+`res.send()` com valor derivado de input do usuário. Ele estava certo, e o
+fixture virou `res.json()`. Fixture que passa porque o check é fraco não prova
+nada; este passou a provar.
+
+**Cobertura: 80/80 gate-áveis (100%).** A conta: 108 checks = 80 com par + 28
+com motivo declarado + 0 sem conta.
 ## [0.76.0] — 2026-08-16
 
 ### O doctor mostrava ✓ verde para um scanner que não varre
