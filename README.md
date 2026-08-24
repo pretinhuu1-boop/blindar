@@ -59,23 +59,27 @@ selecionados completos em modo ESCOLHIDOS).
 
 ## Instalação
 
+> **Repositório principal:** [`github.com/maykonlong/blindar`](https://github.com/maykonlong/blindar) — instale sempre daqui.
+> **Backup/espelho:** [`github.com/pretinhuu1-boop/blindar`](https://github.com/pretinhuu1-boop/blindar) — só se o principal estiver indisponível.
+> Para instalar do backup, use `BLINDAR_REPO=pretinhuu1-boop/blindar` nos scripts, ou troque a URL do `git clone`.
+
 ### Windows (PowerShell)
 
 ```powershell
 # clone direto pra pasta de skills
-git clone https://github.com/pretinhuu1-boop/blindar.git "$env:USERPROFILE\.claude\skills\blindar"
+git clone https://github.com/maykonlong/blindar.git "$env:USERPROFILE\.claude\skills\blindar"
 ```
 
 Ou com o script:
 
 ```powershell
-iwr -useb https://raw.githubusercontent.com/pretinhuu1-boop/blindar/main/scripts/install.ps1 | iex
+iwr -useb https://raw.githubusercontent.com/maykonlong/blindar/main/scripts/install.ps1 | iex
 ```
 
 ### Linux / macOS
 
 ```bash
-git clone https://github.com/pretinhuu1-boop/blindar.git ~/.claude/skills/blindar
+git clone https://github.com/maykonlong/blindar.git ~/.claude/skills/blindar
 ```
 
 ### Verificar o ambiente (faça isto primeiro)
@@ -114,7 +118,7 @@ Cole isto numa sessão do Claude Code, em qualquer pasta:
 ```text
 Instale a skill blindar nesta máquina e deixe pronta para uso:
 
-1. Clone https://github.com/pretinhuu1-boop/blindar para ~/.claude/skills/blindar
+1. Clone https://github.com/maykonlong/blindar para ~/.claude/skills/blindar
    (no Windows: %USERPROFILE%/.claude/skills/blindar).
 2. Rode `bash ~/.claude/skills/blindar/scripts/doctor.sh` e me mostre a saída.
 3. Para cada dependência ausente, me diga o comando de instalação da MINHA
@@ -313,6 +317,17 @@ rodam sequencial multi-turno (ver [`MULTI-AI.md`](MULTI-AI.md)).
 
 **Sempre multi-agente**: princípio do skill — mesmo em AI single-threaded,
 nunca um prompt monolítico.
+
+**Prova de achado e auditoria externa** (v0.78+):
+- **`reproduzir`** — cada finding carrega os passos de reprodução + o comando de
+  confirmação. Achado sem prova refazível é alegação, não achado.
+  `node scripts/blindar-report.mjs reproduzir`.
+- **`infra-exposure`** (agente, módulo 17) — vê o que o HTTP não vê: banco/cache/
+  broker exposto na internet (Redis/Mongo/Postgres) + IP em blacklist DNS.
+  `node scripts/infra-scan.mjs --target host`.
+- **`sentinela-bridge`** — traz a verdade de runtime da app **logada** (DAST em
+  sessão autenticada, browser real) pro relatório do blindar, como o
+  `ancorar-bridge` traz a verdade do servidor. `scripts/sentinela-bridge.sh`.
 
 ## Atualização
 

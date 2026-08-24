@@ -87,7 +87,7 @@ v0.6.0.
 
 ## Como contribuir com qualquer item
 
-1. Abra issue em [github.com/pretinhuu1-boop/blindar/issues](https://github.com/pretinhuu1-boop/blindar/issues)
+1. Abra issue em [github.com/maykonlong/blindar/issues](https://github.com/maykonlong/blindar/issues)
 2. Indique qual item do roadmap
 3. Mostre **bug/dor real observada** (princípio do skill — não é "seria legal")
 4. PR com implementação respeitando princípios não-negociáveis do skill

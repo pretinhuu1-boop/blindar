@@ -27,7 +27,9 @@ Segurança não é uma fase — é gate em CADA passo. A sequência é:
    (com segurança embutida, nunca mock em produção).
 3. **Provar que sobe (smoke)** — `smoke-run.sh` em homolog. Boot + health +
    fluxo. Não adianta atacar o que não sobe.
-4. **Atacar** — pentest + adversarial (módulo 15) + recon (17).
+4. **Atacar** — pentest + adversarial (módulo 15) + recon externo (17:
+   `attack-recon` passivo HTTP **e** `infra-exposure` = portas perigosas/DNSBL).
+   Verdade de runtime da app logada: `sentinela-bridge` (DAST, opt-in).
 5. **Proteger** — corrigir o que o ataque achou.
 6. **Revisar** — adversarial review final, production checklist.
 
@@ -197,6 +199,9 @@ TODAS verdadeiras?
 | `stacks.md` | Categorias extras conforme stack detectada |
 | `CONTRACT.md` | Estrutura completa de `.blindar/` no projeto-alvo |
 | `MULTI-AI.md` | Se você NÃO é Claude Code com Workflow API |
+| `scripts/blindar-report.mjs reproduzir` | Após checks: passos de reprodução + comando de confirmação por finding |
+| `scripts/infra-scan.mjs --target host` | Módulo 17: portas perigosas expostas (banco/cache/broker) + DNSBL |
+| `scripts/sentinela-bridge.sh` | DAST em sessão autenticada (app logada) → ingere SARIF no relatório |
 
 ## Decisão: confiança em finding adversarial
 
