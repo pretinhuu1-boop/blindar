@@ -206,8 +206,23 @@ if [ "$SG_RC" -ge 2 ] && [ "$SG_RC" -ne 124 ]; then
   log_fail "Semgrep terminou com erro (rc=$SG_RC) — o SAST não completou"
   [ -s "$ERR" ] && log_warn "stderr: $(head -c 300 "$ERR")"
   log_warn "isto NÃO é 'nenhuma vulnerabilidade': é análise que não aconteceu."
-  log_warn "no Windows, confira se o diretório Scripts do Python está no PATH"
-  log_warn "  (o semgrep.exe chama pysemgrep pelo nome e falha sem ele)"
+  # ─── Diagnóstico Windows: a causa mais comum NÃO é PATH ───
+  # Medido nesta base: o `semgrep.exe` é achado e o `semgrep-core.exe` roda
+  # isolado — o PATH está OK. O que quebra é o RPC pysemgrep → semgrep-core
+  # quando o semgrep foi instalado sob o Python da Microsoft Store (o pacote
+  # PythonSoftwareFoundation.Python.*), cujo AppContainer estrangula o spawn do
+  # subprocesso: stderr traz "RPC subprocess exited" / "semgrep-core ... failed".
+  # Apontar só "PATH" mandava o operador consertar o que não estava quebrado.
+  SG_PATH="$(command -v semgrep 2>/dev/null || true)"
+  if grep -qiE 'RPC subprocess|semgrep-core' "$ERR" 2>/dev/null \
+     || printf '%s' "$SG_PATH" | grep -qi 'PythonSoftwareFoundation.Python'; then
+    log_warn "causa provável: semgrep sob o Python da Microsoft Store (sandbox bloqueia o RPC do core)."
+    log_warn "  destrave por um destes caminhos (em ordem de esforço):"
+    log_warn "  1) suba o Docker Desktop e re-rode — este check cai no container oficial (SAST completo)."
+    log_warn "  2) reinstale fora da Store:  winget install Python.Python.3.12  &&  py -3.12 -m pip install --user semgrep"
+  else
+    log_warn "no Windows, confira também se o diretório Scripts do Python está no PATH (o semgrep.exe chama pysemgrep pelo nome)."
+  fi
   BLINDAR_MISSING_TOOL="semgrep(rc=$SG_RC)"
   emit_result "$BLINDAR_AGENT" "skipped" 0
   exit 0
