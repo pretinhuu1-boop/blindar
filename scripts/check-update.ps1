@@ -26,7 +26,7 @@ if ($env:BLINDAR_SKIP_UPDATE_CHECK -eq "1") {
     exit 0
 }
 
-$Repo = if ($env:BLINDAR_REPO) { $env:BLINDAR_REPO } else { "maykonlong/blindar" }
+$Repo = if ($env:BLINDAR_REPO) { $env:BLINDAR_REPO } else { "maykonlong/blindar-claude" }
 $Branch = if ($env:BLINDAR_BRANCH) { $env:BLINDAR_BRANCH } else { "main" }
 
 $SkillRoot = Split-Path -Parent $PSScriptRoot

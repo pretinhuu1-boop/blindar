@@ -29,7 +29,7 @@ done
   exit 0
 }
 
-REPO="${BLINDAR_REPO:-maykonlong/blindar}"
+REPO="${BLINDAR_REPO:-maykonlong/blindar-claude}"
 BRANCH="${BLINDAR_BRANCH:-main}"
 
 SKILL_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
