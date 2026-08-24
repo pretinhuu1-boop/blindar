@@ -35,6 +35,7 @@ done
 # Lista de checks por modo (18 em v0.23)
 FULL_CHECKS=(
   check-secrets.sh                    # gitleaks
+  check-client-bundle-secrets.sh      # segredo de provider no bundle do browser
   check-mock-killer.sh                # console.log + TODO + mock + onClick={}
   check-config-externalization.sh     # URLs hardcoded + .env.example sync
   check-deps-audit.sh                 # npm/pip/go/cargo audit + trivy

@@ -27,6 +27,7 @@ PAIRS=(
   # proposito, entao o gitleaks nunca disparava nele. Sem disparo nao ha
   # contrato, e o falso negativo do scan do indice vazio viveu ali.
   "check-secrets.sh              | project-gitleaks-bad    | project-gitleaks-good"
+  "check-client-bundle-secrets.sh| project-clientbundle-bad | project-clientbundle-good"
   "check-gitleaks.sh             | project-gitleaks-bad    | project-gitleaks-good"
   "check-horizontal-scale.sh     | project-hscale-bad      | project-hscale-good"
   "check-semgrep.sh              | project-sast-bad        | project-sast-good"

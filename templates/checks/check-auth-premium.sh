@@ -52,17 +52,23 @@ if [ "$HS256" -gt 0 ]; then
 fi
 rm -f "$TMP"
 
-# 3. Token em localStorage (CRIT — XSS lê)
-log_info "Buscando JWT em localStorage..."
+# 3. Token em storage legível por JS (CRIT — é o que faz XSS/CDP roubar a sessão)
+#    localStorage e sessionStorage têm a MESMA exposição: JS da página e o Chrome
+#    DevTools Protocol leem os dois. Cobrir só localStorage deixava sessionStorage
+#    passar — e o mesmo ataque (roubo de token via CDP/XSS documentado em pentests
+#    reais) rouba de um jeito idêntico. document.cookie=... é cookie SEM httpOnly
+#    por definição (JS não consegue setar httpOnly): mesma exposição, mesmo crit.
+log_info "Buscando token em storage legível por JS (localStorage/sessionStorage/document.cookie)..."
 TMP=$(mktemp)
-rg -n "localStorage\.setItem.*['\"](token|access[_-]?token|jwt|auth)" --type ts --type js --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
+rg -n "(localStorage|sessionStorage)\.setItem.*['\"](token|access[_-]?token|jwt|auth)" --type ts --type js --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" > "$TMP" 2>/dev/null || true
+rg -n "document\.cookie\s*=.*(token|jwt|session|auth)" --type ts --type js --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" >> "$TMP" 2>/dev/null || true
 LS_TOKEN=$(wc -l < "$TMP" || echo 0)
 if [ "$LS_TOKEN" -gt 0 ]; then
   while IFS=: read -r file line content; do
     [ -z "$file" ] && continue
-    add_finding "crit" "Token em localStorage (XSS lê): $(trim_ws "$content" | cut -c1-80)" "$file" "$line"
+    add_finding "crit" "Token em storage legível por JS (XSS/CDP roubam): $(trim_ws "$content" | cut -c1-80)" "$file" "$line"
   done < "$TMP"
-  log_fail "$LS_TOKEN token(s) em localStorage — usar httpOnly cookie"
+  log_fail "$LS_TOKEN token(s) em storage acessível por JS — usar cookie httpOnly+secure+sameSite"
   FAIL=1
 fi
 rm -f "$TMP"
