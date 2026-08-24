@@ -22,7 +22,7 @@ npx @blindar/cli check
 ## Install (Claude Code skill)
 
 ```bash
-git clone https://github.com/maykonlong/blindar.git ~/.claude/skills/blindar
+git clone https://github.com/maykonlong/blindar-claude.git ~/.claude/skills/blindar
 ```
 
 Then in any Claude Code session:
@@ -45,7 +45,7 @@ npx blindar report        # generates HTML report
 ## GitHub Action
 
 ```yaml
-- uses: maykonlong/blindar@v0.31
+- uses: maykonlong/blindar-claude@v0.31
   with:
     mode: ci
     fail-on: crit,high

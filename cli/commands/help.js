@@ -40,6 +40,6 @@ export default function help({ cliRoot, skillRoot }) {
   console.log('  ' + kleur.gray(skillRoot));
   console.log('');
   console.log(kleur.bold('Doc:'));
-  console.log('  ' + kleur.blue('https://github.com/maykonlong/blindar'));
+  console.log('  ' + kleur.blue('https://github.com/maykonlong/blindar-claude'));
   return 0;
 }

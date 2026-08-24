@@ -48,7 +48,7 @@ if [ "${1:-}" = "--local" ]; then
     done
 else
   passo "1. clone do GitHub para o HOME limpo"
-  git clone --quiet --depth 1 https://github.com/maykonlong/blindar.git "$S" 2>&1 | tail -2
+  git clone --quiet --depth 1 https://github.com/maykonlong/blindar-claude.git "$S" 2>&1 | tail -2
 fi
 [ -f "$S/SKILL.md" ] && [ -f "$S/VERSION" ]; vale $? "clone traz SKILL.md e VERSION ($(cat "$S/VERSION" 2>/dev/null))"
 

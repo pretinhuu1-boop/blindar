@@ -1175,7 +1175,7 @@ O blindar tem uma **GitHub Action pronta** (`action.yml`). Roda os checks no PR,
 comenta os achados, e falha conforme o limiar:
 
 ```yaml
-- uses: maykonlong/blindar@main
+- uses: maykonlong/blindar-claude@main
   with:
     fail-on: crit        # crit | high | never
     post-comment: true

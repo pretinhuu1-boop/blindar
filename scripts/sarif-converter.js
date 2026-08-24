@@ -84,7 +84,7 @@ const SARIF_VERSION = '2.1.0';
 const SARIF_SCHEMA =
   'https://docs.oasis-open.org/sarif/sarif/v2.1.0/schemas/sarif-schema-2.1.0.json';
 const TOOL_VERSION = '1.0.0';
-const TOOL_INFO_URI = 'https://github.com/maykonlong/blindar';
+const TOOL_INFO_URI = 'https://github.com/maykonlong/blindar-claude';
 
 function printHelp() {
   const help = `${SCRIPT_NAME} — blindar -> SARIF 2.1.0 converter

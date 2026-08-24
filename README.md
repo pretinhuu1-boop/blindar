@@ -59,7 +59,7 @@ selecionados completos em modo ESCOLHIDOS).
 
 ## Instalação
 
-> **Repositório principal:** [`github.com/maykonlong/blindar`](https://github.com/maykonlong/blindar) — instale sempre daqui.
+> **Repositório principal:** [`github.com/maykonlong/blindar-claude`](https://github.com/maykonlong/blindar-claude) — instale sempre daqui.
 > **Backup/espelho:** [`github.com/pretinhuu1-boop/blindar`](https://github.com/pretinhuu1-boop/blindar) — só se o principal estiver indisponível.
 > Para instalar do backup, use `BLINDAR_REPO=pretinhuu1-boop/blindar` nos scripts, ou troque a URL do `git clone`.
 
@@ -67,19 +67,19 @@ selecionados completos em modo ESCOLHIDOS).
 
 ```powershell
 # clone direto pra pasta de skills
-git clone https://github.com/maykonlong/blindar.git "$env:USERPROFILE\.claude\skills\blindar"
+git clone https://github.com/maykonlong/blindar-claude.git "$env:USERPROFILE\.claude\skills\blindar"
 ```
 
 Ou com o script:
 
 ```powershell
-iwr -useb https://raw.githubusercontent.com/maykonlong/blindar/main/scripts/install.ps1 | iex
+iwr -useb https://raw.githubusercontent.com/maykonlong/blindar-claude/main/scripts/install.ps1 | iex
 ```
 
 ### Linux / macOS
 
 ```bash
-git clone https://github.com/maykonlong/blindar.git ~/.claude/skills/blindar
+git clone https://github.com/maykonlong/blindar-claude.git ~/.claude/skills/blindar
 ```
 
 ### Verificar o ambiente (faça isto primeiro)
@@ -118,7 +118,7 @@ Cole isto numa sessão do Claude Code, em qualquer pasta:
 ```text
 Instale a skill blindar nesta máquina e deixe pronta para uso:
 
-1. Clone https://github.com/maykonlong/blindar para ~/.claude/skills/blindar
+1. Clone https://github.com/maykonlong/blindar-claude para ~/.claude/skills/blindar
    (no Windows: %USERPROFILE%/.claude/skills/blindar).
 2. Rode `bash ~/.claude/skills/blindar/scripts/doctor.sh` e me mostre a saída.
 3. Para cada dependência ausente, me diga o comando de instalação da MINHA
