@@ -133,7 +133,9 @@ fi
 if [ "$SG_RC" -ge 2 ] && [ "$SG_RC" -ne 124 ] \
    && [ "${BLINDAR_SEMGREP_NO_DOCKER:-0}" != "1" ] \
    && command -v docker >/dev/null 2>&1; then
-  if docker info >/dev/null 2>&1; then
+  # ensure_docker_up sobe o daemon sob demanda se estiver parado (desligar com
+  # BLINDAR_NO_DOCKER_AUTOSTART=1). Retorna 1 se não subir → cai no else honesto.
+  if ensure_docker_up; then
     log_warn "semgrep nativo falhou (rc=$SG_RC) — tentando pela imagem oficial em container"
     # cygpath -m: o Docker no Windows precisa de C:/... e o bash entrega /c/...
     # Montar o caminho POSIX cria um bind vazio, e o scan varre nada e sai 0 —
@@ -161,7 +163,7 @@ if [ "$SG_RC" -ge 2 ] && [ "$SG_RC" -ne 124 ] \
       log_info "semgrep rodou em container — SAST coberto"
     fi
   else
-    log_info "docker instalado mas o daemon não responde — sem fallback de container"
+    log_info "Docker não disponível (não subiu ou auto-start desligado) — sem fallback de container"
   fi
 fi
 

@@ -551,6 +551,57 @@ have_tool() {
 has_file() { [ -f "$1" ]; }
 has_dir()  { [ -d "$1" ]; }
 
+# ─── Sobe o daemon do Docker SOB DEMANDA ───
+# Usado pelos checks que caem num fallback de container (ex.: semgrep no Windows,
+# onde o binário nativo quebra). A ideia: não obrigar o operador a deixar o
+# Docker ligado o tempo todo nem a subir no boot — o check liga o Docker só
+# quando de fato vai usar, e só se estiver parado.
+#
+# Retorno: 0 = daemon respondendo (já estava, ou subiu). 1 = sem docker, ou não
+# subiu a tempo, ou auto-start desligado. Nunca aborta o check: quem chama trata
+# o 1 como "sem fallback de container" e segue para o skip honesto.
+#
+# Desligar o auto-start:  BLINDAR_NO_DOCKER_AUTOSTART=1  (aí só usa se já estiver de pé)
+ensure_docker_up() {
+  command -v docker >/dev/null 2>&1 || return 1
+  docker info >/dev/null 2>&1 && return 0
+  [ "${BLINDAR_NO_DOCKER_AUTOSTART:-0}" = "1" ] && return 1
+
+  log_info "Docker instalado mas o daemon está parado — subindo sob demanda..."
+  case "$(uname -s 2>/dev/null)" in
+    *MINGW*|*MSYS*|*CYGWIN*|*NT*)
+      # Windows: Docker Desktop. Lança destacado; o & sozinho não basta no
+      # Git Bash (o processo morre com o subshell), daí o ( ... & ).
+      local dd
+      for dd in "/c/Program Files/Docker/Docker/Docker Desktop.exe" \
+                "$HOME/AppData/Local/Docker/Docker Desktop.exe"; do
+        [ -f "$dd" ] && { ( "$dd" >/dev/null 2>&1 & ) ; break; }
+      done
+      ;;
+    Darwin)
+      open -a Docker >/dev/null 2>&1 || true
+      ;;
+    Linux)
+      # Docker Desktop (CLI) → serviço de usuário → serviço de sistema sem prompt.
+      # sudo -n: só age se já houver privilégio; nunca trava pedindo senha.
+      docker desktop start >/dev/null 2>&1 \
+        || systemctl --user start docker-desktop >/dev/null 2>&1 \
+        || sudo -n systemctl start docker >/dev/null 2>&1 \
+        || true
+      ;;
+  esac
+
+  # Espera o daemon responder (até ~90s: 45 × 2s). Medido nesta máquina: ~5s.
+  local n=0
+  while [ "$n" -lt 45 ]; do
+    docker info >/dev/null 2>&1 && { log_info "Docker respondendo (~$((n * 2))s)."; return 0; }
+    sleep 2
+    n=$((n + 1))
+  done
+  log_warn "Docker não respondeu a tempo — seguindo sem o fallback de container."
+  return 1
+}
+
 is_nodejs()  { has_file "package.json"; }
 is_python()  { has_file "pyproject.toml" || has_file "requirements.txt" || has_file "Pipfile"; }
 is_go()      { has_file "go.mod"; }
