@@ -11,12 +11,12 @@ load_intelligence_globs "$BLINDAR_AGENT"
 
 # ─── Gate: só roda se detectar stack FHIR/healthtech ───
 FHIR_HITS=0
-FHIR_HITS=$(( FHIR_HITS + $(rg -c "@medplum/core" --type ts --type js --type py --type js --type pyon "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0) ))
-FHIR_HITS=$(( FHIR_HITS + $(rg -c "fhir-kit-client" --type ts --type js --type py --type js --type pyon "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0) ))
-FHIR_HITS=$(( FHIR_HITS + $(rg -c "smart-on-fhir" --type ts --type js --type py --type js --type pyon "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0) ))
-FHIR_HITS=$(( FHIR_HITS + $(rg -c "fhir\\.js" --type ts --type js --type py --type js --type pyon "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0) ))
-FHIR_HITS=$(( FHIR_HITS + $(rg -c "hapi-fhir" --type ts --type js --type py --type js --type pyon "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0) ))
-FHIR_HITS=$(( FHIR_HITS + $(rg -c "resourceType" --type ts --type js --type pyon "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0) ))
+FHIR_HITS=$(( FHIR_HITS + $(rg -c "@medplum/core" --type ts --type js --type py --type js --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0) ))
+FHIR_HITS=$(( FHIR_HITS + $(rg -c "fhir-kit-client" --type ts --type js --type py --type js --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0) ))
+FHIR_HITS=$(( FHIR_HITS + $(rg -c "smart-on-fhir" --type ts --type js --type py --type js --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0) ))
+FHIR_HITS=$(( FHIR_HITS + $(rg -c "fhir\\.js" --type ts --type js --type py --type js --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0) ))
+FHIR_HITS=$(( FHIR_HITS + $(rg -c "hapi-fhir" --type ts --type js --type py --type js --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0) ))
+FHIR_HITS=$(( FHIR_HITS + $(rg -c "resourceType" --type ts --type js --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0) ))
 FHIR_HITS=$(( FHIR_HITS + $(rg -c "(prontuario|telemedicina|teleconsulta|prescricao)" --type ts --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0) ))
 
 if [ "$FHIR_HITS" -eq 0 ]; then
@@ -28,7 +28,7 @@ fi
 log_info "Stack healthtech detectada ($FHIR_HITS sinais) — auditando"
 
 # ─── 1. Patient SEM campo identifier (CRIT) ───
-PATIENT_NO_ID=$(rg -nU "\"resourceType\"\\s*:\\s*\"Patient\"[\\s\\S]{0,400}" --type js --type pyon --type ts --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null \
+PATIENT_NO_ID=$(rg -nU "\"resourceType\"\\s*:\\s*\"Patient\"[\\s\\S]{0,400}" --type js --type py --type ts --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null \
   | grep -v "identifier" | wc -l || echo 0)
 if [ "$PATIENT_NO_ID" -gt 0 ]; then
   add_finding "crit" "$PATIENT_NO_ID Patient resource(s) sem campo 'identifier' (CPF/CNS) — paciente fantasma, viola CFM 1821 e impede interoperabilidade" "" ""
@@ -68,7 +68,7 @@ fi
 
 # ─── 5. Sem audit trail (Provenance) em mudanças de prontuário (HIGH) ───
 MUTATION_HITS=$(rg -c "(update|patch|create).*?(Observation|Condition|Medication|DiagnosticReport|Patient)" --type ts --type js --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0)
-PROVENANCE_HITS=$(rg -c "Provenance" --type ts --type js --type py --type js --type pyon "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0)
+PROVENANCE_HITS=$(rg -c "Provenance" --type ts --type js --type py --type js --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0)
 if [ "$MUTATION_HITS" -gt 5 ] && [ "$PROVENANCE_HITS" -eq 0 ]; then
   add_finding "high" "Detectadas $MUTATION_HITS mutações em resources clínicos sem Provenance — viola CFM 1821 (trilha de auditoria)" "" ""
 fi
@@ -94,15 +94,15 @@ if [ "$ADDR_EXPOSURE" -gt 0 ]; then
 fi
 
 # ─── 8. DiagnosticReport.result sem versioning (HIGH) ───
-DIAG_HITS=$(rg -c "DiagnosticReport" --type ts --type js --type py --type js --type pyon "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0)
-HISTORY_HITS=$(rg -c "(_history|versionId|history-instance|meta\\.versionId)" --type ts --type js --type py --type js --type pyon "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0)
+DIAG_HITS=$(rg -c "DiagnosticReport" --type ts --type js --type py --type js --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0)
+HISTORY_HITS=$(rg -c "(_history|versionId|history-instance|meta\\.versionId)" --type ts --type js --type py --type js --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | wc -l || echo 0)
 if [ "$DIAG_HITS" -gt 3 ] && [ "$HISTORY_HITS" -eq 0 ]; then
   add_finding "high" "DiagnosticReport sem versioning (_history/versionId) — laudo alterado sem histórico viola CFM e configura adulteração" "" ""
 fi
 
 # ─── 9. Encounter.period sem timezone (MED) ───
 PERIOD_NO_TZ_TMP=$(mktemp 2>/dev/null || echo "/tmp/blindar-period.$$")
-rg -nU "\"period\"\\s*:\\s*\\{[\\s\\S]{0,200}\\}" --type js --type pyon --type ts --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null > "$PERIOD_NO_TZ_TMP" || true
+rg -nU "\"period\"\\s*:\\s*\\{[\\s\\S]{0,200}\\}" --type js --type py --type ts --type py "${IGNORE[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null > "$PERIOD_NO_TZ_TMP" || true
 PERIOD_NO_TZ=0
 if [ -s "$PERIOD_NO_TZ_TMP" ]; then
   PERIOD_NO_TZ=$(rg -vc "(-03:00|-02:00|Z\"|[+\\-][0-9]{2}:[0-9]{2})" "$PERIOD_NO_TZ_TMP" 2>/dev/null || echo 0)
