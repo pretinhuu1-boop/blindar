@@ -16,6 +16,7 @@
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { reproFromResults } from './manual-verification.mjs';
 
 const DIR = 'blindar';
 const FILE = join(DIR, 'RELATORIO.md');
@@ -309,11 +310,31 @@ if (cmd === 'init') {
   else if (!ev.lidos && ag.length) console.log('→ sem evidência: os checks desta fase parecem não ter rodado');
   else if (ev.semCobertura.length) console.log('→ pode registrar "ok", mas há buraco de cobertura — instale a ferramenta e re-rode');
   else console.log('→ pode registrar "ok"');
+} else if (cmd === 'reproduzir') {
+  // Lista cada finding de .blindar/results/ com PASSOS de reprodução. Um achado
+  // que carrega o próprio "como reproduzir" não pode blefar — é a resposta
+  // direta ao relatório que diz "demonstrado" sem prova refazível.
+  const dir = join('.blindar', 'results');
+  const itens = reproFromResults(dir);
+  if (!itens.length) {
+    console.log(`sem findings em ${dir} — rode os checks (run-all.sh) antes.`);
+  } else {
+    for (const { agent, finding, repro } of itens) {
+      const loc = finding.file ? ` — ${finding.file}${finding.line ? ':' + finding.line : ''}` : '';
+      console.log(`\n[${finding.severity || '?'}] ${finding.message || '(sem mensagem)'}${loc}`);
+      console.log(`  origem: ${agent}  |  categoria: ${repro.category}`);
+      console.log('  como reproduzir:');
+      repro.steps.forEach((s, i) => console.log(`    ${i + 1}. ${s}`));
+      if (repro.automated) console.log(`  comando de confirmação:\n    ${repro.automated}`);
+    }
+    console.log(`\n${itens.length} finding(s) com passos de reprodução.`);
+  }
 } else {
   console.log('uso: blindar-report.mjs <comando>');
   console.log('  init                      cria blindar/RELATORIO.md se não existir');
   console.log('  status                    estado das fases, o que precisa voltar, próxima');
   console.log('  verificar --fase N        confere a evidência da fase sem alterar nada');
+  console.log('  reproduzir                lista cada finding com passos de reprodução');
   console.log('  set --fase N --estado ok|pendencias|bloqueada|pulada --resumo "..."');
   console.log('      [--pendencia "..."] [--achado "..."] [--forcar]');
   console.log('');
