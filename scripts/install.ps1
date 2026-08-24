@@ -10,7 +10,7 @@
 
 [CmdletBinding()]
 param(
-    [string]$Repo = $(if ($env:BLINDAR_REPO) { $env:BLINDAR_REPO } else { "pretinhuu1-boop/blindar" }),
+    [string]$Repo = $(if ($env:BLINDAR_REPO) { $env:BLINDAR_REPO } else { "maykonlong/blindar" }),
     [string]$Branch = $(if ($env:BLINDAR_BRANCH) { $env:BLINDAR_BRANCH } else { "main" })
 )
 

@@ -29,7 +29,7 @@ done
   exit 0
 }
 
-REPO="${BLINDAR_REPO:-pretinhuu1-boop/blindar}"
+REPO="${BLINDAR_REPO:-maykonlong/blindar}"
 BRANCH="${BLINDAR_BRANCH:-main}"
 
 SKILL_ROOT="$(cd "$(dirname "$0")/.." && pwd)"

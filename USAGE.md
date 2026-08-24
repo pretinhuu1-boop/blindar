@@ -23,22 +23,24 @@ Documento de referência: do zero ao projeto blindado.
 
 ## 1. Instalação
 
+> **Principal:** [`github.com/maykonlong/blindar`](https://github.com/maykonlong/blindar). **Backup:** `pretinhuu1-boop/blindar` (use `BLINDAR_REPO=pretinhuu1-boop/blindar` só se o principal cair).
+
 ### Windows (PowerShell)
 
 ```powershell
-git clone https://github.com/pretinhuu1-boop/blindar.git "$env:USERPROFILE\.claude\skills\blindar"
+git clone https://github.com/maykonlong/blindar.git "$env:USERPROFILE\.claude\skills\blindar"
 ```
 
 ou via script:
 
 ```powershell
-iwr -useb https://raw.githubusercontent.com/pretinhuu1-boop/blindar/main/scripts/install.ps1 | iex
+iwr -useb https://raw.githubusercontent.com/maykonlong/blindar/main/scripts/install.ps1 | iex
 ```
 
 ### Linux / macOS
 
 ```bash
-git clone https://github.com/pretinhuu1-boop/blindar.git ~/.claude/skills/blindar
+git clone https://github.com/maykonlong/blindar.git ~/.claude/skills/blindar
 ```
 
 ### Verificar
@@ -384,7 +386,7 @@ TTL de 24h. Se versão nova existir, imprime aviso uma vez:
   blindar v0.5.0 disponivel
   Voce esta em v0.4.1
   Atualizar: git -C "C:\Users\user\.claude\skills\blindar" pull --ff-only
-  CHANGELOG: https://github.com/pretinhuu1-boop/blindar/blob/main/CHANGELOG.md
+  CHANGELOG: https://github.com/maykonlong/blindar/blob/main/CHANGELOG.md
 ```
 
 ### Forçar checagem
@@ -476,6 +478,21 @@ $env:USERPROFILE + "\.claude\skills\blindar"
 Get-ChildItem "$env:USERPROFILE\.claude\skills\blindar\agents\*.md" | Select-Object Name
 ```
 
+### Recursos de auditoria externa e prova de achado
+
+```bash
+# "Como reproduzir" de cada achado (passos + comando de confirmação por finding)
+node ~/.claude/skills/blindar/scripts/blindar-report.mjs reproduzir
+
+# Exposição de infra externa: portas perigosas (banco/cache/broker) + DNSBL
+node ~/.claude/skills/blindar/scripts/infra-scan.mjs --target seu-host.com
+
+# DAST em sessão autenticada (browser real, você loga) → traz o SARIF pro relatório
+bash ~/.claude/skills/blindar/scripts/sentinela-bridge.sh --check
+bash ~/.claude/skills/blindar/scripts/sentinela-bridge.sh --url https://sua-app --run
+bash ~/.claude/skills/blindar/scripts/sentinela-bridge.sh --ingest
+```
+
 ### Validar instalação
 
 ```powershell
@@ -506,7 +523,7 @@ Remove-Item "$env:USERPROFILE\.claude\skills\blindar\.last-check" -ErrorAction S
 
 ```
 1. INSTALAR
-   git clone https://github.com/pretinhuu1-boop/blindar.git \
+   git clone https://github.com/maykonlong/blindar.git \
        ~/.claude/skills/blindar
 
 2. NO PROJETO-ALVO
@@ -533,4 +550,4 @@ Remove-Item "$env:USERPROFILE\.claude\skills\blindar\.last-check" -ErrorAction S
 ---
 
 Dúvidas que não estão aqui? Abrir issue em
-[github.com/pretinhuu1-boop/blindar/issues](https://github.com/pretinhuu1-boop/blindar/issues).
+[github.com/maykonlong/blindar/issues](https://github.com/maykonlong/blindar/issues).

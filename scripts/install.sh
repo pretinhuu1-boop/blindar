@@ -4,14 +4,14 @@
 # Instala (ou atualiza) o skill blindar em ~/.claude/skills/blindar.
 #
 # Uso remoto:
-#   curl -sSL https://raw.githubusercontent.com/pretinhuu1-boop/blindar/main/scripts/install.sh | bash
+#   curl -sSL https://raw.githubusercontent.com/maykonlong/blindar/main/scripts/install.sh | bash
 #
 # Uso local (depois de clonar):
 #   ./install.sh
 
 set -eu
 
-REPO="${BLINDAR_REPO:-pretinhuu1-boop/blindar}"
+REPO="${BLINDAR_REPO:-maykonlong/blindar}"
 BRANCH="${BLINDAR_BRANCH:-main}"
 TARGET="$HOME/.claude/skills/blindar"
 
