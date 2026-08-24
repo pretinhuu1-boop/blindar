@@ -338,13 +338,14 @@
       "default_on_when": [],
       "skip_token": "attack-recon-only",
       "agents": [
-        "attack-recon"
+        "attack-recon",
+        "infra-exposure"
       ],
       "phases": [
         "09-attack-recon"
       ],
       "entrypoint": "scripts/attack-recon.sh",
-      "notes": "Modo PASSIVO puro (só GET/HEAD/OPTIONS, rate 1/3s, UA browser). Zero payload de ataque → não dispara WAF, seguro pra produção. Opt-in via roles:[attack-recon] ou --attack. Precisa da URL como arg."
+      "notes": "Recon externo, opt-in via roles:[attack-recon]/[infra-exposure] ou --attack, requer host alvo. attack-recon: PASSIVO puro (só GET/HEAD/OPTIONS, rate 1/3s, não dispara WAF). infra-exposure (scripts/infra-scan.mjs): TCP connect em portas perigosas (banco/cache/broker/remoto) + DNSBL — vê o que o HTTP não vê."
     },
     "18": {
       "name": "Smoke / Runtime Truth — prova que a app SOBE + checks de infra/runtime (homolog, nunca dev)",
