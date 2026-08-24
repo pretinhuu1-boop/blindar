@@ -46,8 +46,8 @@ log_info "bundles a varrer: ${DIRS[*]}"
 # Padrões de SEGREDO de provider — nenhum destes pode legitimamente estar num
 # arquivo que o browser baixa. Rótulo|regex.
 PATTERNS=(
-  "Stripe secret key (sk_live)|sk_live_[0-9A-Za-z]{16,}"
-  "Stripe secret key (sk_test)|sk_test_[0-9A-Za-z]{16,}"
+  "Stripe secret key (sk_live)|sk_live_[0-9A-Za-z]{12,}"
+  "Stripe secret key (sk_test)|sk_test_[0-9A-Za-z]{12,}"
   "Stripe restricted key (rk)|rk_(live|test)_[0-9A-Za-z]{16,}"
   "Mailgun private API key|key-[0-9a-f]{32}"
   "AWS access key id|AKIA[0-9A-Z]{16}"
