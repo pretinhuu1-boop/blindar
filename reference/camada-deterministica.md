@@ -18,8 +18,19 @@ bash ~/.claude/skills/blindar/scripts/install-deterministic-checks.sh
 ```
 
 Resultado no projeto-alvo:
-- `scripts/blindar/*.sh` — 8 checks executáveis (secrets, mock-killer,
-  config-ext, deps audit, prisma schema, payments, file-uploads, tenant-isolation)
+- `scripts/blindar/*.sh` — **117 checks executáveis** (103 shell puro + 14
+  `.api.sh`). O instalador copia `templates/checks/*.sh` inteiro, então a conta
+  cresce com o repositório em vez de ficar congelada aqui.
+
+  > Esta linha dizia "8 checks executáveis" até a v0.79 — número da v0.22, que
+  > ficou parado por 57 versões. Documentação que envelhece em silêncio produz
+  > exatamente o tipo de conclusão errada que este projeto tenta evitar: quem
+  > lesse a referência concluiria que o blindar mede 8 coisas.
+
+- **5 deles são DINÂMICOS** (v0.79): exercitam o sistema no ar em vez de ler o
+  repositório — `chaos-run`, `load-curve`, `redteam-origin`, `deploy-identity`,
+  `failure-ux`. Sem alvo eles saem `skipped` com motivo, e a dimensão fica
+  `NOT EXERCISED` no gate. Ver [`docs/dynamic-layer.md`](../docs/dynamic-layer.md).
 - `.github/workflows/blindar.yml` — CI obrigatório
 - `.husky/pre-commit + pre-push` — gates locais
 - `.blindar/results/*.json` — output auditável + agregado

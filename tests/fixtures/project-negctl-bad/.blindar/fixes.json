@@ -1,0 +1,3 @@
+{ "schema": "blindar/fixes@v1", "fixes": [
+  { "finding_id": "check-security:0", "summary": "escapa entrada antes da query" },
+  { "finding_id": "check-cors-csrf:1", "summary": "restringe allow_origins" } ] }

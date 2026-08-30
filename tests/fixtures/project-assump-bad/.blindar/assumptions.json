@@ -1,0 +1,7 @@
+{ "schema": "blindar/assumptions@v1", "assumptions": [
+  { "finding_id": "check-security:0", "premise": "a query concatena entrada do usuario",
+    "measured_how": "grep no repo + execucao com aspas", "result": "confirmed",
+    "at": "2026-08-30T09:00:00Z" },
+  { "finding_id": "check-cors-csrf:1", "premise": "allow_origins esta em * em producao",
+    "measured_how": "curl -H 'Origin: https://x' contra homolog", "result": "refuted",
+    "at": "2026-08-30T09:10:00Z" } ] }

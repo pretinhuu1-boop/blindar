@@ -1,0 +1,7 @@
+{ "schema": "blindar/assumptions@v1", "assumptions": [
+  { "finding_id": "check-security:0", "premise": "a query concatena entrada do usuario",
+    "measured_how": "execucao com aspas simples contra homolog: erro de sintaxe SQL no log",
+    "result": "confirmed", "at": "2026-08-30T09:00:00Z" },
+  { "finding_id": "check-cors-csrf:1", "premise": "allow_origins esta em * em producao",
+    "measured_how": "curl -H 'Origin: https://evil.test' contra producao: header ecoado",
+    "result": "confirmed", "at": "2026-08-30T09:10:00Z" } ] }

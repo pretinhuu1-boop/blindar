@@ -3,6 +3,334 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.79.0] — 2026-08-30
+
+### O verde que provava a estrutura, não o comportamento
+
+A v0.78 fechou com 115 templates de check: 101 shell puro, 14 `.api.sh`. Os 101
+são determinísticos de verdade — exit code próprio, result JSON, sem depender do
+LLM lembrar de nada.
+
+Só que **97 deles leem o repositório**. E ler o repositório prova uma coisa
+específica: que a estrutura existe. Há código de circuit breaker. Há `try/catch`
+no handler. Há header de segurança configurado. Há `TRUST_PROXY` restrito.
+
+Nenhuma dessas leituras prova que o breaker segura, que o `catch` traduz o erro
+para algo utilizável, que o header chega ao browser, ou que o `TRUST_PROXY`
+resiste a um `X-Forwarded-For` forjado vindo de outra origem de rede.
+
+O gate lia `passed` e escrevia `PASS`. Quem recebe o relatório lê `PASS` como
+"verificado". A distância entre as duas coisas era invisível — e distância
+invisível é a definição operacional do problema que este projeto inteiro existe
+para recusar.
+
+Antes desta versão: `docker pause` não aparecia em nenhum script. Nem `tc
+netem`. Nem `X-Forwarded-For`. `agents/chaos-engineering.md` prescreve GameDay
+desde a v0.2x e nunca derrubou nada. Quatro dos 101 checks chegavam a mandar uma
+requisição HTTP.
+
+### `evidence_kind` e `exercised`
+
+Todo result passa a carregar:
+
+```json
+{ "evidence_kind": "static" | "dynamic",
+  "exercised": true | false,
+  "not_exercised_reason": "sem alvo: passe --url, ..." }
+```
+
+E o `emit_result` ganhou uma regra que não depende de ninguém lembrar: **check
+dinâmico com `exercised: false` nunca sai `passed`**. Vira `skipped`, com o
+motivo gravado.
+
+É a mesma disciplina do `require_tool` — sem ferramenta não há veredito —
+aplicada à pré-condição de runtime em vez de à de ferramenta. "Não medi" não
+pode ser gravado com o mesmo status de "medi e estava bom". Como a regra vive no
+ponto por onde todo check passa, ela vale para os cinco novos e para qualquer
+outro que venha depois.
+
+### `NOT EXERCISED` — o quarto estado do gate
+
+Três dimensões respondem perguntas que nenhuma leitura de repositório responde:
+`RUNTIME`, `RESILIENCE` e `DEPLOYMENT`. Nelas, estático passando agora produz:
+
+```
+RESILIENCE   NOT EXERCISED   2 check(s) estático(s) sem finding, e nenhum
+                             check dinâmico rodou — ninguém tocou o sistema
+                             no ar nesta dimensão
+```
+
+Em ordem de informação: `BLOCKED` (mediram e acharam crítico), `NOT VERIFIED`
+(nenhum check executou), `NOT EXERCISED` (o estático passou, o dinâmico não
+mediu), `PASS` (mediram, inclusive contra o sistema no ar).
+
+Conta como warning, dispensável por aceite assinado — nunca por default.
+Ajustável por `BLINDAR_DYNAMIC_REQUIRED`, para que uma lib sem runtime possa
+reduzir a lista de forma **registrada**, em vez de por omissão.
+
+### Cinco checks que exercitam o sistema
+
+| Check | Exercita | Reprova quando |
+|---|---|---|
+| `check-chaos-run` | congela a dependência (`docker pause`) | trava > 5s, blast radius total, não recupera |
+| `check-load-curve` | rampa de concorrência | joelho de saturação abaixo do alvo |
+| `check-redteam-origin` | container atacante na rede do alvo | rota interna alcançável, XFF forjado concede acesso |
+| `check-deploy-identity` | identidade de build no health | diverge do commit auditado, ou não declara |
+| `check-failure-ux` | provoca falhas e lê a resposta | 500 onde cabia 404, rastro vazado, 401 por falha de infra |
+
+`docker pause` e não `docker stop`: `stop` fecha o socket e devolve
+`ECONNREFUSED` na hora, que praticamente todo cliente trata. `pause` congela o
+processo com o socket **aberto** — ninguém recebe RST, e quem espera resposta
+espera para sempre. É o modo de falha que mais dói e o menos coberto por teste.
+
+`check-load-curve` responde uma pergunta diferente do `load-test.sh`. Aquele
+pergunta "passou neste ponto?"; este pergunta "onde começa a degradar?". Um
+sistema que passa folgado em 20 concorrentes e satura em 60 recebe verde do gate
+de um ponto, e o incidente acontece no primeiro pico de 80.
+
+`check-deploy-identity` fecha a lição mais cara do histórico deste projeto:
+dezessete checks passaram contra a imagem errada. Nenhum estava errado — todos
+mediram corretamente o repositório. O defeito era a premissa silenciosa de que o
+repositório e o artefato no ar são a mesma coisa. Artefato que não declara
+identidade agora é `high`: verde sobre artefato anônimo tem o mesmo valor
+probatório de nenhum verde.
+
+### O check de resiliência que causou o incidente que deveria medir
+
+Na primeira execução real do `check-failure-ux` contra um alvo de teste em
+`localhost:8799`, a seleção de dependência por padrão de nome
+(`postgres|mysql|redis|...`) casou com um Redis de **outro projeto** da máquina
+e o congelou.
+
+O `trap` funcionou e nada ficou pausado. Mas o defeito não era o vazamento — era
+a premissa de que "container com nome de banco" e "dependência do alvo" são a
+mesma coisa.
+
+`dyn_pick_dependency` agora só devolve container amarrado ao alvo: mesmo projeto
+compose de quem publica a porta, ou o que o operador passou em `--service`. Sem
+esse vínculo, o check sai `NOT EXERCISED` em vez de adivinhar. Ficar sem
+congelar nada é um resultado ruim; congelar o container errado é pior.
+
+### Três checks para as disciplinas que não eram agente nenhum
+
+| Check | Gateia | Por que não bastava o que existia |
+|---|---|---|
+| `check-negative-control` | toda correção com controle negativo executado | mutation score é uma média: 85% convive com o teste da correção de hoje não proteger nada |
+| `check-assumption-probe` | premissa do achado medida antes de virar obra | `product-critic` questiona o produto, `runtime-adversarial` questiona o método — ninguém questionava o achado |
+| `check-report-integrity` | laudo versionado que se corrige | `decision-log` e `execution-report` registram; nenhum se auto-corrige |
+
+O `assumption-probe` nasceu de dois achados escritos, plausíveis e errados na
+mesma sessão: "a sessão vive em memória, não escala" (era DB-backed) e
+"`TRUST_PROXY /16` é um furo" (já mitigado em produção). Corrigi-los teria
+produzido código que precisa ser mantido para sempre, resolvendo um problema que
+não existia. O custo de pular essa etapa não é o bug que ficou — é o trabalho
+inteiro que não precisava existir. Virou a fase
+[`04b-assumption-probe`](pipeline/04b-assumption-probe.md).
+
+### O teste que "provou" que os checks não mediam nada
+
+A primeira versão de `tests/dynamic-evidence.test.mjs` subia o alvo com
+`createServer` no mesmo processo do teste e rodava os checks com `spawnSync`.
+Cinco asserções falharam: todo probe voltava `000`.
+
+`spawnSync` bloqueia o event loop do Node. O servidor ficava sem aceitar conexão
+justamente durante a medição. Os checks estavam certos; o teste é que media o
+próprio bloqueio.
+
+O alvo virou processo separado (`tests/fixtures/dyn-server.mjs`, modos `bad` e
+`good`), e o teste passou a provar contra execução real que o check dispara no
+defeituoso e cala no correto — o par de fixture, na forma que a camada dinâmica
+admite.
+
+Fica registrado como o custo de testar código que mede tempo e rede: o
+instrumento entra na medição, e a primeira falha costuma ser dele.
+
+### O mapeamento que falhou em silêncio
+
+Ao ligar os checks novos ao `gate_of()`, três das seis substituições não
+casaram — e o script que as aplicava não tinha asserção. O resultado seria
+`check-chaos-run`, `check-load-curve`, `check-failure-ux`,
+`check-negative-control` e `check-deploy-identity` alimentando gate nenhum.
+
+Quem acusou foi o próprio blindar: o bloco `UNMAPPED` do
+`check-release-gates.sh` listou os órfãos na primeira execução. É a feature
+existindo exatamente para o caso que aconteceu — check fora de gate seria
+cobertura invisível, e cobertura invisível conta como aprovada.
+
+### O laboratorio que provou os dois ultimos defeitos
+
+Os cinco dinamicos foram exercitados contra alvo vivo antes de fechar a versao.
+Tres deles (`failure-ux`, `deploy-identity`, `load-curve`) contra um servidor
+Node; o `chaos-run` exigia um projeto compose de verdade — e foi montado um:
+app Node + Redis, com o health dependendo do Redis por socket **sem timeout de
+leitura**, que e o defeito que o check deve achar.
+
+Ele achou: com o Redis congelado, `/healthz` pendurou **30s** (teto do
+experimento), enquanto a rota independente seguiu respondendo 200 e a
+recuperacao foi imediata. Adicionado `socket.setTimeout(1500)`, o mesmo
+experimento passou: **503 em 1734ms**. O par vulneravel/limpo da camada
+dinamica, provado contra sistema no ar.
+
+E o laboratorio cobrou dois defeitos do proprio harness:
+
+**O motivo do `not_exercised` morria em subshell.** `dyn_pick_dependency`
+ecoava o nome do container, e quem chamava fazia `DEP=$(dyn_pick_dependency ...)`.
+Command substitution roda em subshell: os `not_exercised()` de dentro setavam a
+variavel num processo que morria em seguida. O result reportava o texto
+generico do `declare_dynamic` — "nao chegou a exercitar nada" — em vez de dizer
+por que. O campo criado nesta versao justamente para acabar com o silencio
+estava produzindo silencio. Retorno passou a ser por variavel, no mesmo shell.
+
+**A dependencia era procurada so pelo NOME do container.** O compose do
+laboratorio tem um servico chamado `db` rodando `redis:7-alpine` — nome que nao
+contem "redis". O padrao nao casava, e o experimento saia sem alvo pelo caso
+mais comum que existe em compose real. Agora casa contra nome **e imagem**, e
+quando nao acha lista os containers que viu, para o motivo ser diagnosticavel.
+
+### O CI estava vermelho havia dias, pelo mesmo tipo de bug
+
+Ao abrir o PR, o job `check-selftest` reprovou em 14 segundos no Linux:
+
+    scripts/check-selftest.sh: line 185: LAST_MISSING_TOOL: unbound variable
+
+Nao era regressao desta versao. O `main` reprova com a mesma mensagem (linha
+182, deslocada pelas linhas que esta versao inseriu) em **todas as execucoes
+desde 2026-08-24**. O gate que "bloqueia merge" estava vermelho o tempo todo.
+
+A causa e a mesma que esta versao ja tinha encontrado duas vezes no proprio
+harness: `run_status` roda em `st=$(run_status ...)`, e command substitution e
+subshell. `LAST_MISSING_TOOL`, setada la dentro, morre com ele — e sob `set -u`
+ler no pai nao devolve vazio: aborta o script.
+
+O caminho so e percorrido quando **alguma ferramenta externa falta**. Na maquina
+de quem tem tudo instalado, nunca. Por isso viveu dias sem ninguem ver, e por
+isso nao reproduz aqui: retirar o gitleaks do PATH nao basta, porque o
+check-secrets tem fallback. O mecanismo foi provado isolado, em cinco linhas de
+bash, antes e depois da correcao.
+
+Canal agora e arquivo, que atravessa subshell. Tres bugs de subshell numa
+versao so — vale como padrao a procurar, nao como coincidencia.
+
+### O segundo bug, escondido atras do primeiro
+
+Corrigido o subshell, o CI foi mais longe — 14s para 33s — e reprovou de novo:
+
+    Pares OK: 84   Regressoes: 3
+    • 3 check(s) gate-avel(is) sem par de fixture
+
+Os tres eram `check-secrets`, `check-gitleaks` e `check-semgrep`: no ubuntu do
+CI nao ha gitleaks nem semgrep, os checks saem `skipped`, e o laco do `SEM_PAR`
+so pergunta "esta em VERIFIED?". Quem nao pode ser avaliado nunca entra la.
+
+O script imprime, tres linhas antes, sobre esses mesmos checks: *"Nao entram
+como aprovados nem como regressao."* E entao os contava como regressao — com
+uma mensagem mandando escrever um par que **ja existe**.
+
+`NAO VERIFICADO` deixa de virar regressao, e passa a ter linha propria na
+cobertura. As duas metades da regra agora valem: nao conta como aprovado, nao
+conta como reprovado.
+
+### O insumo de fixture que nunca chegava ao clone
+
+Descoberto ao preparar o envio: o `.gitignore` ignorava
+`tests/fixtures/**/.blindar/` inteiro. Regra correta para a SAIDA que os checks
+escrevem ali — e desastrosa para os fixtures cujo INSUMO mora no mesmo lugar.
+
+O par do `check-wave-guardian` estava quebrado no repositorio **desde que foi
+escrito**: `run-report.json` nunca chegou a ser commitado. Na maquina de quem
+escreveu, o par passava. Num clone limpo, o fixture "limpo" reprovava por falta
+de pre-requisito — e quem lesse o resultado veria "falso-positivo no fixture
+limpo" e iria procurar o bug no check, que estava certo.
+
+Os tres pares novos desta versao (`negative-control`, `assumption-probe`,
+`report-integrity`) guardam o insumo no mesmo lugar e teriam nascido com o
+mesmo defeito: verdes aqui, quebrados em qualquer clone.
+
+O `.gitignore` passa a reincluir o diretorio, excluir o conteudo e reincluir
+arquivo por arquivo — saida nova continua fora por padrao, insumo entra por
+decisao. E `tests/fixtures-versionados.test.mjs` contrata isso nos dois
+sentidos: nenhum insumo ignorado, e `results/` seguindo ignorado. Removendo a
+correcao de proposito, o teste nomeia os 13 arquivos que se perderiam.
+
+E a lição registrada, que e a mesma de sempre nesta base: o par de fixture nao
+prova nada se o fixture nao chega inteiro em quem for rodar. "Passa aqui" e uma
+afirmacao sobre esta maquina.
+
+### `exercised` e monotonico: uma vez tocado, tocado
+
+Terceiro defeito cobrado pelo proprio teste, depois das correcoes do
+laboratorio: `not_exercised()` zerava um `mark_exercised()` anterior.
+
+O `check-failure-ux` exercita o alvo em tres probes e so depois tenta congelar
+a dependencia. Sem essa ultima pre-condicao, ele chamava `not_exercised` — e o
+result saia com `exercised: false` **carregando dois findings reais medidos
+contra alvo vivo** (vazamento de rastro e 500 onde cabia 404). O gate leria
+"nao mediu" sobre uma medicao que produziu achado.
+
+`not_exercised` virou no-op quando o exercicio ja aconteceu. A lacuna parcial
+continua reportada — como finding proprio, que e onde ela pertence.
+
+Quem pegou foi `tests/dynamic-evidence.test.mjs`, na re-execucao depois das
+mudancas. Controle negativo funcionando no sentido em que ele importa: o teste
+falhou quando o comportamento regrediu.
+
+### Duas coisas que a versao encontrou de quebrado
+
+**`reference/camada-deterministica.md` dizia "8 checks executaveis".** Numero da
+v0.22, parado por 57 versoes. Quem lesse a referencia concluiria que o blindar
+mede oito coisas — e foi exatamente essa a conclusao de uma analise externa
+recente. Documentacao que envelhece em silencio produz o mesmo tipo de erro que
+o resto do projeto tenta evitar: uma afirmacao antiga sobrevivendo a medicao que
+a contradiz. Agora diz 117, com nota sobre por que estava errada.
+
+**O par de fixture do `wave-guardian` estava sem o insumo.** O fixture "limpo"
+(`project-wave-good`) precisa trazer um `.blindar/run-report.json` — o check le
+esse arquivo. Ele nao estava la, e o par reprovava por falta de pre-requisito,
+nao por falso-positivo. Restaurado, com uma nota dentro do proprio `.blindar`
+explicando que os arquivos que o check ESCREVE ali (`results/`,
+`wave-N-guardian.md`) sao produto da rodada e nao fazem parte do fixture.
+
+### Números
+
+- **123 → 131 agentes**, todos com frontmatter e ativados por módulo
+- **115 → 123 templates de check**
+- **86 → 89 pares de fixture** verificados
+- **4 → 5 estados** de gate
+- **27 asserções novas** em `tests/dynamic-evidence.test.mjs`, contra alvo vivo
+
+### Arquivos novos
+
+```
+templates/checks/_dyn.sh                     harness dinamico compartilhado
+templates/checks/check-chaos-run.sh
+templates/checks/check-load-curve.sh
+templates/checks/check-redteam-origin.sh
+templates/checks/check-deploy-identity.sh
+templates/checks/check-failure-ux.sh
+templates/checks/check-negative-control.sh
+templates/checks/check-assumption-probe.sh
+templates/checks/check-report-integrity.sh
+agents/{chaos-run,load-curve,redteam-origin,deploy-identity,failure-ux}.md
+agents/{negative-control,assumption-probe,report-integrity}.md
+pipeline/04b-assumption-probe.md
+docs/dynamic-layer.md
+tests/dynamic-evidence.test.mjs
+tests/fixtures/dyn-server.mjs
+tests/fixtures/project-{negctl,assump,report}-{bad,good}/
+```
+
+### Como usar
+
+```bash
+export BLINDAR_TARGET_URL=http://localhost:3000   # ou .blindar/target.url
+bash scripts/blindar/run-all.sh
+bash scripts/blindar/check-release-gates.sh
+```
+
+Sem alvo, os cinco dinâmicos saem `skipped` com o motivo e as três dimensões
+ficam `NOT EXERCISED`. Isso é intencional: a lacuna aparece no gate em vez de
+sumir.
+
 ## [0.78.0] — 2026-08-17
 
 ### Python virou cidadão de primeira classe

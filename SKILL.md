@@ -481,6 +481,10 @@ Três regras que decorrem disso:
 
 - Gate sem check executado é `NOT VERIFIED`, **não** `PASS`. Conta como warning
   e só é dispensado por aceite assinado.
+- Gate cujo estático passou mas cujo sistema ninguém exercitou é `NOT EXERCISED`
+  (v0.79). Vale para `RUNTIME`, `RESILIENCE` e `DEPLOYMENT`: "o código do breaker
+  existe" e "o breaker segura" são afirmações diferentes, e só a segunda é
+  aprovação. Ver [`docs/dynamic-layer.md`](docs/dynamic-layer.md).
 - `BACKUP_RECOVERY` exige evidência de **restore**, não de backup.
   `DEPLOYMENT` exige **rollback**.
 - Zero checks com resultado ⇒ `NO-GO`. Sem medição não há aprovação.

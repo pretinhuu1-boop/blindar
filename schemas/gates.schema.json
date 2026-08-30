@@ -4,7 +4,11 @@
   "title": "blindar release gates",
   "description": "Veredito de release em 11 dimensões independentes, gerado por templates/checks/check-release-gates.sh em .blindar/gates.json. Substitui a decisão puramente por severidade (0 crit + <=2 high), que aprovava projeto com SQLite em produção, sem backup restaurável e sem rollback desde que nenhum check achasse crit. v0.53.0+.",
   "type": "object",
-  "required": ["schema", "verdict", "gates"],
+  "required": [
+    "schema",
+    "verdict",
+    "gates"
+  ],
   "properties": {
     "schema": {
       "const": "blindar/gates@v1"
@@ -15,8 +19,12 @@
     },
     "verdict": {
       "type": "string",
-      "enum": ["GO", "CONDITIONAL GO", "NO-GO"],
-      "description": "GO = nenhum gate BLOCKED nem warning. CONDITIONAL GO = nenhum BLOCKED, >=1 warning, cada um exigindo aceite assinado em .accept-risk.md. NO-GO = >=1 gate BLOCKED, OU nenhum check produziu resultado (sem medição não há aprovação)."
+      "enum": [
+        "GO",
+        "CONDITIONAL GO",
+        "NO-GO"
+      ],
+      "description": "GO = nenhum gate BLOCKED nem warning. CONDITIONAL GO = nenhum BLOCKED, >=1 warning (inclui NOT VERIFIED e NOT EXERCISED), cada um exigindo aceite assinado em .accept-risk.md. NO-GO = >=1 gate BLOCKED, OU nenhum check produziu resultado (sem medição não há aprovação)."
     },
     "blocked_gates": {
       "type": "integer",
@@ -30,20 +38,37 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["gate", "status"],
+        "required": [
+          "gate",
+          "status"
+        ],
         "properties": {
           "gate": {
             "type": "string",
             "enum": [
-              "SECURITY", "ARCHITECTURE", "DATABASE", "RUNTIME", "RESILIENCE",
-              "OBSERVABILITY", "PRIVACY", "QUALITY", "DEPLOYMENT",
-              "BACKUP_RECOVERY", "DOCUMENTATION"
+              "SECURITY",
+              "ARCHITECTURE",
+              "DATABASE",
+              "RUNTIME",
+              "RESILIENCE",
+              "OBSERVABILITY",
+              "PRIVACY",
+              "QUALITY",
+              "DEPLOYMENT",
+              "BACKUP_RECOVERY",
+              "DOCUMENTATION"
             ]
           },
           "status": {
             "type": "string",
-            "enum": ["PASS", "PASS WITH WARNINGS", "NOT VERIFIED", "BLOCKED"],
-            "description": "NOT VERIFIED é distinto de PASS: nenhum check da dimensão executou. 'Não rodou' e 'não se aplica' são estados diferentes e só o operador distingue — por isso NOT VERIFIED conta como warning e é dispensável por aceite assinado, nunca por default."
+            "enum": [
+              "PASS",
+              "PASS WITH WARNINGS",
+              "NOT VERIFIED",
+              "NOT EXERCISED",
+              "BLOCKED"
+            ],
+            "description": "NOT VERIFIED e distinto de PASS: nenhum check da dimensao executou. NOT EXERCISED (v0.79.0+) e um terceiro estado, entre os dois: os checks ESTATICOS da dimensao passaram, mas nenhum check dinamico chegou a exercitar o sistema no ar. Aplica-se as dimensoes que so fecham com medicao de runtime (RUNTIME, RESILIENCE, DEPLOYMENT): la, 'o codigo do breaker existe' e 'o breaker segura' sao afirmacoes diferentes, e so a segunda e aprovacao. Os tres estados contam como warning e sao dispensaveis por aceite assinado, nunca por default."
           },
           "checks": {
             "type": "integer",
