@@ -1,0 +1,13 @@
+{
+  "schema": "blindar/run-report@v1",
+  "ran_at": "2026-08-16T21:36:00Z",
+  "wave": 0,
+  "total_agents": 10,
+  "passed": 10,
+  "failed": 0,
+  "skipped": 0,
+  "deferred": 0,
+  "errored": 0,
+  "coverage_pct": 100,
+  "results": []
+}

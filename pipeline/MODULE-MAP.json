@@ -217,7 +217,8 @@
       "agents": [
         "functional-e2e",
         "testing-strategy",
-        "visual-regression"
+        "visual-regression",
+        "negative-control"
       ],
       "phases": [
         "04-rounds-loop",
@@ -257,7 +258,9 @@
         "chaos-engineering",
         "event-driven",
         "queue-management",
-        "fallback-resilience"
+        "fallback-resilience",
+        "chaos-run",
+        "load-curve"
       ],
       "phases": [
         "04-rounds-loop"
@@ -288,7 +291,8 @@
         "deployment-readiness",
         "chief-architect",
         "git-collaboration",
-        "skill-builder"
+        "skill-builder",
+        "report-integrity"
       ],
       "phases": [
         "03-bootstrap-sec-html",
@@ -307,7 +311,8 @@
         "wave-guardian",
         "proactive-analysis",
         "runtime-adversarial",
-        "race-fuzzing"
+        "race-fuzzing",
+        "assumption-probe"
       ],
       "phases": [
         "05-adversarial-review",
@@ -362,7 +367,9 @@
         "notnull-no-default",
         "ratelimit-response",
         "infra-windows",
-        "infra-runtime"
+        "infra-runtime",
+        "deploy-identity",
+        "failure-ux"
       ],
       "phases": [
         "04-rounds-loop",
@@ -377,7 +384,8 @@
       "default_on_when": [],
       "skip_token": "pentest-active-only",
       "agents": [
-        "pentest-active"
+        "pentest-active",
+        "redteam-origin"
       ],
       "phases": [
         "05-adversarial-review"

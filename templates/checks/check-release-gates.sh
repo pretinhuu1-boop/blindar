@@ -52,7 +52,7 @@ gate_of() {
     check-osv-scanner|check-supply-chain|check-sbom-slsa|check-deps-audit|check-network-security|\
     check-tenant-isolation*|check-file-uploads|check-api-surface-isolation|check-mcp-security|\
     check-prompt-injection-defense|check-ai-llm-safety|check-llm-system-prompt-leak|\
-    check-vector-db-security|check-fine-tune-data-leak|check-pentest*|check-defense-theater|check-invisible-unicode)
+    check-vector-db-security|check-fine-tune-data-leak|check-pentest*|check-defense-theater|check-invisible-unicode|    check-redteam-origin)
       echo "SECURITY" ;;
     check-api-design|check-architect|check-solution-architect|check-config-externalization|\
     check-feature-flags|check-api-gateway)
@@ -62,11 +62,11 @@ gate_of() {
     check-destructive-migration)
       echo "DATABASE" ;;
     check-mock-killer|check-functional-e2e|check-entrypoint-cmd|check-homolog-only|\
-    check-infra-windows|check-api-frontend-coverage|check-user-journey-simulator)
+    check-infra-windows|check-api-frontend-coverage|check-user-journey-simulator|check-failure-ux|check-negative-control)
       echo "RUNTIME" ;;
     check-queue-management|check-fallback-resilience|check-process-resilience|check-worker-jobs|\
     check-scheduled-jobs|check-realtime|check-ratelimit-response|check-termination|\
-    check-load-test|check-chaos-engineering|check-multi-region)
+    check-load-test|check-chaos-engineering|check-multi-region|check-chaos-run|check-load-curve)
       echo "RESILIENCE" ;;
     check-observability|check-log-ops|check-cost-observability)
       echo "OBSERVABILITY" ;;
@@ -77,17 +77,29 @@ gate_of() {
     check-session-timeout-ux|check-lighthouse|check-bundle-size|check-govtech-acessibilidade)
       echo "QUALITY" ;;
     check-environment-parity|check-deps-sync|check-cdn-strategy|check-patch-management|\
-    check-vps-readiness)
+    check-vps-readiness|check-deploy-identity)
       echo "DEPLOYMENT" ;;
     check-backup-recovery)
       echo "BACKUP_RECOVERY" ;;
-    check-documentation*|check-runbook*|check-decision-log)
+    check-documentation*|check-runbook*|check-decision-log|    check-report-integrity|check-assumption-probe)
       echo "DOCUMENTATION" ;;
     *) echo "UNMAPPED" ;;
   esac
 }
 
 GATES="SECURITY ARCHITECTURE DATABASE RUNTIME RESILIENCE OBSERVABILITY PRIVACY QUALITY DEPLOYMENT BACKUP_RECOVERY DOCUMENTATION"
+
+# ─── Dimensões que só fecham com o sistema EXERCITADO ───
+# Estas três respondem perguntas que nenhuma leitura de repositório responde:
+#   RUNTIME    — o que o código afirma acontece de fato quando roda?
+#   RESILIENCE — o que acontece quando uma dependência cai?
+#   DEPLOYMENT — o artefato no ar é o que foi auditado?
+#
+# Nelas, check estático passando prova que a ESTRUTURA existe. Até a v0.78 isso
+# virava PASS, e PASS era lido como "verificado". Agora, sem nenhum check
+# dinâmico que tenha de fato exercitado o sistema, a dimensão fica NOT EXERCISED:
+# um terceiro estado, entre "não rodou nada" e "medi e estava bom".
+DYNAMIC_REQUIRED="${BLINDAR_DYNAMIC_REQUIRED:-RUNTIME RESILIENCE DEPLOYMENT}"
 
 # ─── Coleta: uma linha por check ───
 # Formato intermediário: agent|status|crit|high|missing_tool. O mapeamento
@@ -111,7 +123,11 @@ if [ "$JSON_READER" = "node" ]; then
       const crit = f.filter(x => x && x.severity === "crit").length;
       const high = f.filter(x => x && x.severity === "high").length;
       const mt = (j.missing_tool === null || j.missing_tool === undefined) ? "0" : "1";
-      process.stdout.write([j.agent, j.status || "unknown", crit, high, mt].join("|") + "\n");
+      // v0.79: evidencia estatica x dinamica. Um check dinamico que nao
+      // exercitou nada nao pode alimentar um gate como se tivesse medido.
+      const dyn = j.evidence_kind === "dynamic" ? "1" : "0";
+      const exercised = j.exercised === true ? "1" : "0";
+      process.stdout.write([j.agent, j.status || "unknown", crit, high, mt, dyn, exercised].join("|") + "\n");
     }
   ' "$RESULTS_DIR" > "$RAW" 2>/dev/null || true
 else
@@ -125,14 +141,16 @@ else
     # missing_tool != null significa "não verificado", que é buraco de cobertura.
     # Ler isso como aprovação é o modo de falha que este arquivo existe pra evitar.
     mt=$(jq -r 'if .missing_tool == null then "0" else "1" end' "$f" 2>/dev/null || echo 0)
-    printf '%s|%s|%s|%s|%s\n' "$agent" "$status" "$crit" "$high" "$mt" >> "$RAW"
+    dyn=$(jq -r 'if .evidence_kind == "dynamic" then "1" else "0" end' "$f" 2>/dev/null || echo 0)
+    exercised=$(jq -r 'if .exercised == true then "1" else "0" end' "$f" 2>/dev/null || echo 0)
+    printf '%s|%s|%s|%s|%s|%s|%s\n' "$agent" "$status" "$crit" "$high" "$mt" "$dyn" "$exercised" >> "$RAW"
   done
 fi
 
 ROWS=$(mktemp)
-while IFS='|' read -r agent status crit high mt; do
+while IFS='|' read -r agent status crit high mt dyn exercised; do
   [ -z "${agent:-}" ] && continue
-  printf '%s|%s|%s|%s|%s|%s\n' "$(gate_of "$agent")" "$agent" "$status" "$crit" "$high" "$mt" >> "$ROWS"
+  printf '%s|%s|%s|%s|%s|%s|%s|%s\n' "$(gate_of "$agent")" "$agent" "$status" "$crit" "$high" "$mt" "${dyn:-0}" "${exercised:-0}" >> "$ROWS"
 done < "$RAW"
 rm -f "$RAW"
 
@@ -184,6 +202,27 @@ for g in $GATES; do
     fi
   fi
 
+  # ─── NOT EXERCISED: estrutura verificada, comportamento não ───
+  # Só se aplica quando o gate CHEGARIA a PASS. Gate já em BLOCKED ou com
+  # warning não melhora nem piora por causa disto — o que este estado existe
+  # para impedir é o verde limpo em cima de nenhuma medição dinâmica.
+  ndyn=$(awk -F'|' -v g="$g" '$1==g && $7=="1" && $8=="1"' "$ROWS" | wc -l | tr -d ' ')
+  ndyn_tentou=$(awk -F'|' -v g="$g" '$1==g && $7=="1"' "$ROWS" | wc -l | tr -d ' ')
+  case " $DYNAMIC_REQUIRED " in
+    *" $g "*)
+      if [ "$status" = "PASS" ] && [ "${ndyn:-0}" -eq 0 ]; then
+        status="NOT EXERCISED"
+        if [ "${ndyn_tentou:-0}" -gt 0 ]; then
+          evid="$n check(s) estático(s) sem finding, e ${ndyn_tentou} check(s) dinâmico(s) rodaram sem exercitar o sistema (sem alvo/docker/autorização) — estrutura verificada, comportamento não"
+        else
+          evid="$n check(s) estático(s) sem finding, e nenhum check dinâmico rodou — ninguém tocou o sistema no ar nesta dimensão"
+        fi
+      elif [ "$status" = "PASS" ]; then
+        evid="$evid, ${ndyn} exercitado(s) contra o sistema no ar"
+      fi
+      ;;
+  esac
+
   # Overrides: gates que exigem prova positiva
   if [ "$g" = "BACKUP_RECOVERY" ] && [ "$status" = "PASS" ] && ! has_restore_evidence; then
     status="PASS WITH WARNINGS"
@@ -213,7 +252,7 @@ for g in $GATES; do
 
   case "$status" in
     BLOCKED) BLOCKED_N=$((BLOCKED_N+1)) ;;
-    "PASS WITH WARNINGS"|"NOT VERIFIED") WARN_N=$((WARN_N+1)) ;;
+    "PASS WITH WARNINGS"|"NOT VERIFIED"|"NOT EXERCISED") WARN_N=$((WARN_N+1)) ;;
   esac
 
   printf "%-18s %-22s %s\n" "$g" "$status" "$evid"

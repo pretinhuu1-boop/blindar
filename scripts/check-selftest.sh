@@ -110,6 +110,9 @@ PAIRS=(
   "check-git-hygiene.sh         | project-githyg-bad      | project-githyg-good"
   "check-invisible-unicode.sh    | project-unicode-bad     | project-unicode-good"
   "check-seo-foundation.sh       | project-seofound-bad    | project-seofound-good"
+  "check-negative-control.sh     | project-negctl-bad      | project-negctl-good"
+  "check-assumption-probe.sh     | project-assump-bad      | project-assump-good"
+  "check-report-integrity.sh     | project-report-bad      | project-report-good"
   # blindar-learn:insert (mantenha — scripts/blindar-learn.sh insere novos pares acima desta linha)
 )
 
@@ -229,6 +232,18 @@ is_gateable() {
   base=$(basename "$f")
   case "$base" in *.api.sh) return 1 ;; esac              # 1
 
+  # ─── Check DINÂMICO: o insumo é um sistema no ar, não um diretório ───
+  # Par de fixture em disco não existe para ele: o "fixture vulnerável" é um
+  # processo respondendo errado. O contrato dele vive em
+  # tests/dynamic-evidence.test.mjs, que sobe o alvo nos dois modos e prova que
+  # o check dispara no defeituoso e cala no correto.
+  #
+  # A exclusão é pela PROPRIEDADE declarada (`declare_dynamic`), não pelo
+  # acidente de o arquivo conter a string "curl " — que é o que a regra 4
+  # abaixo pegaria. Um comentário reescrito devolveria o check ao denominador
+  # sem par, e o gate quebraria por causa de uma palavra num comentário.
+  grep -qE '^declare_dynamic' "$f" && return 1
+
   # ─── Par registrado É a resposta ───
   # As heurísticas abaixo servem para decidir sobre check SEM par: elas tentam
   # adivinhar se daria para contratar. Quando o par existe e passa, não há o que
@@ -276,6 +291,9 @@ motivo_exclusao() { # basename → motivo, ou vazio se é gate-ável
       echo "o veredito e do scanner: exige rede e base de CVE atualizada, e par de fixture aqui deixaria o gate lento e instavel" ;;
     check-mcp-security.sh)
       echo "lê config MCP em \$HOME — o veredito depende da máquina, não do projeto" ;;
+    check-chaos-run.sh|check-load-curve.sh|check-redteam-origin.sh|\
+    check-deploy-identity.sh|check-failure-ux.sh)
+      echo "check DINÂMICO: o insumo é um sistema no ar, não um diretório — o par vive em tests/dynamic-evidence.test.mjs, contra alvo vivo nos modos bad/good" ;;
     *) echo "" ;;
   esac
 }

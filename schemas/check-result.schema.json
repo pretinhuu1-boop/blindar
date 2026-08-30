@@ -31,14 +31,23 @@
     },
     "status": {
       "type": "string",
-      "enum": ["passed", "failed", "skipped", "deferred", "errored"]
+      "enum": [
+        "passed",
+        "failed",
+        "skipped",
+        "deferred",
+        "errored"
+      ]
     },
     "exit_code": {
       "type": "integer",
       "description": "Exit code retornado pelo script do check."
     },
     "missing_tool": {
-      "type": ["string", "null"],
+      "type": [
+        "string",
+        "null"
+      ],
       "description": "Ferramenta ausente que impediu o check de rodar (ex: 'jq'). Quando preenchido, status='skipped' significa AUSÊNCIA DE COBERTURA, não aprovação — quem consome o result precisa distinguir isso de um skip por não-aplicabilidade."
     },
     "duration_sec": {
@@ -53,18 +62,34 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["severity", "message"],
+        "required": [
+          "severity",
+          "message"
+        ],
         "properties": {
           "severity": {
             "type": "string",
-            "enum": ["crit", "high", "med", "low"]
+            "enum": [
+              "crit",
+              "high",
+              "med",
+              "low"
+            ]
           },
-          "message": { "type": "string" },
-          "file": { "type": "string" },
+          "message": {
+            "type": "string"
+          },
+          "file": {
+            "type": "string"
+          },
           "line": {
             "anyOf": [
-              { "type": "string" },
-              { "type": "integer" }
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
             ]
           }
         },
@@ -73,10 +98,37 @@
     },
     "kind": {
       "type": "string",
-      "enum": ["deterministic", "api-wrapped", "playbook-only"]
+      "enum": [
+        "deterministic",
+        "api-wrapped",
+        "playbook-only"
+      ]
     },
-    "module": { "type": "string" },
-    "message": { "type": "string" }
+    "module": {
+      "type": "string"
+    },
+    "message": {
+      "type": "string"
+    },
+    "evidence_kind": {
+      "type": "string",
+      "enum": [
+        "static",
+        "dynamic"
+      ],
+      "description": "static = o check leu o repositorio e prova que a ESTRUTURA existe. dynamic = o check exercitou o sistema no ar. Sao coisas diferentes e o gate as le de formas diferentes: estatico passando nunca fecha sozinho uma dimensao dinamica (RUNTIME/RESILIENCE/DEPLOYMENT). v0.79.0+."
+    },
+    "exercised": {
+      "type": "boolean",
+      "description": "So faz sentido com evidence_kind=dynamic. true = o check tocou o sistema vivo e mediu. false = nao tocou (sem alvo, sem docker, sem autorizacao). Check dinamico com exercised=false NUNCA sai 'passed': o _lib.sh rebaixa para 'skipped', porque 'nao medi' nao pode ser gravado com o mesmo status de 'medi e estava bom'."
+    },
+    "not_exercised_reason": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Por que o check dinamico nao exercitou o sistema. Obrigatoriamente preenchido quando exercised=false — 'nao exercitei' precisa dizer por que, senao vira o mesmo silencio que o campo existe para acabar."
+    }
   },
   "additionalProperties": true
 }

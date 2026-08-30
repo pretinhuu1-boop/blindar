@@ -68,6 +68,21 @@ FULL_CHECKS=(
   check-compliance-lgpd-br.sh         # ANPD + endpoints Art. 18 + DPO
   check-pii-encryption.sh             # DEK/KEK envelope + HMAC search + migration
   check-cost-observability.sh         # LLM usage + S3 lifecycle + budget
+
+  # ─── v0.79: disciplina de auditoria (estaticos, leem .blindar/) ───
+  check-negative-control.sh           # toda correcao com controle negativo executado
+  check-assumption-probe.sh           # premissa do achado medida antes de virar obra
+  check-report-integrity.sh           # laudo versionado que se corrige
+
+  # ─── v0.79: DINAMICOS — exercitam o sistema no ar ───
+  # Rodam sempre e, sem alvo, saem 'skipped' com o motivo. Isso e intencional:
+  # a dimensao dinamica aparece como NOT EXERCISED no gate em vez de sumir.
+  # Informe o alvo com BLINDAR_TARGET_URL=... ou .blindar/target.url
+  check-deploy-identity.sh            # imagem no ar == commit auditado
+  check-failure-ux.sh                 # o que o cliente recebe quando quebra
+  check-chaos-run.sh                  # congela dependencia e mede
+  check-load-curve.sh                 # rampa + joelho de saturacao
+  check-redteam-origin.sh             # origem externa (exige .accept-authorization)
 )
 
 FAST_CHECKS=(

@@ -54,7 +54,37 @@ que agrega `.blindar/results/*.json` e emite `.blindar/gates.json`
 | `PASS` | checks rodaram, nenhum finding | — |
 | `PASS WITH WARNINGS` | finding não-crit, ou check não verificado por ferramenta ausente | warning |
 | `NOT VERIFIED` | **nenhum check desta dimensão executou** | warning |
+| `NOT EXERCISED` | **o estático passou, mas ninguém tocou o sistema no ar** (v0.79.0+) | warning |
 | `BLOCKED` | ≥1 finding crit | bloqueio |
+
+### `NOT EXERCISED` — o terceiro estado
+
+Três dimensões respondem perguntas que **nenhuma leitura de repositório
+responde**: `RUNTIME`, `RESILIENCE` e `DEPLOYMENT`.
+
+Nelas, um check estático passando prova que a estrutura existe — há código de
+breaker, há `try/catch`, há header configurado. Não prova que o breaker segura,
+que o `catch` traduz o erro, que o header chega ao browser.
+
+Até a v0.78 isso virava `PASS`, e `PASS` é lido por quem recebe o relatório como
+"verificado". Agora, sem nenhum check dinâmico que tenha de fato exercitado o
+sistema, a dimensão fica `NOT EXERCISED`:
+
+```
+RESILIENCE   NOT EXERCISED   2 check(s) estático(s) sem finding, e nenhum
+                             check dinâmico rodou — ninguém tocou o sistema
+                             no ar nesta dimensão
+```
+
+Quem alimenta essas dimensões com evidência exercitada são os checks dinâmicos
+da v0.79 (`chaos-run`, `load-curve`, `redteam-origin`, `deploy-identity`,
+`failure-ux`), que declaram `evidence_kind: dynamic` e só contam quando
+`exercised: true`. Detalhe em [`docs/dynamic-layer.md`](../docs/dynamic-layer.md).
+
+A lista de dimensões que exigem prova dinâmica é ajustável por
+`BLINDAR_DYNAMIC_REQUIRED` — uma biblioteca sem runtime tem motivo legítimo
+para reduzi-la. A diferença é que a escolha fica registrada como escolha, em vez
+de acontecer por omissão.
 
 `NOT VERIFIED` é a distinção que mais importa. "Não rodou" e "não se aplica"
 são estados diferentes, e só o operador consegue separá-los: um CLI
@@ -111,7 +141,9 @@ finding, engine consistente entre infra e runtime", nunca "banco ok".
 
 ## Anti-padrões
 
-- ❌ Declarar GO com gates `NOT VERIFIED` sem aceite.
+- ❌ Declarar GO com gates `NOT VERIFIED` ou `NOT EXERCISED` sem aceite.
+- ❌ Ler `NOT EXERCISED` como "quase PASS". É mais perto de `NOT VERIFIED`: a
+  pergunta da dimensão continua sem resposta.
 - ❌ Compensar um gate BLOCKED com outros dez em PASS. Não são somáveis.
 - ❌ Aceitar warning em `.accept-risk.md` sem nome de quem aceitou e por quê.
 - ❌ Marcar `BACKUP_RECOVERY: PASS` porque existe script de backup.

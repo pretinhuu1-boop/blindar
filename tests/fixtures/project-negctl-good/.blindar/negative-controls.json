@@ -1,0 +1,7 @@
+{ "schema": "blindar/negative-controls@v1", "controls": [
+  { "finding_id": "check-security:0", "how_broken": "removi o escape em src/db/query.ts",
+    "test": "tests/query.spec.ts::rejeita aspas", "observed": "failed",
+    "at": "2026-08-30T10:00:00Z" },
+  { "finding_id": "check-cors-csrf:1", "how_broken": "voltei allow_origins para ['*']",
+    "test": "tests/cors.spec.ts::recusa origem desconhecida", "observed": "failed",
+    "at": "2026-08-30T10:05:00Z" } ] }
