@@ -116,6 +116,20 @@ PAIRS=(
   # blindar-learn:insert (mantenha — scripts/blindar-learn.sh insere novos pares acima desta linha)
 )
 
+# ─── Canal entre run_status e quem chama ───
+# run_status roda SEMPRE em command substitution — st=$(run_status ...) — e
+# command substitution e subshell: variavel setada la dentro morre com ele.
+#
+# Com `set -u`, ler LAST_MISSING_TOOL no pai nao devolvia vazio: abortava o
+# script inteiro com "unbound variable". O CI do repositorio ficou vermelho por
+# isso durante dias, e ninguem viu, porque o caminho so e percorrido quando
+# ALGUMA ferramenta externa FALTA — nunca na maquina de quem tem tudo instalado.
+#
+# Arquivo atravessa subshell; variavel nao.
+MT_FILE="$(mktemp 2>/dev/null || echo "${TMPDIR:-/tmp}/blindar-selftest-mt.$$")"
+: > "$MT_FILE"
+trap 'rm -f "$MT_FILE"' EXIT
+
 # Retorna o STATUS canônico do check (passed|failed|skipped), lendo o result JSON.
 # blindar agrega por status, não por exit code (checks só-med emitem failed+exit0).
 run_status() { # dir check → echo status
@@ -141,12 +155,12 @@ run_status() { # dir check → echo status
   fi
   ( cd "$dir" && bash "$CHECKS_DIR/$ck" >/dev/null 2>&1 ); local rc=$?
   local rf="$dir/.blindar/results/${ck%.sh}.json" st=""
-  LAST_MISSING_TOOL=""
+  : > "$MT_FILE"
   if [ -f "$rf" ]; then
     st=$(grep -oE '"status"[[:space:]]*:[[:space:]]*"[a-z]+"' "$rf" | head -1 | sed -E 's/.*"([a-z]+)".*/\1/')
     # Precisa sair daqui: as linhas seguintes apagam o .blindar.
-    LAST_MISSING_TOOL=$(grep -oE '"missing_tool"[[:space:]]*:[[:space:]]*"[^"]+"' "$rf" \
-      | head -1 | sed -E 's/.*:[[:space:]]*"([^"]+)".*/\1/')
+    grep -oE '"missing_tool"[[:space:]]*:[[:space:]]*"[^"]+"' "$rf" \
+      | head -1 | sed -E 's/.*:[[:space:]]*"([^"]+)".*/\1/' > "$MT_FILE"
   fi
   [ -z "$st" ] && { if [ "$rc" -ne 0 ]; then st="failed"; else st="passed"; fi; }
 
@@ -182,7 +196,7 @@ for row in "${PAIRS[@]}"; do
     # por causa do ambiente; contar como ✓ seria pior ainda, porque diria
     # "verificado" sobre algo que ninguém executou. É um terceiro estado.
     if [ "$st" = "skipped" ]; then
-      mt="$LAST_MISSING_TOOL"
+      mt=$(cat "$MT_FILE" 2>/dev/null | tr -d "\r\n" || true)
       echo "${Y}⊘${RST} $ck  — NÃO VERIFICADO nesta máquina (falta ${mt:-ferramenta externa})"
       NAOVER+=("$ck (${mt:-ferramenta externa})")
       continue

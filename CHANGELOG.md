@@ -187,6 +187,30 @@ contem "redis". O padrao nao casava, e o experimento saia sem alvo pelo caso
 mais comum que existe em compose real. Agora casa contra nome **e imagem**, e
 quando nao acha lista os containers que viu, para o motivo ser diagnosticavel.
 
+### O CI estava vermelho havia dias, pelo mesmo tipo de bug
+
+Ao abrir o PR, o job `check-selftest` reprovou em 14 segundos no Linux:
+
+    scripts/check-selftest.sh: line 185: LAST_MISSING_TOOL: unbound variable
+
+Nao era regressao desta versao. O `main` reprova com a mesma mensagem (linha
+182, deslocada pelas linhas que esta versao inseriu) em **todas as execucoes
+desde 2026-08-24**. O gate que "bloqueia merge" estava vermelho o tempo todo.
+
+A causa e a mesma que esta versao ja tinha encontrado duas vezes no proprio
+harness: `run_status` roda em `st=$(run_status ...)`, e command substitution e
+subshell. `LAST_MISSING_TOOL`, setada la dentro, morre com ele — e sob `set -u`
+ler no pai nao devolve vazio: aborta o script.
+
+O caminho so e percorrido quando **alguma ferramenta externa falta**. Na maquina
+de quem tem tudo instalado, nunca. Por isso viveu dias sem ninguem ver, e por
+isso nao reproduz aqui: retirar o gitleaks do PATH nao basta, porque o
+check-secrets tem fallback. O mecanismo foi provado isolado, em cinco linhas de
+bash, antes e depois da correcao.
+
+Canal agora e arquivo, que atravessa subshell. Tres bugs de subshell numa
+versao so — vale como padrao a procurar, nao como coincidencia.
+
 ### O insumo de fixture que nunca chegava ao clone
 
 Descoberto ao preparar o envio: o `.gitignore` ignorava
