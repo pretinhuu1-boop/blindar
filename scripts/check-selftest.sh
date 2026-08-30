@@ -181,6 +181,7 @@ echo "${B}═══ blindar check self-test ═══${RST}"
 PASS=0; FAIL=0; FAILED=()
 declare -A VERIFIED=()
 NAOVER=()   # par registrado que a MAQUINA nao consegue avaliar
+declare -A NAOVER_SET=()   # o mesmo, indexado por check, para nao virar "sem par"
 
 for row in "${PAIRS[@]}"; do
   IFS='|' read -r ck vuln clean <<< "$row"
@@ -198,7 +199,7 @@ for row in "${PAIRS[@]}"; do
     if [ "$st" = "skipped" ]; then
       mt=$(cat "$MT_FILE" 2>/dev/null | tr -d "\r\n" || true)
       echo "${Y}⊘${RST} $ck  — NÃO VERIFICADO nesta máquina (falta ${mt:-ferramenta externa})"
-      NAOVER+=("$ck (${mt:-ferramenta externa})")
+      NAOVER+=("$ck (${mt:-ferramenta externa})"); NAOVER_SET["$ck"]=1
       continue
     fi
     if [ "$st" != "failed" ]; then local_ok=0; reason="não disparou no vulnerável ($vuln, status=$st)"; fi
@@ -334,7 +335,18 @@ PCT=0; [ "$TOTAL_CHECKS" -gt 0 ] && PCT=$(( VERIFIED_N * 100 / TOTAL_CHECKS ))
 # foi registrado — que é justamente o buraco.
 SEM_PAR=()
 for _g in "${GATEABLE_LIST[@]}"; do
-  [ -n "${VERIFIED[$_g]:-}" ] || SEM_PAR+=("$_g")
+  [ -n "${VERIFIED[$_g]:-}" ] && continue
+  # ─── NAO VERIFICADO nao e "sem par" ───
+  # Estes tem par registrado; o que faltou foi a FERRAMENTA nesta maquina. O
+  # bloco de ⊘ acima ja diz, com todas as letras, que eles "nao entram como
+  # aprovados nem como regressao" — e este laco os contava como regressao,
+  # mandando escrever um par que ja existe.
+  #
+  # Medido no CI (ubuntu, sem gitleaks nem semgrep): 3 regressoes falsas. Ficou
+  # escondido atras do bug de subshell, que abortava o script antes de chegar
+  # aqui.
+  [ -n "${NAOVER_SET[$_g]:-}" ] && continue
+  SEM_PAR+=("$_g")
 done
 if [ "${#SEM_PAR[@]}" -gt 0 ]; then
   echo ""
@@ -356,6 +368,11 @@ PCT_ALL=0; [ "$ALL_CHECKS" -gt 0 ] && PCT_ALL=$(( VERIFIED_N * 100 / ALL_CHECKS 
 echo ""
 echo "${B}── cobertura de fixtures ──${RST}"
 echo "Gate-áveis com par verificado: ${VERIFIED_N}/${TOTAL_CHECKS} (${PCT}%)"
+# Nao verificado nao vira nem numerador nem regressao: vira uma linha propria.
+# Sem isto, uma maquina sem gitleaks leria "100%" sobre um conjunto onde tres
+# checks nao foram executados por ninguem.
+[ "${#NAOVER_SET[@]}" -gt 0 ] && \
+  echo "Nao verificados nesta maquina:  ${#NAOVER_SET[@]} (par existe, ferramenta ausente — nao contam como aprovados)"
 echo "Sobre TODOS os checks:         ${VERIFIED_N}/${ALL_CHECKS} (${PCT_ALL}%)  — ${EXCLUDED} excluídos (.api.sh + scanners externos)"
 echo "Meta: 100% dos gate-áveis. Cada check novo DEVE entrar em PAIRS antes de mergear."
 

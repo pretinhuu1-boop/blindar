@@ -211,6 +211,25 @@ bash, antes e depois da correcao.
 Canal agora e arquivo, que atravessa subshell. Tres bugs de subshell numa
 versao so — vale como padrao a procurar, nao como coincidencia.
 
+### O segundo bug, escondido atras do primeiro
+
+Corrigido o subshell, o CI foi mais longe — 14s para 33s — e reprovou de novo:
+
+    Pares OK: 84   Regressoes: 3
+    • 3 check(s) gate-avel(is) sem par de fixture
+
+Os tres eram `check-secrets`, `check-gitleaks` e `check-semgrep`: no ubuntu do
+CI nao ha gitleaks nem semgrep, os checks saem `skipped`, e o laco do `SEM_PAR`
+so pergunta "esta em VERIFIED?". Quem nao pode ser avaliado nunca entra la.
+
+O script imprime, tres linhas antes, sobre esses mesmos checks: *"Nao entram
+como aprovados nem como regressao."* E entao os contava como regressao — com
+uma mensagem mandando escrever um par que **ja existe**.
+
+`NAO VERIFICADO` deixa de virar regressao, e passa a ter linha propria na
+cobertura. As duas metades da regra agora valem: nao conta como aprovado, nao
+conta como reprovado.
+
 ### O insumo de fixture que nunca chegava ao clone
 
 Descoberto ao preparar o envio: o `.gitignore` ignorava
