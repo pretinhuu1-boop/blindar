@@ -28,9 +28,10 @@
 | 18 | Smoke / Runtime Truth + checks de infra (prova que a app SOBE) | sempre (self-skip sem docker/URL) | [`smoke-runtime`](../agents/smoke-runtime.md) + 9 checks de infra/runtime |
 | 19 | Pentest ATIVO — payloads reais (requer `.blindar/.accept-authorization`) | só com autorização | [`pentest-active`](../agents/pentest-active.md) |
 
-> **Total**: 117 agentes em 19 módulos (90 checks determinísticos + 14 API-wrapped = 104 `check-*.sh`, + playbooks).
-> Contagem verificada por `ls agents/*.md` e `ls templates/checks/check-*.sh` em v0.58 —
-> os números anteriores (118/81) tinham derivado do real.
+> **Total**: 170 agentes em 19 módulos (130 checks determinísticos + 14 API-wrapped = 144 `check-*.sh`, + playbooks).
+> Contagem verificada por `ls agents/*.md`, `ls templates/checks/check-*.sh` e
+> `pipeline/MODULE-MAP.json` em v0.80 — a v0.80 acrescentou 27 checks operacionais
+> e de compliance que antes eram só playbook advisory.
 > Fonte da verdade: [`pipeline/MODULE-MAP.json`](../pipeline/MODULE-MAP.json).
 
 **Módulos não-negociáveis** (sempre rodam, mesmo em "MVP"): **1, 2, 11, 12, 15** (+ 18, que self-skipa quando não há runtime pra subir).

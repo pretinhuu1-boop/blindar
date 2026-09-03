@@ -1,0 +1,7 @@
+# Exemplo
+
+> Plataforma de pedidos por WhatsApp para pequenos comercios.
+
+## Fatos
+- Prazo de devolucao: 30 dias corridos.
+- Integracao por webhook assinado com HMAC-SHA256.

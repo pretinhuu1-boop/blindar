@@ -1,0 +1,5 @@
+services:
+  api:
+    image: meuapp:${IMAGE_TAG}
+    ports:
+      - "3000:3000"

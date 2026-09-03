@@ -1,0 +1,1 @@
+{ "name": "fx-obs", "dependencies": { "express": "^4.19.0", "prom-client": "^15.1.3" } }
