@@ -3,6 +3,123 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.80.0] — 2026-09-03
+
+### O playbook que aconselhava e o check que mede
+
+A v0.79 separou evidência estática de evidência exercitada. Esta versão ataca a
+lacuna que ficou antes disso: **agente que existe só como playbook**.
+
+`observability`, `backup-recovery`, `patch-management` e `frontend-performance`
+estavam no `MODULE-MAP` desde as primeiras versões, com texto bom e nenhum
+script. O orquestrador os marcava `deferred / playbook-only`. Quem lia o
+relatório via o nome do agente na lista e concluía que a dimensão tinha sido
+olhada — quando o que havia era um documento pedindo para alguém olhar.
+
+Playbook advisory vale **NÃO VERIFICADO**, nunca "aprovado". É a lição-mãe do
+projeto, aplicada agora ao lugar onde ela ainda não tinha chegado.
+
+Uma auditoria real de 30/08 confirmou o buraco por fora: o blindar validou o
+código do projeto e as maiores alavancas restantes eram todas **operacionais e
+não executadas** — observabilidade sem alerta, backup nunca restaurado, CVE sem
+monitoramento contínuo, front sem orçamento medido, latência de LLM invisível.
+
+### 27 checks novos, todos executando
+
+Materializados com o molde `agentic-harness`: playbook em `agents/`, check
+determinístico em `templates/checks/`, registro em `pipeline/MODULE-MAP.json`,
+par de fixtures no `scripts/check-selftest.sh`.
+
+**Operacionais** — `observability-present` (métrica exposta **e** alguém sendo
+paginado), `backup-restore-tested` (restore exercitado, não só backup agendado),
+`deps-auto-update` (Dependabot/Renovate), `frontend-perf-budget` (orçamento de
+bytes gzipped medido, mais Lighthouse quando há URL), `llm-latency-observability`
+(duração da chamada ao provedor instrumentada).
+
+**Segurança** — `security-headers-completo` (Permissions-Policy + COOP/COEP/CORP,
+lidos da resposta HTTP real quando há alvo), `mfa-readiness`,
+`metered-external-cost-guard` (cota **por origem** em serviço cobrado por uso),
+`npm-ci-lockfile`, `prompt-untrusted-delimiting`.
+
+**Escalabilidade** — `idempotency-keys`, `graceful-shutdown`,
+`outbound-queue-readiness`.
+
+**Infra** — `container-hardening`, `image-scan` (CVE da IMAGEM, não das deps),
+`pii-in-logs`, `synthetic-uptime`, `rollback-ready`.
+
+**Fluidez** — `image-optimization`, `resource-hints`, `a11y-executado`
+(axe-core quando há URL, e razão de contraste **calculada** a partir do CSS
+sempre).
+
+**Compliance** — `lgpd-transferencia-internacional`, `dsr-automation`,
+`retention-job-agendado`, `breach-runbook`, `feature-flags-killswitch`.
+
+### GEO entra como gate condicional
+
+`geo-readiness` — *Generative Engine Optimization*. Não é SEO com outro nome: SEO
+disputa posição numa lista de links, GEO disputa **ser citado dentro de uma
+resposta** que o usuário lê sem clicar em nada.
+
+Checa dados estruturados JSON-LD, política de crawler de IA, conteúdo visível sem
+JS, resposta extraível e sinais de E-E-A-T.
+
+**A política de crawler é dividida em dois tiers, tratados de forma diferente.**
+Bloquear crawler de treino é decisão legítima do operador; bloquear crawler de
+resposta é auto-de-indexação:
+
+- **Tier RESPOSTA** (GPTBot, OAI-SearchBot, ChatGPT-User, Google-Extended,
+  Googlebot, ClaudeBot, Claude-SearchBot, Claude-User, anthropic-ai,
+  PerplexityBot, Perplexity-User, bingbot, Meta-ExternalAgent) — bloqueio é
+  **high**.
+- **Tier TREINO/MENOR** (CCBot, Bytespider, Amazonbot, Applebot-Extended,
+  cohere-ai, MistralAI-User, YouBot, DuckAssistBot, Diffbot, AI2Bot, PetalBot,
+  omgili) — a postura é **reportada como observação**, nunca reprova sozinha.
+
+O roster carrega data (`revisar trimestralmente, últ.: 2026-09`) e **user-agent
+fora dele não vira "aprovado"**: vira "não classificado, verifique manualmente".
+Mesma regra no roster de provedores estrangeiros do
+`lgpd-transferencia-internacional` e no de monitores sintéticos do
+`synthetic-uptime`.
+
+**Auto-skip é a regra, não a exceção.** A maioria dos projetos que o blindar
+audita não tem superfície pública de conteúdo — API, CLI, backend de bot e painel
+interno saem `skipped` com o motivo escrito.
+
+### Fallback declarado, nunca silencioso
+
+Cada check que depende de ferramenta externa cai para a camada estática **e diz
+que caiu**, com `missing_tool` preenchido:
+
+| Check | Sem a ferramenta |
+|---|---|
+| `frontend-perf-budget` | sem `lighthouse` → só orçamento de bytes; sem `gzip` → bytes crus, com a unidade registrada |
+| `a11y-executado` | sem `axe` → só contraste calculado do CSS |
+| `image-scan` | sem `trivy`/`grype` ou sem a imagem local → `skipped`, nunca `passed` |
+| `security-headers-completo` | sem alvo HTTP → só a configuração do repositório |
+
+O caso que mais importa: **binário que responde `--version` e falha no scan
+real** é registrado como `trivy:sem-saida`, não como imagem limpa.
+
+Quando um destes exercita o sistema de fato, o result passa a
+`evidence_kind: "dynamic"` com `exercised: true` — a mesma contabilidade da
+v0.79.
+
+### Infraestrutura
+
+- `_lib.sh`: `scan_src` / `scan_hit` (varredura por `grep` POSIX puro, mesmo
+  conjunto de arquivos em Windows, Linux e CI) e `has_personal_data` (os checks
+  de LGPD só cobram de quem tem titular de dado).
+- `pipeline/MODULE-MAP.json` → 170 agentes registrados em 19 módulos.
+- `templates/checks/run-all.sh` → os 27 entram no modo `full`.
+- `scripts/check-selftest.sh` → 27 pares novos, 114 no total.
+- Contagens de `README.md`, `reference/camada-deterministica.md` e
+  `reference/modulos-e-agentes.md` recalculadas a partir do repositório.
+
+### Severidade
+
+Todos os achados novos usam `crit|high|med|low`. Nenhum `critical`/`medium` —
+essas variantes não são contadas pelo gate e deixariam achado grave passar.
+
 ## [0.79.0] — 2026-08-30
 
 ### O verde que provava a estrutura, não o comportamento

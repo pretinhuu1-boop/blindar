@@ -52,10 +52,13 @@ gate_of() {
     check-osv-scanner|check-supply-chain|check-sbom-slsa|check-deps-audit|check-network-security|\
     check-tenant-isolation*|check-file-uploads|check-api-surface-isolation|check-mcp-security|\
     check-prompt-injection-defense|check-ai-llm-safety|check-llm-system-prompt-leak|\
-    check-vector-db-security|check-fine-tune-data-leak|check-pentest*|check-defense-theater|check-invisible-unicode|    check-redteam-origin)
+    check-vector-db-security|check-fine-tune-data-leak|check-pentest*|check-defense-theater|check-invisible-unicode|\
+    check-redteam-origin|check-mfa-readiness|check-prompt-untrusted-delimiting|\
+    check-security-headers-completo|check-npm-ci-lockfile|check-image-scan|\
+    check-deps-auto-update|check-container-hardening)
       echo "SECURITY" ;;
     check-api-design|check-architect|check-solution-architect|check-config-externalization|\
-    check-feature-flags|check-api-gateway)
+    check-feature-flags|check-api-gateway|check-idempotency-keys|check-feature-flags-killswitch)
       echo "ARCHITECTURE" ;;
     check-db-engine-consistency|check-prisma-schema|check-soft-delete|check-notnull-no-default|\
     check-alembic-health|check-pagination|check-audit-log|check-redis-patterns|\
@@ -66,20 +69,25 @@ gate_of() {
       echo "RUNTIME" ;;
     check-queue-management|check-fallback-resilience|check-process-resilience|check-worker-jobs|\
     check-scheduled-jobs|check-realtime|check-ratelimit-response|check-termination|\
-    check-load-test|check-chaos-engineering|check-multi-region|check-chaos-run|check-load-curve)
+    check-load-test|check-chaos-engineering|check-multi-region|check-chaos-run|check-load-curve|\
+    check-graceful-shutdown|check-outbound-queue-readiness)
       echo "RESILIENCE" ;;
-    check-observability|check-log-ops|check-cost-observability)
+    check-observability|check-log-ops|check-cost-observability|check-observability-present|\
+    check-llm-latency-observability|check-synthetic-uptime|check-metered-external-cost-guard)
       echo "OBSERVABILITY" ;;
-    check-compliance-lgpd-br|check-pii-encryption|check-log-ops-retention|check-regulatory-mapper)
+    check-compliance-lgpd-br|check-pii-encryption|check-log-ops-retention|check-regulatory-mapper|\
+    check-pii-in-logs|check-lgpd-transferencia-internacional|check-dsr-automation|\
+    check-retention-job-agendado|check-breach-runbook)
       echo "PRIVACY" ;;
     check-responsive-a11y|check-frontend*|check-content-quality|check-visual-regression|\
     check-i18n-tz|check-datetime-tz|check-seo-marketing-meta|check-seo-foundation|check-pwa-installable|\
-    check-session-timeout-ux|check-lighthouse|check-bundle-size|check-govtech-acessibilidade)
+    check-session-timeout-ux|check-lighthouse|check-bundle-size|check-govtech-acessibilidade|\
+    check-image-optimization|check-resource-hints|check-a11y-executado|check-geo-readiness)
       echo "QUALITY" ;;
     check-environment-parity|check-deps-sync|check-cdn-strategy|check-patch-management|\
-    check-vps-readiness|check-deploy-identity)
+    check-vps-readiness|check-deploy-identity|check-rollback-ready)
       echo "DEPLOYMENT" ;;
-    check-backup-recovery)
+    check-backup-recovery|check-backup-restore-tested)
       echo "BACKUP_RECOVERY" ;;
     check-documentation*|check-runbook*|check-decision-log|    check-report-integrity|check-assumption-probe)
       echo "DOCUMENTATION" ;;
@@ -158,11 +166,26 @@ rm -f "$RAW"
 # Backup existir não é a mesma coisa que restore funcionar. Deploy existir não é
 # a mesma coisa que ter caminho de volta.
 has_restore_evidence() {
+  # O check-backup-restore-tested mede isto com mais cuidado do que um `ls`:
+  # ele exige script, teste, job de CI ou runbook com verificacao, e distingue
+  # "ha caminho de restore" de "ninguem nunca rodou". Quando ele passou, a
+  # evidencia existe; quando falhou, nao existe — e o `ls` nao tem por que
+  # discordar. Sem o result dele, cai na heuristica antiga.
+  local r="$RESULTS_DIR/check-backup-restore-tested.json"
+  if [ -f "$r" ]; then
+    grep -q '"status"[[:space:]]*:[[:space:]]*"passed"' "$r" 2>/dev/null && return 0
+    grep -q '"status"[[:space:]]*:[[:space:]]*"failed"' "$r" 2>/dev/null && return 1
+  fi
   ls docs/*restore* docs/**/*restore* scripts/*restore* 2>/dev/null | head -1 | grep -q . && return 0
   grep -rqil 'restore' docs/runbooks 2>/dev/null && return 0
   return 1
 }
 has_rollback_evidence() {
+  local r="$RESULTS_DIR/check-rollback-ready.json"
+  if [ -f "$r" ]; then
+    grep -q '"status"[[:space:]]*:[[:space:]]*"passed"' "$r" 2>/dev/null && return 0
+    grep -q '"status"[[:space:]]*:[[:space:]]*"failed"' "$r" 2>/dev/null && return 1
+  fi
   ls docs/*rollback* scripts/*rollback* 2>/dev/null | head -1 | grep -q . && return 0
   grep -rqil 'rollback' docs 2>/dev/null && return 0
   return 1
