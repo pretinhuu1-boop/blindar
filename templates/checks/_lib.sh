@@ -77,8 +77,64 @@ normalize_severity() {
   esac
 }
 
+# ─── Comentário não é config viva ───
+# Os matchers de texto que decidem crit/high casavam a linha inteira, comentário
+# incluso. Medido no FastList (set/2026): o `homolog-only` deu 1 crit ("sobe sem
+# NODE_ENV=production") casando um comentário do docker-compose, enquanto o
+# Dockerfile real trazia `ENV NODE_ENV=production`; o `defense-theater` deu high
+# de "CSP unsafe-inline" casando o comentário que explicava a REMOÇÃO do
+# unsafe-inline.
+#
+# Além do falso positivo, o incentivo estava invertido: dava para "sumir" com o
+# achado apagando o comentário, ou seja, o check punia documentar a decisão.
+#
+# Filtra linha que É comentário, não linha que TEM comentário: em
+# `ENV NODE_ENV=production  # nunca dev`, a parte antes do # é config viva e
+# continua valendo. Aceita tanto `arquivo:linha:conteúdo` (rg -n) quanto
+# conteúdo puro.
+drop_comment_lines() {
+  awk '{
+    content = $0
+    if (match(content, /^[^:]+:[0-9]+:/)) content = substr(content, RSTART + RLENGTH)
+    sub(/^[ 	]*/, "", content)
+    if (content ~ /^(#|\/\/|\*|\/\*|<!--|--[^-])/) next
+    print $0
+  }'
+}
+
+# ─── O scanner não acusa o próprio workdir ───
+# Medido no FastList (set/2026): o semgrep reportou 4 crit "Private Key
+# detected" em `.blindar/pgtls/server.key` e `.blindar/tls/app.key` —
+# certificados de teste que o próprio blindar gera para exercitar TLS, dentro
+# do seu diretório de trabalho, gitignored, que nunca foram segredo da app.
+#
+# Crit auto-infligido é pior que ruído: é indistinguível de segredo real até
+# alguém abrir o caminho, infla o contador toda rodada, e ensina o operador a
+# ignorar crit — que é exatamente a defesa que este projeto tenta construir.
+#
+# A regra é dos dois lados: os wrappers passam a excluir o workdir no próprio
+# comando (não varrer é mais barato que varrer e descartar), e aqui fica a rede
+# para o scanner que não tem flag de exclusão. Âncora no início do caminho de
+# propósito: `tests/fixtures/projeto/.blindar/...` é insumo de fixture e
+# continua audítavel.
+BLINDAR_SELF_FINDINGS_DROPPED=0
+is_own_workdir_path() {
+  local f="${1#./}"
+  local wd="${BLINDAR_DIR:-.blindar}"; wd="${wd#./}"; wd="${wd%/}"
+  [ -z "$f" ] && return 1
+  case "$f" in
+    "$wd"/*|"$wd") return 0 ;;
+    .blindar/*|.blindar.*/*) return 0 ;;   # workdir default e variantes (--reset guarda .blindar.bak)
+    *) return 1 ;;
+  esac
+}
+
 add_finding() {
   local sev="$1"; local msg="$2"; local file="${3:-}"; local line="${4:-}"
+  if [ -n "$file" ] && is_own_workdir_path "$file"; then
+    BLINDAR_SELF_FINDINGS_DROPPED=$((BLINDAR_SELF_FINDINGS_DROPPED+1))
+    return 0
+  fi
   local norm; norm=$(normalize_severity "$sev")
   if [ "$norm" != "$sev" ]; then
     case "$sev" in
@@ -193,6 +249,27 @@ emit_result() {
   local sha=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
   local findings_json="["$(IFS=,; echo "${FINDINGS[*]:-}")"]"
 
+  # ─── Contagem por severidade, no próprio result ───
+  # O rollup do orquestrador só carregava `findings` como NÚMERO — quantos, sem
+  # dizer de que gravidade. Quem lia o run-report.json (Claude na sequência, um
+  # CI, um dashboard) via `crit` em lugar nenhum e concluia "0 crítico" com
+  # crítico vivo nos arquivos por agente. Medido em campo (FastList, set/2026):
+  # semgrep com 4 crit e mock-killer com 206 high, e o rollup dizendo verde.
+  #
+  # A contagem nasce aqui porque é aqui que a lista existe. Somá-la lá em cima
+  # exigiria reabrir 130 arquivos e reparsear findings — e o consumidor que
+  # esquecesse de fazer isso voltaria a ler zero. Ausência de sinal não é
+  # aprovação: o sinal passa a existir onde o veredito é lido.
+  local _sev_crit=0 _sev_high=0 _sev_med=0 _sev_low=0 _f
+  for _f in "${FINDINGS[@]:-}"; do
+    case "$_f" in
+      *'"severity":"crit"'*) _sev_crit=$((_sev_crit+1)) ;;
+      *'"severity":"high"'*) _sev_high=$((_sev_high+1)) ;;
+      *'"severity":"med"'*)  _sev_med=$((_sev_med+1))  ;;
+      *'"severity":"low"'*)  _sev_low=$((_sev_low+1))  ;;
+    esac
+  done
+
   # ─── `passed` com achado crit/high é contradição ───
   # Nada verificava isso. Cada check decidia o status por conta própria, com um
   # `FAIL=1` espalhado por vários ramos, e bastava um ramo esquecer de marcar
@@ -243,6 +320,12 @@ emit_result() {
     exercised_reason_json="\"$(escape_json "$BLINDAR_NOT_EXERCISED_REASON")\""
   fi
 
+  # Descarte de achado no próprio workdir é dito em voz alta: filtro silencioso
+  # é como um crit real sumiria sem ninguém notar.
+  if [ "${BLINDAR_SELF_FINDINGS_DROPPED:-0}" -gt 0 ]; then
+    log_info "$BLINDAR_SELF_FINDINGS_DROPPED achado(s) descartado(s) por apontarem para o workdir do próprio blindar (${BLINDAR_DIR:-.blindar}/)"
+  fi
+
   local out="$RESULTS_DIR/${agent}.json"
   # O diretório pode ter sumido entre o source do _lib.sh e agora (limpeza
   # concorrente, --reset em paralelo). Recriar aqui é barato.
@@ -258,6 +341,7 @@ emit_result() {
   "duration_sec": $duration,
   "missing_tool": $skip_json,
   "findings_count": ${#FINDINGS[@]},
+  "severities": {"crit": $_sev_crit, "high": $_sev_high, "med": $_sev_med, "low": $_sev_low},
   "evidence_kind": "$BLINDAR_EVIDENCE_KIND",
   "exercised": $([ "$BLINDAR_EXERCISED" -eq 1 ] && echo true || echo false),
   "not_exercised_reason": $exercised_reason_json,

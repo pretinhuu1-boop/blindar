@@ -33,7 +33,10 @@ load_intelligence_globs "$BLINDAR_AGENT"
 scan() { # severidade  padrão  mensagem
   local sev="$1" pat="$2" msg="$3" tmp
   tmp=$(mktemp)
-  rg -n "$pat" "${GLOBS[@]}" "${INTEL_GLOBS[@]}" > "$tmp" 2>/dev/null || true
+  # drop_comment_lines: um comentário explicando que o `unsafe-inline` FOI
+  # REMOVIDO era casado como se fosse a diretiva viva, e virava high. Punir quem
+  # documenta a decisão é o oposto do que este check quer produzir.
+  rg -n "$pat" "${GLOBS[@]}" "${INTEL_GLOBS[@]}" 2>/dev/null | drop_comment_lines > "$tmp" || true
   grep -v '@blindar:keep' "$tmp" > "$tmp.f" 2>/dev/null || true
   mv "$tmp.f" "$tmp" 2>/dev/null || true
   while IFS=: read -r file line content; do

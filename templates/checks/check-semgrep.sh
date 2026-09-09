@@ -64,10 +64,20 @@ for cfg in $SEMGREP_CONFIG; do
   SEMGREP_CFG_ARGS+=("--config=$cfg")
 done
 
+# ─── O workdir do blindar não é alvo do blindar ───
+# `--no-git-ignore` faz o semgrep entrar no que o .gitignore esconde — e o
+# `.blindar/` é justamente gitignored. Sem exclusão explícita o scan varria os
+# certificados de teste que o próprio blindar gera (`tls/`, `pgtls/`) e emitia
+# "Private Key detected" como crit da aplicação. Medido no FastList (set/2026):
+# 4 crit, todos auto-infligidos. Scanner que acusa a si mesmo ensina o operador
+# a ignorar crit.
+SEMGREP_EXCLUDE_ARGS=(--exclude="${BLINDAR_DIR:-.blindar}" --exclude=".blindar"
+                      --exclude="node_modules" --exclude=".git")
+
 # Nota: NÃO usar --quiet aqui. Em algumas versões/plataformas (semgrep
 # 1.167 no Windows/Git Bash), --quiet faz exit code virar 2 mesmo em sucesso.
 # stderr é redirecionado pro $ERR de qualquer jeito.
-SEMGREP_CMD=(semgrep "${SEMGREP_CFG_ARGS[@]}" --json --no-git-ignore --disable-version-check "${TARGETS[@]}")
+SEMGREP_CMD=(semgrep "${SEMGREP_CFG_ARGS[@]}" "${SEMGREP_EXCLUDE_ARGS[@]}" --json --no-git-ignore --disable-version-check "${TARGETS[@]}")
 
 # Detecta plataforma — em Git Bash / MSYS / Cygwin, `timeout` (GNU) wrapando
 # binário Python nativo (semgrep) trunca stdout pra "<ERROR: missing output>".
@@ -109,6 +119,7 @@ if [ "$SG_RC" -ge 2 ] && [ "$SG_RC" -ne 124 ] && [ "$SEMGREP_CONFIG" = "auto" ];
   log_warn "config 'auto' falhou (rc=$SG_RC) — tentando rulesets explícitos"
   [ -s "$ERR" ] && log_info "motivo: $(head -c 160 "$ERR" | tr '\n' ' ')"
   SEMGREP_CMD=(semgrep --config=p/security-audit --config=p/secrets
+               "${SEMGREP_EXCLUDE_ARGS[@]}"
                --json --no-git-ignore --disable-version-check "${TARGETS[@]}")
   "${SEMGREP_CMD[@]}" > "$TMP" 2> "$ERR"
   SG_RC=$?
@@ -144,7 +155,7 @@ if [ "$SG_RC" -ge 2 ] && [ "$SG_RC" -ne 124 ] \
     command -v cygpath >/dev/null 2>&1 && _MNT="$(cygpath -m "$PWD")"
     MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*' \
       docker run --rm -v "${_MNT}:/src" semgrep/semgrep \
-        semgrep --config="$SEMGREP_CONFIG" --json --no-git-ignore \
+        semgrep --config="$SEMGREP_CONFIG" "${SEMGREP_EXCLUDE_ARGS[@]}" --json --no-git-ignore \
         --disable-version-check /src > "$TMP" 2> "$ERR"
     SG_RC=$?
     # O container vê o projeto em /src; o relatório precisa apontar para o

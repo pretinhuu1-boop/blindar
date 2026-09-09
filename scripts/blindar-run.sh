@@ -70,6 +70,13 @@ else
 fi
 PROJECT_DIR="${PWD}"
 RESULTS_DIR="${BLINDAR_DIR:-$PROJECT_DIR/.blindar}/results"
+# ─── Progresso legível durante a corrida ───
+# O stdout do orquestrador passa por pipe na maioria dos usos reais
+# (`blindar-run.sh ... | tail -40`), e aí o buffer segura tudo até o fim: numa
+# rodada de 21 minutos o operador fica sem saber em que estágio está, e não tem
+# como distinguir "rodando" de "travado". Uma linha por agente concluído, em
+# caminho previsível, resolve sem depender de como o stdout foi encanado.
+PROGRESS_LOG="${BLINDAR_DIR:-$PROJECT_DIR/.blindar}/progress.jsonl"
 RUN_REPORT="${BLINDAR_DIR:-$PROJECT_DIR/.blindar}/run-report.json"
 SKILL_VERSION="$(tr -d '[:space:]' < "$SKILL_DIR/VERSION" 2>/dev/null || echo unknown)"
 # O cache de veredito usa a versão como parte da chave: blindar novo invalida
@@ -330,7 +337,7 @@ run_one_check() {
     [ "$JSON_ONLY" -eq 0 ] && printf '%s
 ' "${Y}⏭${RST}  $agent (module $module_id) — playbook-only, requer Claude" >&2
     cat > "$result_json" <<EOF
-{"schema":"blindar/check-result@v1","agent":"check-$agent","status":"deferred","kind":"playbook-only","module":"$module_id","findings_count":0,"findings":[],"message":"Agente disponível só como playbook em agents/$agent.md — requer Claude pra executar"}
+{"schema":"blindar/check-result@v1","agent":"check-$agent","status":"deferred","kind":"playbook-only","module":"$module_id","findings_count":0,"severities":{"crit":0,"high":0,"med":0,"low":0},"findings":[],"message":"Agente disponível só como playbook em agents/$agent.md — requer Claude pra executar"}
 EOF
     echo "$module_id|$agent|$kind|deferred|0"
     return 0
@@ -370,6 +377,8 @@ EOF
   esac
   [ "$JSON_ONLY" -eq 0 ] && printf '%s
 ' "$ico  $agent → $status ($findings findings)" >&2
+  printf '{"agent":"%s","module":"%s","status":"%s","findings_count":%s,"ts":"%s"}
+'     "$agent" "$module_id" "$status" "$findings" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$PROGRESS_LOG"
   echo "$module_id|$agent|$kind|$status|$findings"
   return 0
 }
@@ -379,11 +388,15 @@ export -f run_one_check 2>/dev/null || true
 declare -a RESULTS=()
 RUN_LOG="$RESULTS_DIR/.run-lines.log"
 : > "$RUN_LOG"
+# Zera o progresso: linha de run anterior misturada com a atual faria o operador
+# ler avanço que não aconteceu nesta rodada.
+mkdir -p "$(dirname "$PROGRESS_LOG")" 2>/dev/null || true
+: > "$PROGRESS_LOG"
 
 if [ "$PARALLEL" -gt 1 ]; then
   # Modo paralelo: usa xargs -P. Cada worker chama bash -c que invoca run_one_check.
   # Exportar variáveis necessárias pros subshells:
-  export CHECKS_DIR RESULTS_DIR VERBOSE JSON_ONLY R G Y B BOLD RST
+  export CHECKS_DIR RESULTS_DIR VERBOSE JSON_ONLY R G Y B BOLD RST PROGRESS_LOG
 
   # Cria um script-helper inline temporário pra invocar run_one_check com env passada
   HELPER=$(mktemp 2>/dev/null || echo "$RESULTS_DIR/.parallel-helper.sh")
@@ -411,7 +424,7 @@ fi
 if [ -z "$script" ]; then
   [ "${JSON_ONLY:-0}" -eq 0 ] && echo "${Y}⏭${RST}  $agent (module $module_id) — playbook-only, requer Claude" >&2
   cat > "$result_json" <<EOF2
-{"schema":"blindar/check-result@v1","agent":"check-$agent","status":"deferred","kind":"playbook-only","module":"$module_id","findings_count":0,"findings":[],"message":"Agente disponível só como playbook em agents/$agent.md — requer Claude pra executar"}
+{"schema":"blindar/check-result@v1","agent":"check-$agent","status":"deferred","kind":"playbook-only","module":"$module_id","findings_count":0,"severities":{"crit":0,"high":0,"med":0,"low":0},"findings":[],"message":"Agente disponível só como playbook em agents/$agent.md — requer Claude pra executar"}
 EOF2
   echo "$module_id|$agent|$kind|deferred|0"
   exit 0
@@ -444,6 +457,8 @@ case "$status" in
   *) ico="${R}!${RST}"; status="errored" ;;
 esac
 [ "${JSON_ONLY:-0}" -eq 0 ] && echo "$ico  $agent → $status ($findings findings)" >&2
+printf '{"agent":"%s","module":"%s","status":"%s","findings_count":%s,"ts":"%s"}
+'   "$agent" "$module_id" "$status" "$findings" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$PROGRESS_LOG"
 echo "$module_id|$agent|$kind|$status|$findings"
 HELPER_EOF
   chmod +x "$HELPER" 2>/dev/null || true
@@ -498,6 +513,42 @@ if [ "$STRICT" -eq 1 ] && [ "$DEFERRED" -gt 0 ]; then
   log "${R}${BOLD}STRICT MODE: $DEFERRED agente(s) sem forma executável${RST}"
 fi
 
+# ─── Severidade no rollup, não só nos arquivos por agente ───
+# Até a v0.81 o topo do run-report.json tinha passed/failed/skipped/deferred e
+# coverage_pct — e nada de `crit` ou `high`. As entradas de `results[]` traziam
+# `findings` como número puro. Quem lia o rollup para dar veredito (a sequência
+# obrigatória do SKILL.md, um CI, um dashboard) somava zero crítico enquanto os
+# `check-*.json` guardavam o contrário: medido no FastList em set/2026, 4 crit
+# do semgrep e 206 high do mock-killer, com o rollup dizendo verde.
+#
+# Verde por omissão é o modo de falha que este projeto existe para recusar. Aqui
+# a severidade sobe para onde o veredito é lido; abrir arquivo por agente volta a
+# ser drill-down, e deixa de ser pré-requisito para saber se há crítico.
+severities_of() {
+  local f="$RESULTS_DIR/check-$1.json"
+  # Sem arquivo não há medição. Zero aqui é "não há findings a somar", e o
+  # status do próprio agente (errored/deferred) é que carrega a ausência.
+  [ -f "$f" ] || { echo "0 0 0 0"; return; }
+  local line
+  line=$(grep -o '"severities"[^}]*}' "$f" | head -1)
+  # Result de versão anterior (sem o bloco): não inventa contagem.
+  [ -z "$line" ] && { echo "0 0 0 0"; return; }
+  local c h m l
+  c=$(printf '%s' "$line" | grep -oE '"crit"[[:space:]]*:[[:space:]]*[0-9]+' | grep -oE '[0-9]+$')
+  h=$(printf '%s' "$line" | grep -oE '"high"[[:space:]]*:[[:space:]]*[0-9]+' | grep -oE '[0-9]+$')
+  m=$(printf '%s' "$line" | grep -oE '"med"[[:space:]]*:[[:space:]]*[0-9]+'  | grep -oE '[0-9]+$')
+  l=$(printf '%s' "$line" | grep -oE '"low"[[:space:]]*:[[:space:]]*[0-9]+'  | grep -oE '[0-9]+$')
+  echo "${c:-0} ${h:-0} ${m:-0} ${l:-0}"
+}
+
+SEV_CRIT=0; SEV_HIGH=0; SEV_MED=0; SEV_LOW=0
+for r in "${RESULTS[@]}"; do
+  IFS='|' read -r _mid _ag _kind _st _fc <<< "$r"
+  read -r _c _h _m _l <<< "$(severities_of "$_ag")"
+  SEV_CRIT=$((SEV_CRIT + _c)); SEV_HIGH=$((SEV_HIGH + _h))
+  SEV_MED=$((SEV_MED + _m));   SEV_LOW=$((SEV_LOW + _l))
+done
+
 # Aggregate report
 {
   echo "{"
@@ -526,13 +577,15 @@ fi
   echo "  \"deferred\": $DEFERRED,"
   echo "  \"errored\": $ERRORED,"
   echo "  \"coverage_pct\": $(( (PASSED + FAILED + SKIPPED) * 100 / (TOTAL_DISPONIVEL > 0 ? TOTAL_DISPONIVEL : 1) )),"
+  echo "  \"severity_totals\": {\"crit\": $SEV_CRIT, \"high\": $SEV_HIGH, \"med\": $SEV_MED, \"low\": $SEV_LOW},"
   echo "  \"results\": ["
   first=1
   for r in "${RESULTS[@]}"; do
     IFS='|' read -r mid ag kind st fc <<< "$r"
+    read -r _c _h _m _l <<< "$(severities_of "$ag")"
     [ $first -eq 0 ] && echo ","
     first=0
-    printf '    {"module":"%s","agent":"%s","kind":"%s","status":"%s","findings":%s}' "$mid" "$ag" "$kind" "$st" "$fc"
+    printf '    {"module":"%s","agent":"%s","kind":"%s","status":"%s","findings":%s,"findings_count":%s,"severities":{"crit":%s,"high":%s,"med":%s,"low":%s}}'       "$mid" "$ag" "$kind" "$st" "$fc" "$fc" "$_c" "$_h" "$_m" "$_l"
   done
   echo ""
   echo "  ]"
@@ -549,6 +602,12 @@ log "${R}Failed:${RST}   $FAILED"
 log "${Y}Skipped:${RST}  $SKIPPED"
 log "${Y}Deferred:${RST} $DEFERRED (precisa Claude)"
 log "${R}Errored:${RST}  $ERRORED"
+# A tela é o que o operador lê antes do JSON. Contagem de agentes não diz
+# gravidade: 130 "passed" com 4 crit escondidos em dois arquivos era leitura
+# possível até aqui.
+if [ $((SEV_CRIT + SEV_HIGH + SEV_MED + SEV_LOW)) -gt 0 ]; then
+  log "Findings:  ${R}${SEV_CRIT} crit${RST}, ${R}${SEV_HIGH} high${RST}, ${Y}${SEV_MED} med${RST}, ${SEV_LOW} low"
+fi
 # Mesmo denominador do run-report: o total DISPONÍVEL, não o filtrado. Com
 # --only, medir contra a lista filtrada mostraria 100% tendo olhado um agente —
 # e a tela é o que o operador lê antes do JSON.

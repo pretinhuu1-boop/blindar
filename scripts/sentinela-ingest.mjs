@@ -51,6 +51,15 @@ export function sarifToResult(sarif, { agent = 'sentinela' } = {}) {
     exit_code: hasBlock ? 1 : 0,
     missing_tool: null,
     source: 'sentinela (DAST runtime, sessão autenticada)',
+    // findings_count e severities são exigidos pelo check-result@v1: sem eles o
+    // agregado soma zero crítico para este agente e o DAST some do veredito.
+    findings_count: findings.length,
+    severities: {
+      crit: findings.filter((f) => f.severity === 'crit').length,
+      high: findings.filter((f) => f.severity === 'high').length,
+      med: findings.filter((f) => f.severity === 'med').length,
+      low: findings.filter((f) => f.severity === 'low').length,
+    },
     findings,
   };
 }

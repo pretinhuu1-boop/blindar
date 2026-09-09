@@ -38,13 +38,35 @@ rg -n "console\.(log|debug|warn|trace)\(" --type ts --type js --type py "${IGNOR
 grep -v "@blindar:keep" "$TMP" > "$TMP.filtered" || true
 mv "$TMP.filtered" "$TMP"
 
+# ─── Debug esquecido × log estruturado ───
+# Todo `console.*` saia como `high`, com a régua de frontend aplicada a
+# backend. Medido no FastList (set/2026): 206 high, todos da observabilidade
+# que o projeto construiu à mão — `[WA]`, `[cobranca]`, `[migrar]` — com o
+# dado sensível já redigido antes de imprimir. Baseline arquitetural ocupando
+# o contador de high esconde o high de verdade que estiver no meio.
+#
+# Em backend Node, stdout/stderr É o mecanismo de log: PM2, journald e o
+# runtime do container capturam dali. O que sobra de defeito é o debug solto
+# — `console.log("aqui")`, `console.log(obj)` — e esse continua `high`.
+#
+# A marca de log estruturado é o prefixo de módulo no primeiro argumento
+# (`console.log("[cobranca] ...")`). Quem tem prefixo vira `low` com nome
+# próprio; quem não tem segue bloqueando.
 CONSOLE_COUNT=$(wc -l < "$TMP" || echo 0)
 if [ "$CONSOLE_COUNT" -gt 0 ]; then
+  CONSOLE_HIGH=0; CONSOLE_STRUCT=0
   while IFS=: read -r file line content; do
     [ -z "$file" ] && continue
-    add_finding "high" "console em produção: $(trim_ws "$content")" "$file" "$line"
+    if printf '%s' "$content" | grep -qE 'console\.(log|debug|warn|trace)\([[:space:]]*(`|"|'"'"')\[[A-Za-z0-9_:.\-]+\]'; then
+      CONSOLE_STRUCT=$((CONSOLE_STRUCT+1))
+      add_finding "low" "log estruturado (prefixo de módulo) em stdout — válido em backend, revise se este arquivo roda no browser: $(trim_ws "$content")" "$file" "$line"
+    else
+      CONSOLE_HIGH=$((CONSOLE_HIGH+1))
+      add_finding "high" "console em produção: $(trim_ws "$content")" "$file" "$line"
+    fi
   done < "$TMP"
-  log_fail "$CONSOLE_COUNT console.* em código de produção"
+  [ "$CONSOLE_HIGH" -gt 0 ] && log_fail "$CONSOLE_HIGH console.* sem prefixo de módulo (debug esquecido)"
+  [ "$CONSOLE_STRUCT" -gt 0 ] && log_warn "$CONSOLE_STRUCT console.* com prefixo de módulo — contado como low (observabilidade reconhecida)"
 else
   log_pass "Zero console em código de produção"
 fi
@@ -100,10 +122,22 @@ fi
 rm -f "$TMP"
 
 # 5. Status final
+# Só `low` não reprova: mesma regra do emit_result, onde med/low são
+# informativos. Antes, um único log estruturado reprovava o check inteiro — e
+# reprovação que o operador aprende a ignorar deixa de ser reprovação.
 TOTAL=${#FINDINGS[@]}
-if [ "$TOTAL" -gt 0 ]; then
+BLOCKING=0
+for _f in "${FINDINGS[@]:-}"; do
+  case "$_f" in
+    *'"severity":"crit"'*|*'"severity":"high"'*|*'"severity":"med"'*) BLOCKING=$((BLOCKING+1)) ;;
+  esac
+done
+if [ "$BLOCKING" -gt 0 ]; then
   emit_result "$BLINDAR_AGENT" "failed" 1
   exit 1
+fi
+if [ "$TOTAL" -gt 0 ]; then
+  log_warn "$TOTAL achado(s) informativo(s) (low) — sai no relatório, não reprova"
 fi
 
 emit_result "$BLINDAR_AGENT" "passed" 0

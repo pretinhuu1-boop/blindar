@@ -103,6 +103,12 @@ Quando esta skill for invocada (`blindar`, `blinda este projeto`, etc.), você (
 7. Apresentar ao usuário:
    - Resumo numérico (passed/failed/skipped/deferred/cobertura%), incluindo os
      deferred que VOCÊ executou no passo 5
+   - **Severidade sai do `severity_totals` do próprio `run-report.json`.** Até a
+     0.81 o topo do agregado não tinha `crit` nem `high`, e `results[].findings`
+     era só a contagem: quem somasse o rollup lia "0 crítico" com crítico vivo
+     nos `check-*.json`. Medido no FastList em set/2026 — 4 crit do semgrep e
+     206 high do mock-killer invisíveis no agregado. Hoje o headline vem do
+     rollup; abrir arquivo por agente é drill-down, não pré-requisito.
    - Top 5 findings críticos (severity crit/high)
    - Análise proativa resumida (se gerada)
    - Recomendação de próxima ação
