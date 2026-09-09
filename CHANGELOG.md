@@ -3,6 +3,127 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.81.0] — 2026-09-03
+
+### 18 checks rodavam, achavam crítico, e não chegavam ao veredito
+
+O `check-release-gates.sh` mapeia cada result para uma das 11 dimensões pelo
+nome do agente. O que não casa cai no `*)` genérico e vira `UNMAPPED`, e o
+relatório imprimia:
+
+```
+⚠  checks sem gate mapeado (não contam pro veredito): check-payments ...
+```
+
+A linha estava certa. O problema é que ela era só uma linha: nada acontecia por
+causa dela. Dezoito checks estavam nessa condição, e não eram checks
+decorativos:
+
+| Check | O que ficava invisível | Gate agora |
+|---|---|---|
+| `check-payments` | `crit` de PCI — CVV em código, PAN em log | SECURITY |
+| `check-client-bundle-secrets` | `crit` — segredo de provider no bundle servido ao browser | SECURITY |
+| `check-healthtech-fhir` | `crit` — PHI em log, endpoint FHIR sem auth, telemedicina sem registro | PRIVACY |
+| `check-fintech-banking-br` | `crit` — chave PIX hardcoded, webhook sem signature verify | SECURITY |
+| `check-git-hygiene` | `crit` — `.env` existe e está fora do `.gitignore` | SECURITY |
+| `check-horizontal-scale` | `high` — sessão em memória, upload em disco local, rate limit por réplica | RESILIENCE |
+| `check-ecom-checkout-conversion` | `high` — pagamento sem 3DS2, carrinho sem persistência | QUALITY |
+| `check-email-deliverability` | `high` — envio sem checagem de supressão | DEPLOYMENT |
+| `check-adversarial-reviewer` | red team sobre os findings dos outros checks | SECURITY |
+| `check-feature-gap-analyzer` | camada faltando entre schema, endpoint e tela | RUNTIME |
+| `check-rag-quality` | qualidade do pipeline de recuperação | QUALITY |
+
+É o mesmo defeito que o `severity-contract` pegou na v0.70, um degrau adiante.
+Lá o achado se perdia na string da severidade — `"critical"` fora do enum,
+presente no JSON e contado por ninguém. Aqui ele se perde no nome do agente. Nos
+dois casos o gate diz GO com crítico aberto, e em nenhum dos dois o sistema diz
+"não sei": ele diz "está tudo bem".
+
+### Duas listas, porque um balde só ninguém lê
+
+A lista antiga misturava o `check-strategic-scanner`, que descobre a stack e
+nunca emite finding, com o `check-payments`, que acha violação de PCI. Lista
+onde o ruído esperado mora junto do buraco real não é lida por ninguém — e não
+foi.
+
+**`out_of_gate`** — fora do veredito por desenho, com motivo escrito em
+`motivo_fora_do_gate()`. Mesmo contrato do `motivo_exclusao()` do
+`check-selftest.sh`: exclusão sem motivo é silêncio. São sete, em três famílias:
+
+- **informativos**: `check-strategic-scanner`, `check-mcp-recommended`,
+  `check-ai-powered-example`;
+- **gate de outra coisa**: `check-wave-guardian` reprova a *run* do blindar, não
+  o projeto, e já bloqueia pelo próprio exit code;
+- **consultivos**: `check-growth-opportunities`, `check-product-critic`,
+  `check-proactive-analysis`. São o LLM opinando sobre produto, e o wrapper de
+  API deixa o modelo rotular qualquer achado como `crit`. Um "opportunity"
+  virando NO-GO seria bloqueio por opinião.
+
+**`unmapped`** — o que sobra é buraco, e buraco agora pesa: conta como
+**warning**, e **BLOCKED** se algum dos não mapeados trouxer `crit`. "Ninguém
+decidiu onde isso entra" não é aprovação, pela mesma regra do `NOT VERIFIED`.
+
+Os dois campos entram no `gates.json` (schema atualizado), para o relatório da
+Fase 07 poder citar o que ficou fora — *não citou* não pode ser indistinguível
+de *não havia*.
+
+### A lista de 27 estava errada, e o erro é instrutivo
+
+O levantamento inicial rodou o `gate_of()` contra `ls templates/checks/check-*.sh`
+e achou 27. Nove eram falso positivo:
+
+- oito wrappers `.api` — o arquivo é `check-pentest.api.sh`, mas ele declara
+  `BLINDAR_AGENT="check-pentest"`, e é o agente que chega ao gate. Já estavam
+  mapeados;
+- `check-evidence` e `check-release-gates` nem definem `BLINDAR_AGENT`: não
+  chamam `emit_result`, logo nunca aparecem na tabela.
+
+Medido pelo nome do agente, que é o que o gate lê, eram 18. Vale registrar
+porque a auditoria e o sistema auditado precisam medir a mesma coisa: contar
+arquivo quando o gate conta agente inventa buraco onde não há e, no sentido
+contrário, esconderia buraco onde há.
+
+### `tests/gate-mapping.test.mjs` (novo)
+
+Nove asserções sobre os 141 checks que emitem result. Falha se:
+
+- algum agente cair em `UNMAPPED`;
+- alguma exceção aparecer sem motivo escrito;
+- o `gate_of()` devolver nome de gate fora da lista `GATES` (erro de digitação
+  em pattern de `case` não avisa ninguém em runtime);
+- algum check chamar `emit_result` sem declarar `BLINDAR_AGENT`;
+- a lista de exceções passar de dez — o número não é sagrado, o que ele impede é
+  a exceção virar depósito de "check chatinho de mapear".
+
+O teste avalia o `gate_of()` real, extraído do script com `sed`, em vez de
+reimplementar a regra. Regra duplicada entre o código e o teste é regra que
+diverge.
+
+Entrou na CI (`lint.yml`) junto com o `severity-contract.test.mjs`, que rodava
+só na mão.
+
+### Impacto no veredito de projeto existente
+
+**Isto muda veredito.** Um projeto que saía `CONDITIONAL GO` pode passar a
+`NO-GO` — não porque piorou, mas porque um crítico que já existia passou a ser
+contado. Os casos mais prováveis, em ordem:
+
+1. `.env` fora do `.gitignore` (`check-git-hygiene`) — genérico, roda em
+   qualquer projeto, e o achado é `crit`;
+2. gateway de pagamento com CVV/PAN no código ou webhook sem verify
+   (`check-payments`);
+3. chave de provider no bundle do frontend (`check-client-bundle-secrets`).
+
+Nenhum deles é falso positivo novo: os três já apareciam no `results/*.json` e
+no relatório. O que mudou é que agora chegam à decisão.
+
+### Também
+
+- Corrigido um espaço solto dentro do pattern de `case` do gate `DOCUMENTATION`
+  (`|    check-report-integrity`). Funcionava — o tokenizador do bash separa
+  palavras no branco —, mas é o tipo de coisa que passa a não funcionar quando
+  alguém mexe ao lado.
+
 ## [0.80.0] — 2026-09-03
 
 ### O playbook que aconselhava e o check que mede

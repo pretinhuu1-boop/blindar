@@ -34,6 +34,18 @@
       "type": "integer",
       "minimum": 0
     },
+    "out_of_gate": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Agentes deliberadamente fora do veredito, com motivo nomeado em motivo_fora_do_gate() do check-release-gates.sh: scanner de stack, recomendador de MCP, template de exemplo, gate de onda e os wrappers consultivos de LLM. Os achados deles saem no relatorio, nunca no gate. v0.81.0+.",
+      "default": []
+    },
+    "unmapped": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Buraco de mapeamento: checks que emitiram result e nao caem em gate nenhum nem estao declarados como excecao. Lista nao vazia conta como warning; se algum deles trouxer crit, conta como BLOCKED — critico que ninguem conta e critico que passa. v0.81.0+.",
+      "default": []
+    },
     "gates": {
       "type": "array",
       "items": {
