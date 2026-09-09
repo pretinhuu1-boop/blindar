@@ -175,6 +175,47 @@ A rede de baixo é [`tests/gate-mapping.test.mjs`](../tests/gate-mapping.test.mj
 falha se qualquer check voltar a cair em `UNMAPPED`, se uma exceção aparecer sem
 motivo escrito, ou se a lista de exceções passar de dez.
 
+## Novo × baseline aceito
+
+A pergunta que decide o GO não é "quantos crit existem", é "quantos crit
+**este ciclo** introduziu". O `.accept-risk.md` sempre guardou a triagem, mas
+nada o lia: a cada rodada o gate re-listava o baseline inteiro como novo, e
+separar as duas coisas era trabalho manual do operador — duas rodadas seguidas
+disso, medidas em campo, foram o que trouxe esta seção.
+
+O casamento é por **impressão digital**, o campo `fp` de cada finding (agente +
+arquivo + mensagem normalizada, montado no `add_finding`). Basta a linha do
+aceite conter `fp:xxxxxxxx`. Por caminho seria pior: um segundo achado no mesmo
+arquivo herdaria o aceite do primeiro.
+
+O `gates.json` passa a trazer:
+
+```json
+"findings": {
+  "crit": 4, "high": 206,
+  "crit_novo": 0, "high_novo": 3,
+  "crit_aceito": 4, "high_aceito": 203,
+  "accept_file": ".blindar/accept-risk.md"
+}
+```
+
+Três regras que sustentam isso:
+
+- **Achado sem `fp` conta como novo.** Result de versão anterior, ou gravado
+  por subagente que não seguiu o schema, nunca casa aceite. O default do
+  desconhecido não pode ser "já foi aceito".
+- **Crit aceito não vira verde limpo.** Ele tira a dimensão de `BLOCKED`, mas
+  a deixa em `PASS WITH WARNINGS` e derruba o veredito global para
+  `CONDITIONAL GO`. Aceite é decisão viva com data de reavaliação, não
+  ausência de risco — se as duas coisas ficarem indistinguíveis, o arquivo de
+  aceite vira o lugar onde se esconde crit.
+- **O aceite morre com o achado.** Editar o código muda a mensagem, muda a
+  impressão digital, e o achado volta como novo. O aceite valia para aquele
+  achado, não para aquele arquivo.
+
+A rede de baixo é
+[`tests/accept-risk-reconcile.test.mjs`](../tests/accept-risk-reconcile.test.mjs).
+
 ## Relação com o termination
 
 O termination clássico (`0 crit + ≤2 high`, cobertura, CI streak) continua
@@ -199,6 +240,9 @@ finding, engine consistente entre infra e runtime", nunca "banco ok".
   pergunta da dimensão continua sem resposta.
 - ❌ Compensar um gate BLOCKED com outros dez em PASS. Não são somáveis.
 - ❌ Aceitar warning em `.accept-risk.md` sem nome de quem aceitou e por quê.
+- ❌ Escrever o aceite sem a linha `fp:` e achar que o gate vai entender. Sem
+  impressão digital o achado continua contando como NOVO — o texto é para
+  humano, o `fp` é para o gate.
 - ❌ Marcar `BACKUP_RECOVERY: PASS` porque existe script de backup.
 - ❌ Rodar os gates antes dos checks e ler o `NO-GO` de "nada medido" como
   falha do projeto — é falha de ordem de execução.

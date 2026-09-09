@@ -98,6 +98,24 @@ Quando esta skill for invocada (`blindar`, `blinda este projeto`, etc.), você (
    Ao final, confira que cada `deferred` virou arquivo. Agente que não gravou
    result **não foi executado** — trate como `errored`, nunca como aprovado.
 
+   **2ª rodada na mesma sessão, sobre um delta pequeno:** rode com
+   `--reuse-unchanged`. O agente `playbook-only` cujo result anterior foi
+   medido no MESMO código (git_sha ancestral do HEAD, diff vazio, working tree
+   limpa) herda o veredito com nota, em vez de virar `deferred` outra vez. Sem
+   isso, 53 playbooks re-derivavam o baseline já triado — e aí ou o operador
+   queima tokens reconfirmando falso positivo conhecido, ou desobedece esta
+   sequência, e a sequência perde autoridade.
+
+   O reuso só vale quando NADA mudou. Não existe "só o alvo dele não mudou":
+   nenhum agente declara o conjunto de arquivos que cobre, e inferir esse
+   escopo a partir de onde ele achou algo antes transformaria "não sei" em
+   "está tudo bem". Mudou qualquer arquivo, roda.
+
+   **O baseline já triado não precisa ser re-triado.** O gate casa cada finding
+   com o `.accept-risk.md` por `fp`, e o veredito sai como "0 crit/high NOVO"
+   com o aceito ao lado — então o que você precisa olhar é o novo. Achado sem
+   `fp` no aceite conta como novo, sempre.
+
    Exceção: o operador pediu explicitamente para pular.
 6. Ler `.blindar/proactive-analysis.md` se existir (análise consultiva nas 8 dimensões)
 7. Apresentar ao usuário:

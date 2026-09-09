@@ -77,6 +77,34 @@ normalize_severity() {
   esac
 }
 
+# ─── Impressão digital do achado ───
+# O `.accept-risk.md` guarda o que o operador já triou, mas nada ligava as duas
+# pontas: a cada rodada o blindar re-listava tudo como se fosse novo, e separar
+# "entrou neste ciclo" de "baseline aceito" era trabalho manual — justamente a
+# única pergunta que importa para o GO.
+#
+# Por caminho não serve: mover o arquivo, ou um segundo achado no mesmo
+# arquivo, quebraria o casamento. A chave é agente + arquivo + a MENSAGEM
+# normalizada, com dígitos colapsados para que número de linha, contagem e
+# porta não gerem impressão nova a cada rodada.
+#
+# Hash polinomial de 32 bits em awk (sem xor, que não é POSIX e falta no mawk).
+# Colisão aqui custa um aceite aplicado ao achado errado, não um crit
+# escondido: o aceite só vale para quem casa agente E arquivo E mensagem.
+finding_fp() {
+  printf '%s|%s|%s' "${1:-}" "${2:-}" "${3:-}" | LC_ALL=C awk '
+    BEGIN { RS = "\\0"; for (i = 0; i < 256; i++) ord[sprintf("%c", i)] = i }
+    {
+      s = tolower($0)
+      gsub(/[0-9]+/, "#", s)
+      gsub(/[ \\t]+/, " ", s)
+      h = 5381
+      n = length(s)
+      for (i = 1; i <= n; i++) h = (h * 33 + ord[substr(s, i, 1)]) % 4294967296
+      printf "%08x", h
+    }'
+}
+
 # ─── Comentário não é config viva ───
 # Os matchers de texto que decidem crit/high casavam a linha inteira, comentário
 # incluso. Medido no FastList (set/2026): o `homolog-only` deu 1 crit ("sobe sem
@@ -146,8 +174,9 @@ add_finding() {
   # file/line TAMBÉM passam por escape_json: no Windows o rg emite paths com
   # barra invertida (src\config.ts) e "\c" não é escape JSON válido → o result
   # ficava impossível de parsear justamente quando o check ACHAVA algo.
-  local f=$(printf '{"severity":"%s","message":"%s","file":"%s","line":"%s"}' \
-    "$sev" "$(escape_json "$msg")" "$(escape_json "$file")" "$(escape_json "$line")")
+  local fp; fp=$(finding_fp "${BLINDAR_AGENT:-unknown}" "$file" "$msg")
+  local f=$(printf '{"severity":"%s","message":"%s","file":"%s","line":"%s","fp":"%s"}' \
+    "$sev" "$(escape_json "$msg")" "$(escape_json "$file")" "$(escape_json "$line")" "$fp")
   FINDINGS+=("$f")
 }
 

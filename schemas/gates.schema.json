@@ -34,6 +34,21 @@
       "type": "integer",
       "minimum": 0
     },
+    "findings": {
+      "type": "object",
+      "description": "Contagem do ciclo, separando o que entrou agora do baseline ja aceito em accept-risk.md (casado por fingerprint). O headline do veredito e crit_novo/high_novo; crit_aceito > 0 impede GO limpo e rebaixa para CONDITIONAL GO, porque aceite assinado nao e ausencia de risco. v0.83.0+.",
+      "properties": {
+        "crit":        { "type": "integer", "minimum": 0 },
+        "high":        { "type": "integer", "minimum": 0 },
+        "crit_novo":   { "type": "integer", "minimum": 0 },
+        "high_novo":   { "type": "integer", "minimum": 0 },
+        "crit_aceito": { "type": "integer", "minimum": 0 },
+        "high_aceito": { "type": "integer", "minimum": 0 },
+        "accept_file": { "type": "string", "description": "Caminho do arquivo de aceite lido, ou vazio se nao havia." }
+      },
+      "required": ["crit", "high", "crit_novo", "high_novo", "crit_aceito", "high_aceito"],
+      "additionalProperties": true
+    },
     "out_of_gate": {
       "type": "array",
       "items": { "type": "string" },
