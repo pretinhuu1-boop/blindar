@@ -107,6 +107,11 @@ jobs:
       - name: Contrato de severidade
         run: node tests/severity-contract.test.mjs
 
+      - name: Severidade no agregado + ruído auto-infligido
+        # Falha se o run-report voltar a sair sem severity_totals, se o scanner
+        # voltar a acusar o próprio .blindar/, ou se um matcher voltar a dar
+        # crit por linha de comentário.
+        run: node tests/severity-rollup.test.mjs
       - name: Paridade ripgrep real × fallback de grep
         # Falha se alguém reintroduzir --type inválido, glob sem -g, ou se as
         # duas implementações divergirem no veredito. Foi essa divergência que

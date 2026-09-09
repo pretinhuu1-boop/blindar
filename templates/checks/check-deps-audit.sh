@@ -76,7 +76,10 @@ if has_file "Dockerfile" && command -v trivy >/dev/null 2>&1; then
   # trivy, ou um `{"Results":[]}` plantado zerar a contagem (auditoria de deps
   # passando com CVEs reais).
   TRIVY_OUT=$(mktemp)
-  if trivy fs --severity HIGH,CRITICAL --exit-code 1 --format json --output "$TRIVY_OUT" . 2>/dev/null; then
+  # --skip-dirs: o workdir do blindar guarda cert de teste e artefato de scan;
+  # varrê-lo é o scanner auditando a si mesmo.
+  if trivy fs --skip-dirs "${BLINDAR_DIR:-.blindar}" --skip-dirs .blindar \
+       --severity HIGH,CRITICAL --exit-code 1 --format json --output "$TRIVY_OUT" . 2>/dev/null; then
     log_pass "Zero vulns no filesystem (trivy)"
   else
     COUNT=$(jq '[.Results[]?.Vulnerabilities[]?] | length' "$TRIVY_OUT" 2>/dev/null || echo 0)

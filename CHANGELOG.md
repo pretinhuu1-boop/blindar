@@ -3,6 +3,97 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.82.0] — 2026-09-09
+
+Relatório de campo do FastList (183 commits em 7 dias, blindar 0.80 rodado 2×
+com `--parallel auto`). Os números abaixo são daquelas rodadas.
+
+### O agregado dizia "verde" por omissão
+
+A sequência obrigatória manda ler o `.blindar/run-report.json` para dar o
+veredito. O topo do arquivo tinha `passed / failed / skipped / deferred /
+coverage_pct` — e nada de `crit` ou `high`. Nas entradas de `results[]`,
+`findings` era só a contagem; os achados moravam apenas nos `check-*.json`.
+
+Quem agregasse `results[].findings` lia **0 crit / 0 high**. Abrindo os 130+
+arquivos por agente aparecia o real: 4 crit do semgrep, 206 high do
+mock-killer. Verde por ausência de sinal é o modo de falha que este projeto
+existe para recusar — e estava institucionalizado no artefato que o
+orquestrador entrega.
+
+Agora:
+
+- `emit_result` grava `severities: {crit, high, med, low}` em cada
+  `check-*.json`, contado onde a lista de findings existe;
+- `blindar-run.sh` publica `severity_totals` no topo do rollup e repete o bloco
+  por agente em `results[]`;
+- os dois schemas **exigem** os campos: sumir de novo quebra a validação em vez
+  de virar zero;
+- a tela do operador imprime a contagem por severidade, não só a de agentes;
+- passo 7 do `SKILL.md`: o headline sai do rollup, e abrir arquivo por agente
+  volta a ser drill-down.
+
+### O scanner acusava a si mesmo
+
+O semgrep reportou 4 crit "Private Key detected" em `.blindar/pgtls/server.key`
+e `.blindar/tls/app.key` — certificados de teste que o próprio blindar gera no
+seu workdir, gitignored, que nunca foram segredo da app. O `--no-git-ignore`
+fazia o scan entrar justamente onde o `.gitignore` escondia.
+
+Crit auto-infligido é pior que ruído: é indistinguível de segredo real até
+alguém abrir o caminho, e ensina o operador a ignorar crit.
+
+Correção dos dois lados — semgrep (nas três invocações: nativa, fallback de
+ruleset e container) e trivy (`--skip-dirs`) excluem o workdir no próprio
+comando; e `add_finding` descarta, dizendo quantos descartou, o achado que
+aponta para o workdir da rodada. A âncora é no início do caminho de propósito:
+`tests/fixtures/projeto/.blindar/...` é insumo de fixture e segue audítavel.
+
+### `console.*` de backend não é debug esquecido
+
+206 high de "console em produção" — todos da observabilidade estruturada que o
+projeto construiu à mão (`[WA]`, `[cobranca]`, `[migrar]`), com o JID já
+redigido antes de imprimir. Baseline arquitetural dominando o contador de high
+esconde o high de verdade que estiver no meio.
+
+Em backend Node, stdout/stderr **é** o mecanismo de log: PM2, journald e o
+runtime do container capturam dali — a régua de frontend não vale. O que sobra
+de defeito é o debug solto, e esse continua `high`. `console.*` com prefixo de
+módulo vira `low`; e só-`low` deixou de reprovar o check, pela mesma regra que
+o `emit_result` já aplicava.
+
+### Comentário não é config viva
+
+Dois falsos positivos com a mesma causa: o `homolog-only` deu crit ("sobe sem
+`NODE_ENV=production`") casando um comentário do `docker-compose`, com o
+`Dockerfile` real trazendo `ENV NODE_ENV=production`; e o `defense-theater` deu
+high de "CSP unsafe-inline" casando o comentário que explicava a **remoção** do
+unsafe-inline.
+
+Além do achado fantasma, o incentivo estava invertido: dava para "sumir" com o
+crit apagando o comentário — o check punia documentar a decisão.
+
+`drop_comment_lines()` entra no `_lib.sh` e já governa os quatro matchers do
+`homolog-only` e o `scan()` do `defense-theater`. Filtra linha que **é**
+comentário, não linha que **tem** comentário: em
+`ENV NODE_ENV=production  # nunca dev`, a parte antes do `#` é config viva.
+
+### Progresso visível durante a corrida
+
+Numa rodada de 21 minutos o operador ficou sem saber o estágio: o stdout do
+orquestrador quase sempre passa por pipe, e o buffer segura tudo até o fim —
+"rodando" e "travado" ficam indistinguíveis. `blindar-run.sh` passa a escrever
+`.blindar/progress.jsonl`, uma linha por agente concluído (`agent`, `module`,
+`status`, `findings_count`, `ts`), nos dois caminhos de execução.
+
+### Verificação
+
+`tests/severity-rollup.test.mjs` (novo, na CI): 24 ok, 0 fail. Ele **roda o
+orquestrador de verdade** num projeto temporário e lê o artefato que o consumidor
+leria, em vez de fazer grep no fonte — fixture prova a unidade, só a execução
+real prova o sistema. Os seis pares de fixture dos checks tocados seguem
+disparando no `-bad` e calando no `-good`.
+
 ## [0.81.0] — 2026-09-03
 
 ### 18 checks rodavam, achavam crítico, e não chegavam ao veredito

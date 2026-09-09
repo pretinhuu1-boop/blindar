@@ -15,6 +15,7 @@
     "deferred",
     "errored",
     "coverage_pct",
+    "severity_totals",
     "results"
   ],
   "properties": {
@@ -63,6 +64,35 @@
       "minimum": 0,
       "maximum": 100
     },
+    "severity_totals": {
+          "type": "object",
+          "description": "Contagem por severidade. Existe para que quem le o rollup nao precise reabrir os check-*.json so para saber se ha critico: ate a v0.81 essa informacao so morava nos arquivos por agente, e o consumidor que confiasse no agregado lia 0 crit com crit vivo. v0.82.0+.",
+          "properties": {
+                "crit": {
+                      "type": "integer",
+                      "minimum": 0
+                },
+                "high": {
+                      "type": "integer",
+                      "minimum": 0
+                },
+                "med": {
+                      "type": "integer",
+                      "minimum": 0
+                },
+                "low": {
+                      "type": "integer",
+                      "minimum": 0
+                }
+          },
+          "required": [
+                "crit",
+                "high",
+                "med",
+                "low"
+          ],
+          "additionalProperties": false
+    },
     "message": { "type": "string" },
     "results": {
       "type": "array",
@@ -82,7 +112,38 @@
           },
           "findings": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "description": "Contagem de findings do agente. Mantido pelo nome antigo por compat; o mesmo numero sai em findings_count."
+          },
+          "findings_count": { "type": "integer", "minimum": 0 },
+          "severities": {
+                    "type": "object",
+                    "description": "Contagem por severidade. Existe para que quem le o rollup nao precise reabrir os check-*.json so para saber se ha critico: ate a v0.81 essa informacao so morava nos arquivos por agente, e o consumidor que confiasse no agregado lia 0 crit com crit vivo. v0.82.0+.",
+                    "properties": {
+                              "crit": {
+                                        "type": "integer",
+                                        "minimum": 0
+                              },
+                              "high": {
+                                        "type": "integer",
+                                        "minimum": 0
+                              },
+                              "med": {
+                                        "type": "integer",
+                                        "minimum": 0
+                              },
+                              "low": {
+                                        "type": "integer",
+                                        "minimum": 0
+                              }
+                    },
+                    "required": [
+                              "crit",
+                              "high",
+                              "med",
+                              "low"
+                    ],
+                    "additionalProperties": false
           }
         },
         "additionalProperties": true

@@ -166,6 +166,15 @@ if command -v node >/dev/null 2>&1; then
   fi
 
   echo ""
+  echo "${BOLD}── severidade no agregado + ruído auto-infligido ──${RESET}"
+  if node "$SCRIPT_DIR/severity-rollup.test.mjs"; then
+    PASS_COUNT=$((PASS_COUNT+1))
+  else
+    FAIL_COUNT=$((FAIL_COUNT+1))
+    FAIL_LIST+=("tests/severity-rollup.test.mjs")
+  fi
+
+  echo ""
   echo "${BOLD}── path POSIX × binário nativo do Windows ──${RESET}"
   if node "$SCRIPT_DIR/pathconv.test.mjs"; then
     PASS_COUNT=$((PASS_COUNT+1))
