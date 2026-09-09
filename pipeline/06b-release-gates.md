@@ -122,6 +122,59 @@ ausência de veredito nunca é aprovação — a mesma regra que o
 `CONDITIONAL GO` com warnings explicitamente aceitos — o que é diferente, e
 melhor, de um `GO` que só significa "ninguém olhou".
 
+## Quem fica de fora — e por quê
+
+O `gate_of()` mapeia por glob, não por lista exaustiva: check novo cai num gate
+por afinidade de nome em vez de sumir. Sobra, ainda assim, quem não casa. Até a
+v0.80 esse resto era um balde só, e o relatório dizia em voz alta **"não contam
+pro veredito"** sem que nada acontecesse por causa disso.
+
+Eram 18 checks. Entre eles:
+
+| Check | O que ficava invisível |
+|---|---|
+| `check-payments` | `crit` de PCI — CVV em código, PAN em log |
+| `check-client-bundle-secrets` | `crit` — segredo de provider servido ao browser |
+| `check-healthtech-fhir` | `crit` — PHI em log, endpoint FHIR sem auth |
+| `check-fintech-banking-br` | `crit` — chave PIX hardcoded, webhook sem verify |
+| `check-git-hygiene` | `crit` — `.env` fora do `.gitignore` |
+| `check-horizontal-scale` | `high` — sessão em memória, upload em disco local |
+
+É o mesmo defeito que o `severity-contract` pegou em outro degrau: lá o achado
+se perdia na string da severidade (`"critical"` fora do enum), aqui no nome do
+agente. Nos dois casos o achado existe no JSON e nenhum consumidor o conta.
+
+A partir da v0.81 são **duas listas separadas**, porque misturá-las é o que
+fazia ninguém ler nenhuma.
+
+**`out_of_gate` — fora por desenho, com motivo escrito.** Declarado em
+`motivo_fora_do_gate()`, mesmo contrato do `motivo_exclusao()` do
+`check-selftest.sh`: quem entra precisa responder "o que cobre isso, então?".
+São sete, em três famílias:
+
+- **informativos** — `check-strategic-scanner` (Fase 0, nunca emite finding),
+  `check-mcp-recommended` (sugere e não instala), `check-ai-powered-example`
+  (template para escrever check novo);
+- **gate de outra coisa** — `check-wave-guardian` reprova a *run* do blindar,
+  não o projeto, e já bloqueia pelo próprio exit code;
+- **consultivos** — `check-growth-opportunities`, `check-product-critic` e
+  `check-proactive-analysis` são o LLM opinando sobre produto. Um "opportunity"
+  que o modelo rotulou `crit` não pode virar NO-GO: opinião entra no relatório,
+  não no veredito.
+
+**`unmapped` — buraco, e buraco pesa.** O que sobra é check que roda, acha, e
+não chega a dimensão nenhuma. Agora conta como **warning**; se algum deles
+trouxer `crit`, conta como **BLOCKED**. Crítico que ninguém conta é crítico que
+passa, e "ninguém decidiu onde isso entra" não é aprovação — é a mesma regra do
+`NOT VERIFIED`, um degrau acima.
+
+Os dois campos vão para o `gates.json`, para o relatório da Fase 07 poder citar
+o que ficou fora: *não citou* não pode ser indistinguível de *não havia*.
+
+A rede de baixo é [`tests/gate-mapping.test.mjs`](../tests/gate-mapping.test.mjs):
+falha se qualquer check voltar a cair em `UNMAPPED`, se uma exceção aparecer sem
+motivo escrito, ou se a lista de exceções passar de dez.
+
 ## Relação com o termination
 
 O termination clássico (`0 crit + ≤2 high`, cobertura, CI streak) continua
@@ -149,3 +202,8 @@ finding, engine consistente entre infra e runtime", nunca "banco ok".
 - ❌ Marcar `BACKUP_RECOVERY: PASS` porque existe script de backup.
 - ❌ Rodar os gates antes dos checks e ler o `NO-GO` de "nada medido" como
   falha do projeto — é falha de ordem de execução.
+- ❌ Ler a lista de `unmapped` como ruído. Cada nome ali é um check que rodou
+  e cujo achado não chegou a lugar nenhum.
+- ❌ Silenciar um `unmapped` movendo o check para `motivo_fora_do_gate()` sem
+  responder o que passa a cobri-lo. A exceção existe para nomear a decisão,
+  não para esvaziar a lista.

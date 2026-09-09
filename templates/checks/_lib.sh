@@ -728,6 +728,50 @@ load_intelligence_globs() {
   ' "$yml" 2>/dev/null)
 }
 
+# ─── Varredura portátil de código-fonte (v0.80) ───
+# grep POSIX puro, sem depender do ripgrep nem do wrapper acima. Os checks
+# operacionais desta leva rodam em Windows (Git Bash), Linux e CI, e vários
+# precisam varrer arquivos que o ripgrep classifica por tipo de forma diferente
+# em cada versão (.yml, Dockerfile sem extensão, .env). Aqui o conjunto de
+# arquivos é o mesmo em toda máquina.
+#
+# Saída no formato `arquivo:linha:conteúdo` — igual ao rg -n — para que o
+# consumidor possa alimentar add_finding com file e line de verdade.
+scan_src() { # padrão-ERE [dir...]
+  local pat="$1"; shift
+  local dirs=("$@")
+  [ ${#dirs[@]} -eq 0 ] && dirs=(".")
+  grep -rInE \
+    --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=dist \
+    --exclude-dir=build --exclude-dir=.next --exclude-dir=.nuxt \
+    --exclude-dir=.svelte-kit --exclude-dir=out --exclude-dir=coverage \
+    --exclude-dir=vendor --exclude-dir=.venv --exclude-dir=venv \
+    --exclude-dir=__pycache__ --exclude-dir=.blindar --exclude-dir=.terraform \
+    -e "$pat" -- "${dirs[@]}" 2>/dev/null
+}
+
+# Versão silenciosa: 0 = achou, 1 = não achou. Use quando só o SIM/NÃO importa.
+scan_hit() { scan_src "$@" | head -1 | grep -q . ; }
+
+# ─── O projeto trata dado pessoal? ───
+# Vários checks de compliance (LGPD/GDPR) só fazem sentido se existe titular de
+# dado. Num CLI de build ou numa lib, exigir DPO e runbook de vazamento é ruído.
+#
+# O sinal é o SCHEMA e o modelo de domínio, não a palavra solta: `email` aparece
+# em qualquer config de SMTP. Procuramos campo de pessoa em schema de banco,
+# migration ou model.
+has_personal_data() {
+  local alvo
+  for alvo in prisma/schema.prisma schema.prisma; do
+    [ -f "$alvo" ] || continue
+    grep -qiE '(cpf|cnpj|email|phone|telefone|birth|nascimento|address|endereco|endereço|full_?name|nome_?completo)' "$alvo" 2>/dev/null && return 0
+  done
+  # Modelos/entidades fora do Prisma (SQLAlchemy, TypeORM, Mongoose, SQL puro).
+  scan_hit '(class[[:space:]]+User|model[[:space:]]+User|CREATE[[:space:]]+TABLE[[:space:]]+"?users?"?|Schema\(\{[^)]*email|@Entity)' \
+    && return 0
+  return 1
+}
+
 # ─── Pegar começo de timestamp ───
 STARTED_AT=$(date -u +%s)
 

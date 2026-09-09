@@ -1,0 +1,1 @@
+{ "name": "fx-hdr", "dependencies": { "express": "^4.19.0", "helmet": "^8.0.0" } }

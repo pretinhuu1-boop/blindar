@@ -97,6 +97,16 @@ jobs:
           sudo apt-get update && sudo apt-get install -y ripgrep
           rg --version
           bash scripts/check-selftest.sh
+      - name: Contrato de mapeamento check -> gate
+        # Falha se um check voltar a rodar, achar, e nao chegar a dimensao
+        # nenhuma. Foi assim que check-payments (crit de PCI) e
+        # check-client-bundle-secrets (segredo no bundle) passaram versoes
+        # inteiras fora do veredito.
+        run: node tests/gate-mapping.test.mjs
+
+      - name: Contrato de severidade
+        run: node tests/severity-contract.test.mjs
+
       - name: Paridade ripgrep real × fallback de grep
         # Falha se alguém reintroduzir --type inválido, glob sem -g, ou se as
         # duas implementações divergirem no veredito. Foi essa divergência que

@@ -28,6 +28,11 @@ Obrigatório desde a v0.57:
   **GO / CONDITIONAL GO / NO-GO** (`.blindar/gates.json`).
 - **Gates pulados por modo**, nomeados. Gate pulado em silêncio é
   indistinguível de gate aprovado.
+- **Checks fora do veredito**, as duas listas do `gates.json` separadas:
+  `out_of_gate` (fora por desenho, cada um com o motivo que
+  `motivo_fora_do_gate()` declara) e `unmapped` (buraco de mapeamento). Juntá-las
+  numa linha só de "não contam" é como 18 checks — entre eles o de PCI e o de
+  segredo no bundle — passaram versões achando crítico sem ninguém contar.
 - **Decisões arquiteturais** do ciclo (`docs/decisions.md`).
 - **O que NÃO foi alterado, e por quê.** É a seção que mais falta e a que o
   próximo leitor mais precisa: sem ela, "não aparece no relatório" se confunde

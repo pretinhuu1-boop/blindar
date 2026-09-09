@@ -1,0 +1,24 @@
+# Tier RESPOSTA liberado: sao os crawlers que geram citacao e trafego.
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+# Tier TREINO bloqueado por decisao de licenciamento.
+User-agent: CCBot
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /
+
+Sitemap: https://exemplo.com.br/sitemap.xml

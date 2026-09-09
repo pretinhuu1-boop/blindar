@@ -44,44 +44,92 @@ fi
 # Por padrão glob, não lista exaustiva: check novo cai num gate por afinidade de
 # nome em vez de sumir. O que não casar aparece em UNMAPPED no relatório — buraco
 # de mapeamento vira visível, não silencioso.
+#
+# Há uma diferença que a v0.80 ainda não fazia: "check que ninguém mapeou" e
+# "check que fica fora de propósito" caíam no mesmo balde. Um balde com ruído
+# esperado dentro não é lido por ninguém, e foi assim que 18 checks — entre eles
+# `check-payments` com crit de PCI, `check-client-bundle-secrets` com segredo no
+# bundle e `check-healthtech-fhir` com PHI em log — rodaram, acharam crítico, e
+# não chegaram a dimensão nenhuma. Achado que não chega ao veredito é
+# exatamente o modo de falha que este arquivo existe para recusar.
+#
+# Agora são duas listas. `motivo_fora_do_gate()` nomeia quem fica fora e por
+# quê; o que sobra em UNMAPPED é buraco, e buraco pesa no veredito.
+
+# ─── Fora do veredito POR DESENHO, com motivo nomeado ───
+# Mesmo contrato do motivo_exclusao() do check-selftest.sh: exclusão sem motivo
+# escrito é silêncio, e silêncio é onde o bug mora. Quem entrar aqui precisa
+# responder "o que cobre isso, então?".
+motivo_fora_do_gate() {
+  case "$1" in
+    check-strategic-scanner)
+      echo "Fase 0 — descobre a stack e grava scan.json; sempre passa, nunca emite finding" ;;
+    check-mcp-recommended)
+      echo "sugere MCP para a stack e não instala nada — a decisão é do operador" ;;
+    check-ai-powered-example)
+      echo "template de exemplo para escrever check novo, não roda em auditoria" ;;
+    check-wave-guardian)
+      echo "gate da ONDA, não do projeto — reprova a run (agente errored, playbook pendente) e já bloqueia pelo próprio exit code" ;;
+    check-growth-opportunities|check-product-critic|check-proactive-analysis)
+      echo "consultivo: o LLM opina sobre produto e oportunidade, e opinião não reprova release — sai no relatório, não no veredito" ;;
+    *) echo "" ;;
+  esac
+}
+
 gate_of() {
+  # Excecao declarada vem antes do mapa: quem tem motivo escrito nao disputa gate.
+  if [ -n "$(motivo_fora_do_gate "$1")" ]; then echo "OUT_OF_GATE"; return; fi
   case "$1" in
     check-security|check-access-control|check-cryptography|check-secrets*|check-runtime-secrets|\
-    check-headers-security|check-cors-csrf|check-rate-limit|check-auth-premium|check-business-logic|\
-    check-prototype-pollution|check-client-open-redirect|check-semgrep|check-gitleaks|check-trivy|\
-    check-osv-scanner|check-supply-chain|check-sbom-slsa|check-deps-audit|check-network-security|\
-    check-tenant-isolation*|check-file-uploads|check-api-surface-isolation|check-mcp-security|\
-    check-prompt-injection-defense|check-ai-llm-safety|check-llm-system-prompt-leak|\
-    check-vector-db-security|check-fine-tune-data-leak|check-pentest*|check-defense-theater|check-invisible-unicode|    check-redteam-origin)
+    check-headers-security|check-cors-csrf|check-rate-limit|check-auth-premium|\
+    check-business-logic|check-prototype-pollution|check-client-open-redirect|check-semgrep|\
+    check-gitleaks|check-trivy|check-osv-scanner|check-supply-chain|check-sbom-slsa|\
+    check-deps-audit|check-network-security|check-tenant-isolation*|check-file-uploads|\
+    check-api-surface-isolation|check-mcp-security|check-prompt-injection-defense|\
+    check-ai-llm-safety|check-llm-system-prompt-leak|check-vector-db-security|\
+    check-fine-tune-data-leak|check-pentest*|check-defense-theater|check-invisible-unicode|\
+    check-redteam-origin|check-mfa-readiness|check-prompt-untrusted-delimiting|\
+    check-security-headers-completo|check-npm-ci-lockfile|check-image-scan|\
+    check-deps-auto-update|check-container-hardening|check-payments|check-client-bundle-secrets|\
+    check-git-hygiene|check-fintech-banking-br|check-adversarial-reviewer)
       echo "SECURITY" ;;
     check-api-design|check-architect|check-solution-architect|check-config-externalization|\
-    check-feature-flags|check-api-gateway)
+    check-feature-flags|check-api-gateway|check-idempotency-keys|check-feature-flags-killswitch)
       echo "ARCHITECTURE" ;;
     check-db-engine-consistency|check-prisma-schema|check-soft-delete|check-notnull-no-default|\
     check-alembic-health|check-pagination|check-audit-log|check-redis-patterns|\
     check-destructive-migration)
       echo "DATABASE" ;;
     check-mock-killer|check-functional-e2e|check-entrypoint-cmd|check-homolog-only|\
-    check-infra-windows|check-api-frontend-coverage|check-user-journey-simulator|check-failure-ux|check-negative-control)
+    check-infra-windows|check-api-frontend-coverage|check-user-journey-simulator|\
+    check-failure-ux|check-negative-control|check-feature-gap-analyzer)
       echo "RUNTIME" ;;
     check-queue-management|check-fallback-resilience|check-process-resilience|check-worker-jobs|\
     check-scheduled-jobs|check-realtime|check-ratelimit-response|check-termination|\
-    check-load-test|check-chaos-engineering|check-multi-region|check-chaos-run|check-load-curve)
+    check-load-test|check-chaos-engineering|check-multi-region|check-chaos-run|check-load-curve|\
+    check-graceful-shutdown|check-outbound-queue-readiness|check-horizontal-scale)
       echo "RESILIENCE" ;;
-    check-observability|check-log-ops|check-cost-observability)
+    check-observability|check-log-ops|check-cost-observability|check-observability-present|\
+    check-llm-latency-observability|check-synthetic-uptime|check-metered-external-cost-guard)
       echo "OBSERVABILITY" ;;
-    check-compliance-lgpd-br|check-pii-encryption|check-log-ops-retention|check-regulatory-mapper)
+    check-compliance-lgpd-br|check-pii-encryption|check-log-ops-retention|\
+    check-regulatory-mapper|check-pii-in-logs|check-lgpd-transferencia-internacional|\
+    check-dsr-automation|check-retention-job-agendado|check-breach-runbook|\
+    check-healthtech-fhir)
       echo "PRIVACY" ;;
     check-responsive-a11y|check-frontend*|check-content-quality|check-visual-regression|\
-    check-i18n-tz|check-datetime-tz|check-seo-marketing-meta|check-seo-foundation|check-pwa-installable|\
-    check-session-timeout-ux|check-lighthouse|check-bundle-size|check-govtech-acessibilidade)
+    check-i18n-tz|check-datetime-tz|check-seo-marketing-meta|check-seo-foundation|\
+    check-pwa-installable|check-session-timeout-ux|check-lighthouse|check-bundle-size|\
+    check-govtech-acessibilidade|check-image-optimization|check-resource-hints|\
+    check-a11y-executado|check-geo-readiness|check-ecom-checkout-conversion|check-rag-quality)
       echo "QUALITY" ;;
     check-environment-parity|check-deps-sync|check-cdn-strategy|check-patch-management|\
-    check-vps-readiness|check-deploy-identity)
+    check-vps-readiness|check-deploy-identity|check-rollback-ready|check-email-deliverability)
       echo "DEPLOYMENT" ;;
-    check-backup-recovery)
+    check-backup-recovery|check-backup-restore-tested)
       echo "BACKUP_RECOVERY" ;;
-    check-documentation*|check-runbook*|check-decision-log|    check-report-integrity|check-assumption-probe)
+    check-documentation*|check-runbook*|check-decision-log|check-report-integrity|\
+    check-assumption-probe)
       echo "DOCUMENTATION" ;;
     *) echo "UNMAPPED" ;;
   esac
@@ -158,11 +206,26 @@ rm -f "$RAW"
 # Backup existir não é a mesma coisa que restore funcionar. Deploy existir não é
 # a mesma coisa que ter caminho de volta.
 has_restore_evidence() {
+  # O check-backup-restore-tested mede isto com mais cuidado do que um `ls`:
+  # ele exige script, teste, job de CI ou runbook com verificacao, e distingue
+  # "ha caminho de restore" de "ninguem nunca rodou". Quando ele passou, a
+  # evidencia existe; quando falhou, nao existe — e o `ls` nao tem por que
+  # discordar. Sem o result dele, cai na heuristica antiga.
+  local r="$RESULTS_DIR/check-backup-restore-tested.json"
+  if [ -f "$r" ]; then
+    grep -q '"status"[[:space:]]*:[[:space:]]*"passed"' "$r" 2>/dev/null && return 0
+    grep -q '"status"[[:space:]]*:[[:space:]]*"failed"' "$r" 2>/dev/null && return 1
+  fi
   ls docs/*restore* docs/**/*restore* scripts/*restore* 2>/dev/null | head -1 | grep -q . && return 0
   grep -rqil 'restore' docs/runbooks 2>/dev/null && return 0
   return 1
 }
 has_rollback_evidence() {
+  local r="$RESULTS_DIR/check-rollback-ready.json"
+  if [ -f "$r" ]; then
+    grep -q '"status"[[:space:]]*:[[:space:]]*"passed"' "$r" 2>/dev/null && return 0
+    grep -q '"status"[[:space:]]*:[[:space:]]*"failed"' "$r" 2>/dev/null && return 1
+  fi
   ls docs/*rollback* scripts/*rollback* 2>/dev/null | head -1 | grep -q . && return 0
   grep -rqil 'rollback' docs 2>/dev/null && return 0
   return 1
@@ -259,12 +322,40 @@ for g in $GATES; do
   JSON_GATES="${JSON_GATES}{\"gate\":\"$g\",\"status\":\"$status\",\"checks\":$n,\"evidence\":\"$evid\"},"
 done
 
-# Checks sem gate: buraco de mapeamento, reportado em vez de escondido
-UNMAPPED=$(awk -F'|' '$1=="UNMAPPED" {print $2}' "$ROWS" | sort | tr '\n' ' ')
-if [ -n "${UNMAPPED// /}" ]; then
+# ─── Fora do veredito: por desenho × buraco ───
+# Dois blocos separados de propósito. Enquanto eram um só, a lista de "sem gate"
+# misturava o scanner de stack, que nunca acha nada, com o check de PCI, que
+# acha crítico — e uma lista onde o ruído esperado mora junto do buraco não é
+# lida por ninguém.
+OOG=$(awk -F'|' '$1=="OUT_OF_GATE" {print $2}' "$ROWS" | sort -u)
+if [ -n "$OOG" ]; then
   echo ""
-  echo "⚠  checks sem gate mapeado (não contam pro veredito): $UNMAPPED"
-  echo "   Mapeie em gate_of() — check fora de gate é cobertura invisível."
+  echo "ℹ  fora do veredito por desenho (o achado sai no relatório, não no gate):"
+  while IFS= read -r a; do
+    [ -z "$a" ] && continue
+    printf "     %-30s %s\n" "$a" "$(motivo_fora_do_gate "$a")"
+  done <<< "$OOG"
+fi
+
+# Checks sem gate: buraco de mapeamento, e buraco pesa no veredito.
+# Até a v0.80 isto era só uma linha de aviso, e a linha dizia em voz alta que os
+# achados não contavam — sem que nada acontecesse por causa disso. Um crit que
+# ninguém conta é um crit que passa: o mesmo defeito do "critical" fora do enum,
+# que existia no JSON e não era contado por nenhum consumidor.
+UNMAPPED_N=$(awk -F'|' '$1=="UNMAPPED"' "$ROWS" | wc -l | tr -d ' ')
+UNMAPPED_CRIT=$(awk -F'|' '$1=="UNMAPPED" {s+=$4} END{print s+0}' "$ROWS")
+if [ "${UNMAPPED_N:-0}" -gt 0 ]; then
+  echo ""
+  echo "⚠  $UNMAPPED_N check(s) sem gate mapeado — rodaram e não chegam a dimensão nenhuma:"
+  awk -F'|' '$1=="UNMAPPED" {printf "     %-30s %-8s %s crit, %s high\n", $2, $3, $4, $5}' "$ROWS" | sort
+  echo "   Mapeie em gate_of(), ou declare o motivo em motivo_fora_do_gate()."
+  if [ "${UNMAPPED_CRIT:-0}" -gt 0 ]; then
+    echo "   → $UNMAPPED_CRIT crit em check não mapeado. Crítico que ninguém conta é crítico que passa: BLOQUEIA."
+    BLOCKED_N=$((BLOCKED_N+1))
+  else
+    echo "   → cobertura invisível conta como warning: não é PASS nem é reprovação, é 'ninguém decidiu'."
+    WARN_N=$((WARN_N+1))
+  fi
 fi
 
 TOTAL_CHECKS=$(wc -l < "$ROWS" | tr -d ' ')
@@ -283,6 +374,13 @@ else
   VERDICT="GO"; EXIT_CODE=0
 fi
 
+# As duas listas entram no gates.json: o relatório da Fase 07 precisa dizer o que
+# ficou fora e por quê, e "não citou" não pode ser indistinguível de "não havia".
+JSON_OOG=$(awk -F'|' '$1=="OUT_OF_GATE" {print $2}' "$ROWS" | sort -u | awk '{printf "\"%s\",", $1}')
+JSON_OOG="${JSON_OOG%,}"
+JSON_UNMAPPED=$(awk -F'|' '$1=="UNMAPPED" {print $2}' "$ROWS" | sort -u | awk '{printf "\"%s\",", $1}')
+JSON_UNMAPPED="${JSON_UNMAPPED%,}"
+
 mkdir -p "$BLINDAR_DIR"
 cat > "$GATES_OUT" <<EOF
 {
@@ -291,7 +389,9 @@ cat > "$GATES_OUT" <<EOF
   "verdict": "$VERDICT",
   "blocked_gates": $BLOCKED_N,
   "warning_gates": $WARN_N,
-  "gates": [${JSON_GATES%,}]
+  "gates": [${JSON_GATES%,}],
+  "out_of_gate": [${JSON_OOG}],
+  "unmapped": [${JSON_UNMAPPED}]
 }
 EOF
 

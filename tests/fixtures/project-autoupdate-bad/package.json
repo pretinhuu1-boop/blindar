@@ -1,0 +1,1 @@
+{ "name": "fx-autoupdate", "dependencies": { "express": "^4.19.0", "electron": "^34.0.0" } }
