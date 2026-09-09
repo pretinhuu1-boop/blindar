@@ -184,6 +184,24 @@ if command -v node >/dev/null 2>&1; then
   fi
 
   echo ""
+  echo "${BOLD}── insumo de fixture chega no clone limpo ──${RESET}"
+  if node "$SCRIPT_DIR/fixtures-versionados.test.mjs"; then
+    PASS_COUNT=$((PASS_COUNT+1))
+  else
+    FAIL_COUNT=$((FAIL_COUNT+1))
+    FAIL_LIST+=("tests/fixtures-versionados.test.mjs")
+  fi
+
+  echo ""
+  echo "${BOLD}── camada dinâmica (evidência exercitada × estática) ──${RESET}"
+  if node "$SCRIPT_DIR/dynamic-evidence.test.mjs"; then
+    PASS_COUNT=$((PASS_COUNT+1))
+  else
+    FAIL_COUNT=$((FAIL_COUNT+1))
+    FAIL_LIST+=("tests/dynamic-evidence.test.mjs")
+  fi
+
+  echo ""
   echo "${BOLD}── módulo 17 (blindar ataque — recon passivo) ──${RESET}"
   if node "$SCRIPT_DIR/attack-recon.test.js"; then
     PASS_COUNT=$((PASS_COUNT+1))

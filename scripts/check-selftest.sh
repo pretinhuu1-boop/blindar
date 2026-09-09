@@ -110,8 +110,25 @@ PAIRS=(
   "check-git-hygiene.sh         | project-githyg-bad      | project-githyg-good"
   "check-invisible-unicode.sh    | project-unicode-bad     | project-unicode-good"
   "check-seo-foundation.sh       | project-seofound-bad    | project-seofound-good"
+  "check-negative-control.sh     | project-negctl-bad      | project-negctl-good"
+  "check-assumption-probe.sh     | project-assump-bad      | project-assump-good"
+  "check-report-integrity.sh     | project-report-bad      | project-report-good"
   # blindar-learn:insert (mantenha — scripts/blindar-learn.sh insere novos pares acima desta linha)
 )
+
+# ─── Canal entre run_status e quem chama ───
+# run_status roda SEMPRE em command substitution — st=$(run_status ...) — e
+# command substitution e subshell: variavel setada la dentro morre com ele.
+#
+# Com `set -u`, ler LAST_MISSING_TOOL no pai nao devolvia vazio: abortava o
+# script inteiro com "unbound variable". O CI do repositorio ficou vermelho por
+# isso durante dias, e ninguem viu, porque o caminho so e percorrido quando
+# ALGUMA ferramenta externa FALTA — nunca na maquina de quem tem tudo instalado.
+#
+# Arquivo atravessa subshell; variavel nao.
+MT_FILE="$(mktemp 2>/dev/null || echo "${TMPDIR:-/tmp}/blindar-selftest-mt.$$")"
+: > "$MT_FILE"
+trap 'rm -f "$MT_FILE"' EXIT
 
 # Retorna o STATUS canônico do check (passed|failed|skipped), lendo o result JSON.
 # blindar agrega por status, não por exit code (checks só-med emitem failed+exit0).
@@ -138,12 +155,12 @@ run_status() { # dir check → echo status
   fi
   ( cd "$dir" && bash "$CHECKS_DIR/$ck" >/dev/null 2>&1 ); local rc=$?
   local rf="$dir/.blindar/results/${ck%.sh}.json" st=""
-  LAST_MISSING_TOOL=""
+  : > "$MT_FILE"
   if [ -f "$rf" ]; then
     st=$(grep -oE '"status"[[:space:]]*:[[:space:]]*"[a-z]+"' "$rf" | head -1 | sed -E 's/.*"([a-z]+)".*/\1/')
     # Precisa sair daqui: as linhas seguintes apagam o .blindar.
-    LAST_MISSING_TOOL=$(grep -oE '"missing_tool"[[:space:]]*:[[:space:]]*"[^"]+"' "$rf" \
-      | head -1 | sed -E 's/.*:[[:space:]]*"([^"]+)".*/\1/')
+    grep -oE '"missing_tool"[[:space:]]*:[[:space:]]*"[^"]+"' "$rf" \
+      | head -1 | sed -E 's/.*:[[:space:]]*"([^"]+)".*/\1/' > "$MT_FILE"
   fi
   [ -z "$st" ] && { if [ "$rc" -ne 0 ]; then st="failed"; else st="passed"; fi; }
 
@@ -164,6 +181,7 @@ echo "${B}═══ blindar check self-test ═══${RST}"
 PASS=0; FAIL=0; FAILED=()
 declare -A VERIFIED=()
 NAOVER=()   # par registrado que a MAQUINA nao consegue avaliar
+declare -A NAOVER_SET=()   # o mesmo, indexado por check, para nao virar "sem par"
 
 for row in "${PAIRS[@]}"; do
   IFS='|' read -r ck vuln clean <<< "$row"
@@ -179,9 +197,9 @@ for row in "${PAIRS[@]}"; do
     # por causa do ambiente; contar como ✓ seria pior ainda, porque diria
     # "verificado" sobre algo que ninguém executou. É um terceiro estado.
     if [ "$st" = "skipped" ]; then
-      mt="$LAST_MISSING_TOOL"
+      mt=$(cat "$MT_FILE" 2>/dev/null | tr -d "\r\n" || true)
       echo "${Y}⊘${RST} $ck  — NÃO VERIFICADO nesta máquina (falta ${mt:-ferramenta externa})"
-      NAOVER+=("$ck (${mt:-ferramenta externa})")
+      NAOVER+=("$ck (${mt:-ferramenta externa})"); NAOVER_SET["$ck"]=1
       continue
     fi
     if [ "$st" != "failed" ]; then local_ok=0; reason="não disparou no vulnerável ($vuln, status=$st)"; fi
@@ -228,6 +246,18 @@ is_gateable() {
   local f="$1" base
   base=$(basename "$f")
   case "$base" in *.api.sh) return 1 ;; esac              # 1
+
+  # ─── Check DINÂMICO: o insumo é um sistema no ar, não um diretório ───
+  # Par de fixture em disco não existe para ele: o "fixture vulnerável" é um
+  # processo respondendo errado. O contrato dele vive em
+  # tests/dynamic-evidence.test.mjs, que sobe o alvo nos dois modos e prova que
+  # o check dispara no defeituoso e cala no correto.
+  #
+  # A exclusão é pela PROPRIEDADE declarada (`declare_dynamic`), não pelo
+  # acidente de o arquivo conter a string "curl " — que é o que a regra 4
+  # abaixo pegaria. Um comentário reescrito devolveria o check ao denominador
+  # sem par, e o gate quebraria por causa de uma palavra num comentário.
+  grep -qE '^declare_dynamic' "$f" && return 1
 
   # ─── Par registrado É a resposta ───
   # As heurísticas abaixo servem para decidir sobre check SEM par: elas tentam
@@ -276,6 +306,9 @@ motivo_exclusao() { # basename → motivo, ou vazio se é gate-ável
       echo "o veredito e do scanner: exige rede e base de CVE atualizada, e par de fixture aqui deixaria o gate lento e instavel" ;;
     check-mcp-security.sh)
       echo "lê config MCP em \$HOME — o veredito depende da máquina, não do projeto" ;;
+    check-chaos-run.sh|check-load-curve.sh|check-redteam-origin.sh|\
+    check-deploy-identity.sh|check-failure-ux.sh)
+      echo "check DINÂMICO: o insumo é um sistema no ar, não um diretório — o par vive em tests/dynamic-evidence.test.mjs, contra alvo vivo nos modos bad/good" ;;
     *) echo "" ;;
   esac
 }
@@ -302,7 +335,18 @@ PCT=0; [ "$TOTAL_CHECKS" -gt 0 ] && PCT=$(( VERIFIED_N * 100 / TOTAL_CHECKS ))
 # foi registrado — que é justamente o buraco.
 SEM_PAR=()
 for _g in "${GATEABLE_LIST[@]}"; do
-  [ -n "${VERIFIED[$_g]:-}" ] || SEM_PAR+=("$_g")
+  [ -n "${VERIFIED[$_g]:-}" ] && continue
+  # ─── NAO VERIFICADO nao e "sem par" ───
+  # Estes tem par registrado; o que faltou foi a FERRAMENTA nesta maquina. O
+  # bloco de ⊘ acima ja diz, com todas as letras, que eles "nao entram como
+  # aprovados nem como regressao" — e este laco os contava como regressao,
+  # mandando escrever um par que ja existe.
+  #
+  # Medido no CI (ubuntu, sem gitleaks nem semgrep): 3 regressoes falsas. Ficou
+  # escondido atras do bug de subshell, que abortava o script antes de chegar
+  # aqui.
+  [ -n "${NAOVER_SET[$_g]:-}" ] && continue
+  SEM_PAR+=("$_g")
 done
 if [ "${#SEM_PAR[@]}" -gt 0 ]; then
   echo ""
@@ -324,6 +368,11 @@ PCT_ALL=0; [ "$ALL_CHECKS" -gt 0 ] && PCT_ALL=$(( VERIFIED_N * 100 / ALL_CHECKS 
 echo ""
 echo "${B}── cobertura de fixtures ──${RST}"
 echo "Gate-áveis com par verificado: ${VERIFIED_N}/${TOTAL_CHECKS} (${PCT}%)"
+# Nao verificado nao vira nem numerador nem regressao: vira uma linha propria.
+# Sem isto, uma maquina sem gitleaks leria "100%" sobre um conjunto onde tres
+# checks nao foram executados por ninguem.
+[ "${#NAOVER_SET[@]}" -gt 0 ] && \
+  echo "Nao verificados nesta maquina:  ${#NAOVER_SET[@]} (par existe, ferramenta ausente — nao contam como aprovados)"
 echo "Sobre TODOS os checks:         ${VERIFIED_N}/${ALL_CHECKS} (${PCT_ALL}%)  — ${EXCLUDED} excluídos (.api.sh + scanners externos)"
 echo "Meta: 100% dos gate-áveis. Cada check novo DEVE entrar em PAIRS antes de mergear."
 

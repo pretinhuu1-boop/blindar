@@ -118,6 +118,10 @@ while [ $# -gt 0 ]; do
     --parallel) PARALLEL="$2"; shift 2 ;;
     --verbose|-v) VERBOSE=1; shift ;;
     --no-proactive) NO_PROACTIVE=1; shift ;;
+    # v0.79: alvo dos checks DINAMICOS. Sem ele, os cinco que exercitam o
+    # sistema saem 'skipped' com motivo e as dimensoes RUNTIME/RESILIENCE/
+    # DEPLOYMENT ficam NOT EXERCISED — a lacuna aparece no gate em vez de sumir.
+    --url)    export BLINDAR_TARGET_URL="$2"; shift 2 ;;
     -h|--help) sed -n '2,40p' "$0" | sed 's/^# //; s/^#//'; exit 0 ;;
     *) echo "Arg desconhecido: $1" >&2; exit 64 ;;
   esac

@@ -128,6 +128,63 @@ escape_json() {
 }
 
 # ─── Output JSON padrão por check ───
+# ─── Evidência: estática (leu o repositório) vs dinâmica (exercitou o sistema) ───
+# Um check estático que passa prova que a ESTRUTURA existe: há código de breaker,
+# há try/catch, há header configurado. Não prova que o breaker segura, que o
+# catch traduz o erro, que o header chega no browser.
+#
+# Antes da v0.79 os dois estados eram indistinguíveis no result: "passed" e
+# pronto. O gate lia aprovação onde havia, no máximo, ausência de contradição
+# estática — exatamente o "default do desconhecido sendo o valor bom" que este
+# projeto existe para recusar.
+#
+# Agora todo result carrega:
+#   evidence_kind: "static" | "dynamic"
+#   exercised:     true  → o check tocou o sistema vivo e mediu
+#                  false → não tocou (sem alvo, sem docker, sem autorização)
+#   not_exercised_reason: por que não tocou (nunca vazio quando exercised=false)
+BLINDAR_EVIDENCE_KIND="${BLINDAR_EVIDENCE_KIND:-static}"
+BLINDAR_EXERCISED=0
+BLINDAR_NOT_EXERCISED_REASON=""
+
+# Declare no topo do check dinâmico, ANTES de qualquer emit_result.
+declare_dynamic() {
+  BLINDAR_EVIDENCE_KIND="dynamic"
+  [ -z "$BLINDAR_NOT_EXERCISED_REASON" ] && \
+    BLINDAR_NOT_EXERCISED_REASON="o check declarou-se dinâmico e não chegou a exercitar nada"
+}
+
+# Chame no ponto em que o sistema vivo REALMENTE respondeu — depois da primeira
+# medição válida, não antes de tentar.
+mark_exercised() {
+  BLINDAR_EXERCISED=1
+  BLINDAR_NOT_EXERCISED_REASON=""
+}
+
+# Chame quando faltar a pré-condição (alvo, docker, autorização). O motivo vai
+# para o result e aparece no gate — "não exercitei" precisa dizer por quê, senão
+# vira o mesmo silêncio de antes.
+not_exercised() {
+  # ─── Exercitado e MONOTONICO: uma vez tocado, tocado ───
+  # O check pode medir uma coisa e nao conseguir medir outra. O
+  # check-failure-ux exercita o alvo em tres probes e so depois tenta congelar
+  # a dependencia; quando essa ultima parte falta pre-condicao, ela chamava
+  # not_exercised e ZERAVA o exercicio que ja tinha acontecido.
+  #
+  # Medido: o check achava o vazamento de rastro e o 500 onde cabia 404 — dois
+  # findings reais, contra alvo vivo — e gravava exercised=false. O gate leria
+  # "nao mediu" sobre uma medicao que produziu achado.
+  #
+  # A lacuna parcial continua sendo reportada: quem chama registra a parte que
+  # nao rodou como finding proprio, que e onde ela pertence.
+  if [ "$BLINDAR_EXERCISED" -eq 1 ]; then
+    log_warn "  (o sistema ja havia sido exercitado — lacuna parcial: ${1:-pré-condição ausente})"
+    return 0
+  fi
+  BLINDAR_EXERCISED=0
+  BLINDAR_NOT_EXERCISED_REASON="${1:-pré-condição ausente}"
+}
+
 emit_result() {
   local agent="$1"; local status="$2"  # passed|failed|skipped
   local exit_code="${3:-0}"
@@ -160,11 +217,31 @@ emit_result() {
     esac
   fi
 
+  # ─── Dinâmico que não exercitou nada NÃO sai 'passed' ───
+  # Um check dinâmico existe para tocar o sistema vivo. Se não achou alvo, não
+  # tinha docker ou não tinha autorização, ele não mediu nada — e "não medi"
+  # jamais pode ser gravado com o mesmo status de "medi e estava bom".
+  #
+  # É a mesma regra do require_tool, aplicada à pré-condição de RUNTIME em vez
+  # de à de ferramenta: sem exercício não há veredito, e ausência de veredito
+  # nunca é aprovação.
+  if [ "$BLINDAR_EVIDENCE_KIND" = "dynamic" ] && [ "$BLINDAR_EXERCISED" -eq 0 ] && [ "$status" = "passed" ]; then
+    log_warn "$agent é dinâmico e não exercitou o sistema — 'passed' vira 'skipped'."
+    log_warn "  Motivo: ${BLINDAR_NOT_EXERCISED_REASON:-não informado}"
+    log_warn "  O gate lê isto como NOT EXERCISED, não como aprovação."
+    status="skipped"
+  fi
+
   # skipped por falta de ferramenta é DIFERENTE de skipped por não se aplicar.
   # O primeiro é ausência de cobertura e não pode ser lido como aprovação —
   # quem consome o result precisa conseguir distinguir os dois.
   local skip_json="null"
   [ -n "${BLINDAR_MISSING_TOOL:-}" ] && skip_json="\"$(escape_json "$BLINDAR_MISSING_TOOL")\""
+
+  local exercised_reason_json="null"
+  if [ -n "$BLINDAR_NOT_EXERCISED_REASON" ] && [ "$BLINDAR_EXERCISED" -eq 0 ]; then
+    exercised_reason_json="\"$(escape_json "$BLINDAR_NOT_EXERCISED_REASON")\""
+  fi
 
   local out="$RESULTS_DIR/${agent}.json"
   # O diretório pode ter sumido entre o source do _lib.sh e agora (limpeza
@@ -181,6 +258,9 @@ emit_result() {
   "duration_sec": $duration,
   "missing_tool": $skip_json,
   "findings_count": ${#FINDINGS[@]},
+  "evidence_kind": "$BLINDAR_EVIDENCE_KIND",
+  "exercised": $([ "$BLINDAR_EXERCISED" -eq 1 ] && echo true || echo false),
+  "not_exercised_reason": $exercised_reason_json,
   "findings": $findings_json
 }
 EOF

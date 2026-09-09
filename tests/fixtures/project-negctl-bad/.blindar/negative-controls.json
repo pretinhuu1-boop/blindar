@@ -1,0 +1,4 @@
+{ "schema": "blindar/negative-controls@v1", "controls": [
+  { "finding_id": "check-security:0", "how_broken": "removi o escape em src/db/query.ts",
+    "test": "tests/query.spec.ts::rejeita aspas", "observed": "passed",
+    "at": "2026-08-30T10:00:00Z" } ] }

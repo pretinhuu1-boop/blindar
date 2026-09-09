@@ -44,6 +44,11 @@ selecionados completos em modo ESCOLHIDOS).
   vulnerável e cala no limpo
 - **11 release gates** com veredito **GO / CONDITIONAL GO / NO-GO**. Dimensão sem
   check executado conta como `NOT VERIFIED`, **nunca** como aprovação
+- **Camada dinâmica** (v0.79) — 5 checks que EXERCITAM o sistema no ar: congelam a
+  dependência e medem, sobem rampa de carga e acham o joelho, atacam de outra
+  origem de rede, conferem se a imagem no ar é o commit auditado, e leem o que o
+  cliente recebe quando quebra. Dimensão com estático passando e nada exercitado
+  vira `NOT EXERCISED` — ver [`docs/dynamic-layer.md`](docs/dynamic-layer.md)
 - **Execução avulsa** — `--only <agente>` para tarefa pontual (segundos em vez de
   minutos), com o relatório marcado como parcial e a cobertura medida contra o
   total disponível
@@ -159,7 +164,8 @@ Ao me apresentar o resultado:
 - Toda afirmação precisa de onde ser verificada: arquivo e linha, ou a medição.
   Não escreva "PostgreSQL configurado"; escreva onde está e o que prova.
 - Me diga o que NÃO foi verificado e por quê. Gate sem check executado é
-  NOT VERIFIED, nunca aprovado.
+  NOT VERIFIED, nunca aprovado; gate cujo sistema ninguém exercitou é
+  NOT EXERCISED, que também não é aprovado.
 - Liste os crit/high por ordem de risco real, com o que acontece se ninguém
   corrigir.
 

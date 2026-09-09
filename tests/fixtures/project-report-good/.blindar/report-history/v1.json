@@ -1,0 +1,3 @@
+{ "schema": "blindar/report@v1", "version": 1,
+  "claims": [ { "agent": "check-horizontal-scale", "status": "failed" },
+              { "agent": "check-security", "status": "passed" } ] }

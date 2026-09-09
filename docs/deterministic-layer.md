@@ -225,3 +225,17 @@ A camada determinística NÃO substitui Claude — complementa:
 - Visual regression integration (Chromatic/Percy)
 - Performance budget enforcement (size-limit)
 - Lighthouse CI integration
+
+---
+
+## Camada dinamica (v0.79)
+
+Esta camada prova que a ESTRUTURA existe. A camada dinamica prova o
+COMPORTAMENTO: congela a dependencia e mede, sobe rampa de carga e acha o
+joelho, ataca de outra origem de rede, confere se a imagem no ar e o commit
+auditado, e le o que o cliente recebe quando quebra.
+
+Sao complementares, e a diferenca entre elas virou estado de gate: dimensao com
+check estatico passando e nada exercitado nao e PASS, e NOT EXERCISED.
+
+Ver [`dynamic-layer.md`](dynamic-layer.md).

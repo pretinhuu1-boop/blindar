@@ -1,0 +1,6 @@
+{ "schema": "blindar/report@v1", "version": 2, "supersedes": 1,
+  "claims": [ { "agent": "check-horizontal-scale", "status": "passed" },
+              { "agent": "check-security", "status": "passed" } ],
+  "corrections": [
+    { "agent": "check-horizontal-scale", "was": "failed", "now": "passed",
+      "why": "a medicao mostrou sessao DB-backed; a afirmacao da v1 estava errada" } ] }

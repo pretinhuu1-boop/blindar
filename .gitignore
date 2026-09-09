@@ -22,4 +22,32 @@ desktop.ini
 # Outputs transientes do blindar (gerados em fixtures durante testes)
 .blindar/
 tests/fixtures/**/.blindar/
+
+# ...mas alguns fixtures tem o .blindar como INSUMO, nao como saida.
+#
+# O check-wave-guardian LE .blindar/run-report.json; os checks de disciplina
+# (negative-control, assumption-probe, report-integrity) leem fixes.json,
+# negative-controls.json, assumptions.json e report.json. Sao a entrada do
+# fixture, tao versionaveis quanto o package.json de um fixture.
+#
+# A regra acima engolia esses arquivos, e o efeito e o pior possivel: o par
+# passa na maquina de quem escreveu e chega SEM INSUMO no clone limpo, onde o
+# check reprova por falta de pre-requisito — nao por falso-positivo. Foi o que
+# aconteceu com o par do wave-guardian, quebrado no repositorio desde que foi
+# escrito, porque o insumo dele nunca chegou a ser commitado.
+#
+# Reincluir o diretorio, excluir o conteudo, reincluir arquivo por arquivo:
+# saida nova do blindar continua fora por padrao, insumo entra por decisao.
+# Contratado por tests/fixtures-versionados.test.mjs.
+!tests/fixtures/**/.blindar/
+tests/fixtures/**/.blindar/**
+!tests/fixtures/**/.blindar/fixes.json
+!tests/fixtures/**/.blindar/negative-controls.json
+!tests/fixtures/**/.blindar/assumptions.json
+!tests/fixtures/**/.blindar/report.json
+!tests/fixtures/**/.blindar/run-report.json
+!tests/fixtures/**/.blindar/target.url
+!tests/fixtures/**/.blindar/report-history/
+!tests/fixtures/**/.blindar/report-history/**
+
 tests/tmp-attack*.json
