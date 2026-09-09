@@ -18,6 +18,10 @@
 #   --security-only   Roda APENAS módulos de segurança: 2 (core security),
 #                     5 (supply-chain), 15 (pentest). Mutex com --module.
 #   --module N,N,N    Lista módulos por número (ex: --module 1,2,9)
+#   --reuse-unchanged  Playbook-only cujo result anterior foi medido no MESMO
+#                      código (git_sha ancestral, diff vazio, tree limpa) herda
+#                      o veredito em vez de virar `deferred` de novo. Não
+#                      adivinha escopo: se QUALQUER arquivo mudou, re-roda.
 #   --only A[,B]      EXECUÇÃO AVULSA: roda só os agentes nomeados (ex:
 #                     --only mock-killer,secrets). Para tarefa pontual. O
 #                     relatório sai com partial:true e o coverage_pct continua
@@ -77,6 +81,41 @@ RESULTS_DIR="${BLINDAR_DIR:-$PROJECT_DIR/.blindar}/results"
 # como distinguir "rodando" de "travado". Uma linha por agente concluído, em
 # caminho previsível, resolve sem depender de como o stdout foi encanado.
 PROGRESS_LOG="${BLINDAR_DIR:-$PROJECT_DIR/.blindar}/progress.jsonl"
+
+# ─── Re-rodar playbook sobre delta que não o toca ───
+# O passo 5 da sequência manda executar TODO agente `deferred` — e está certo,
+# porque agente não executado nunca pode contar como aprovado. Mas numa 2ª
+# rodada da mesma sessão sobre um delta pequeno, os 53 playbooks re-derivavam o
+# mesmo baseline já triado: ou o operador queima tokens reconfirmando falso
+# positivo conhecido, ou desobedece a sequência — e aí a sequência perde
+# autoridade.
+#
+# O reuso aqui é o caso PROVÁVEL, não o adivinhado: só reaproveita quando o
+# `git_sha` do result anterior é ancestral do HEAD e o diff entre os dois está
+# VAZIO. Aí o veredito anterior vale porque nada mudou, ponto.
+#
+# O que este script deliberadamente NÃO faz é adivinhar o escopo do playbook a
+# partir dos arquivos onde ele achou algo antes. Um agente acha em arquivo onde
+# nunca achou; herdar veredito por escopo inferido seria transformar "não sei"
+# em "está tudo bem", que é o defeito que este projeto existe para recusar.
+REUSE_UNCHANGED=0
+
+pode_reusar() {
+  local agent="$1" prev="$RESULTS_DIR/check-$1.json"
+  [ "$REUSE_UNCHANGED" -eq 1 ] || return 1
+  [ -f "$prev" ] || return 1
+  command -v git >/dev/null 2>&1 || return 1
+  git rev-parse --git-dir >/dev/null 2>&1 || return 1
+  local sha
+  sha=$(grep -oE '"git_sha"[[:space:]]*:[[:space:]]*"[^"]+"' "$prev" 2>/dev/null | head -1 | sed -E 's/.*"([^"]+)"$/\1/')
+  [ -n "$sha" ] && [ "$sha" != "unknown" ] || return 1
+  git merge-base --is-ancestor "$sha" HEAD 2>/dev/null || return 1
+  # Diff vazio: nada mudou desde a medição, então ela continua valendo.
+  [ -z "$(git diff --name-only "$sha" HEAD 2>/dev/null)" ] || return 1
+  # Working tree sujo também invalida: o playbook lê arquivo, não commit.
+  [ -z "$(git status --porcelain 2>/dev/null)" ] || return 1
+  return 0
+}
 RUN_REPORT="${BLINDAR_DIR:-$PROJECT_DIR/.blindar}/run-report.json"
 SKILL_VERSION="$(tr -d '[:space:]' < "$SKILL_DIR/VERSION" 2>/dev/null || echo unknown)"
 # O cache de veredito usa a versão como parte da chave: blindar novo invalida
@@ -120,6 +159,7 @@ while [ $# -gt 0 ]; do
     --json)   JSON_ONLY=1; shift ;;
     --module) MODULES_FILTER="$2"; shift 2 ;;
     --only)   ONLY_AGENTS="$2"; shift 2 ;;
+    --reuse-unchanged) REUSE_UNCHANGED=1; shift ;;
     --with-evolution) WITH_EVOLUTION=1; shift ;;
     --since)  SINCE_REF="$2"; shift 2 ;;
     --parallel) PARALLEL="$2"; shift 2 ;;
@@ -334,6 +374,18 @@ run_one_check() {
   fi
 
   if [ -z "$script" ]; then
+    if pode_reusar "$agent"; then
+      local prev_status
+      prev_status=$(grep -oE '"status"[[:space:]]*:[[:space:]]*"[a-z]+"' "$result_json" | head -1 | sed -E 's/.*"([a-z]+)".*/\1/')
+      if [ -n "$prev_status" ] && [ "$prev_status" != "deferred" ]; then
+        local prev_f
+        prev_f=$(grep -oE '"findings_count"[[:space:]]*:[[:space:]]*[0-9]+' "$result_json" | head -1 | sed -E 's/.*:[[:space:]]*([0-9]+).*/\1/')
+        [ "$JSON_ONLY" -eq 0 ] && printf '%s
+' "${Y}↻${RST}  $agent — reusado: nada mudou desde a medição anterior" >&2
+        echo "$module_id|$agent|playbook-only|${prev_status}|${prev_f:-0}"
+        return 0
+      fi
+    fi
     [ "$JSON_ONLY" -eq 0 ] && printf '%s
 ' "${Y}⏭${RST}  $agent (module $module_id) — playbook-only, requer Claude" >&2
     cat > "$result_json" <<EOF
@@ -396,7 +448,8 @@ mkdir -p "$(dirname "$PROGRESS_LOG")" 2>/dev/null || true
 if [ "$PARALLEL" -gt 1 ]; then
   # Modo paralelo: usa xargs -P. Cada worker chama bash -c que invoca run_one_check.
   # Exportar variáveis necessárias pros subshells:
-  export CHECKS_DIR RESULTS_DIR VERBOSE JSON_ONLY R G Y B BOLD RST PROGRESS_LOG
+  export CHECKS_DIR RESULTS_DIR VERBOSE JSON_ONLY R G Y B BOLD RST PROGRESS_LOG REUSE_UNCHANGED
+  export -f pode_reusar 2>/dev/null || true
 
   # Cria um script-helper inline temporário pra invocar run_one_check com env passada
   HELPER=$(mktemp 2>/dev/null || echo "$RESULTS_DIR/.parallel-helper.sh")
@@ -422,6 +475,18 @@ else kind="playbook-only"; script=""
 fi
 
 if [ -z "$script" ]; then
+  # Mesmo reuso do caminho serial: veredito anterior medido no MESMO codigo
+  # (git_sha ancestral, diff vazio, tree limpa) continua valendo. Sem isso, os
+  # dois modos de execucao dariam respostas diferentes para a mesma pergunta.
+  if declare -F pode_reusar >/dev/null 2>&1 && pode_reusar "$agent"; then
+    prev_status=$(grep -oE '"status"[[:space:]]*:[[:space:]]*"[a-z]+"' "$result_json" | head -1 | sed -E 's/.*"([a-z]+)".*/\1/')
+    if [ -n "${prev_status:-}" ] && [ "$prev_status" != "deferred" ]; then
+      prev_f=$(grep -oE '"findings_count"[[:space:]]*:[[:space:]]*[0-9]+' "$result_json" | head -1 | sed -E 's/.*:[[:space:]]*([0-9]+).*/\1/')
+      [ "${JSON_ONLY:-0}" -eq 0 ] && echo "${Y}↻${RST}  $agent — reusado: nada mudou desde a medicao anterior" >&2
+      echo "$module_id|$agent|playbook-only|${prev_status}|${prev_f:-0}"
+      exit 0
+    fi
+  fi
   [ "${JSON_ONLY:-0}" -eq 0 ] && echo "${Y}⏭${RST}  $agent (module $module_id) — playbook-only, requer Claude" >&2
   cat > "$result_json" <<EOF2
 {"schema":"blindar/check-result@v1","agent":"check-$agent","status":"deferred","kind":"playbook-only","module":"$module_id","findings_count":0,"severities":{"crit":0,"high":0,"med":0,"low":0},"findings":[],"message":"Agente disponível só como playbook em agents/$agent.md — requer Claude pra executar"}

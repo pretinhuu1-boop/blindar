@@ -109,6 +109,11 @@
           "message": {
             "type": "string"
           },
+          "fp": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}$",
+            "description": "Impressao digital estavel do achado (agente + arquivo + mensagem normalizada), montada em add_finding. E por ela que o check-release-gates casa o achado com o aceite registrado em accept-risk.md e distingue novo de baseline. Achado sem fp conta como NOVO. v0.83.0+."
+          },
           "file": {
             "type": "string"
           },

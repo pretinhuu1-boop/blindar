@@ -175,6 +175,15 @@ if command -v node >/dev/null 2>&1; then
   fi
 
   echo ""
+  echo "${BOLD}── novo × baseline aceito (.accept-risk.md por fingerprint) ──${RESET}"
+  if node "$SCRIPT_DIR/accept-risk-reconcile.test.mjs"; then
+    PASS_COUNT=$((PASS_COUNT+1))
+  else
+    FAIL_COUNT=$((FAIL_COUNT+1))
+    FAIL_LIST+=("tests/accept-risk-reconcile.test.mjs")
+  fi
+
+  echo ""
   echo "${BOLD}── path POSIX × binário nativo do Windows ──${RESET}"
   if node "$SCRIPT_DIR/pathconv.test.mjs"; then
     PASS_COUNT=$((PASS_COUNT+1))

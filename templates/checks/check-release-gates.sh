@@ -153,6 +153,36 @@ DYNAMIC_REQUIRED="${BLINDAR_DYNAMIC_REQUIRED:-RUNTIME RESILIENCE DEPLOYMENT}"
 # Formato intermediário: agent|status|crit|high|missing_tool. O mapeamento
 # check→gate fica só no gate_of() do bash, para não duplicar a regra nos dois
 # leitores.
+# ─── Reconciliação com o que já foi triado ───
+# O `.accept-risk.md` sempre existiu, e nada o lia. A cada rodada o blindar
+# re-listava o baseline inteiro como se fosse novo, e separar "entrou neste
+# ciclo" de "já aceito com evidência" era trabalho manual do operador — sendo
+# que essa é a única pergunta que decide o GO.
+#
+# O casamento é por impressão digital (`fp`, montada em add_finding), não por
+# caminho: um segundo achado no mesmo arquivo não deve herdar o aceite do
+# primeiro. Basta a linha do aceite conter `fp:xxxxxxxx`.
+#
+# Aceite NUNCA vira verde limpo: crit aceito rebaixa o veredito para
+# CONDITIONAL GO e sai nomeado. "Alguém assinou" é diferente de "não existe", e
+# no dia em que as duas coisas ficarem indistinguíveis o arquivo de aceite vira
+# um lugar para esconder crit.
+ACCEPT_FILE=""
+for _c in "$BLINDAR_DIR/accept-risk.md" ".accept-risk.md" "accept-risk.md"; do
+  [ -f "$_c" ] && { ACCEPT_FILE="$_c"; break; }
+done
+ACCEPTED_FPS=$(mktemp)
+if [ -n "$ACCEPT_FILE" ]; then
+  grep -oE "fp:[0-9a-f]{8}" "$ACCEPT_FILE" 2>/dev/null | sed "s/^fp://" | sort -u > "$ACCEPTED_FPS"
+  _naccept=$(wc -l < "$ACCEPTED_FPS" | tr -d " ")
+  echo "ℹ  $ACCEPT_FILE: ${_naccept:-0} achado(s) com aceite registrado"
+  if [ "${_naccept:-0}" -eq 0 ] && grep -q "RISK-" "$ACCEPT_FILE" 2>/dev/null; then
+    echo "   Há risco escrito, mas nenhuma linha com fp:xxxxxxxx — sem a impressão"
+    echo "   digital o gate não casa o aceite com o achado, e tudo segue contando"
+    echo "   como NOVO. O formato está em templates/accept-risk.md."
+  fi
+fi
+
 RAW=$(mktemp)
 if [ "$JSON_READER" = "node" ]; then
   # Uma chamada de node para o diretório inteiro. Um processo por arquivo custa
@@ -160,6 +190,13 @@ if [ "$JSON_READER" = "node" ]; then
   node -e '
     const fs = require("fs"), path = require("path");
     const dir = process.argv[1];
+    // Achado sem `fp` (result de versao anterior, ou gravado por subagente que
+    // nao seguiu o schema) nunca casa aceite: conta como novo. O default do
+    // desconhecido nao pode ser "ja foi aceito".
+    let ACEITOS = new Set();
+    try {
+      ACEITOS = new Set(fs.readFileSync(process.argv[2], "utf8").split(/[\r\n]+/).filter(Boolean));
+    } catch (e) { /* sem arquivo de aceite: tudo e novo */ }
     let names = [];
     try { names = fs.readdirSync(dir); } catch (e) { process.exit(0); }
     for (const name of names.filter(n => /^check-.*\.json$/.test(n))) {
@@ -170,14 +207,17 @@ if [ "$JSON_READER" = "node" ]; then
       const f = Array.isArray(j.findings) ? j.findings : [];
       const crit = f.filter(x => x && x.severity === "crit").length;
       const high = f.filter(x => x && x.severity === "high").length;
+      const aceito = (x) => x && x.fp && ACEITOS.has(x.fp);
+      const critNovo = f.filter(x => x && x.severity === "crit" && !aceito(x)).length;
+      const highNovo = f.filter(x => x && x.severity === "high" && !aceito(x)).length;
       const mt = (j.missing_tool === null || j.missing_tool === undefined) ? "0" : "1";
       // v0.79: evidencia estatica x dinamica. Um check dinamico que nao
       // exercitou nada nao pode alimentar um gate como se tivesse medido.
       const dyn = j.evidence_kind === "dynamic" ? "1" : "0";
       const exercised = j.exercised === true ? "1" : "0";
-      process.stdout.write([j.agent, j.status || "unknown", crit, high, mt, dyn, exercised].join("|") + "\n");
+      process.stdout.write([j.agent, j.status || "unknown", crit, high, mt, dyn, exercised, critNovo, highNovo].join("|") + "\n");
     }
-  ' "$RESULTS_DIR" > "$RAW" 2>/dev/null || true
+  ' "$RESULTS_DIR" "$ACCEPTED_FPS" > "$RAW" 2>/dev/null || true
 else
   for f in "$RESULTS_DIR"/check-*.json; do
     [ -f "$f" ] || continue
@@ -191,14 +231,18 @@ else
     mt=$(jq -r 'if .missing_tool == null then "0" else "1" end' "$f" 2>/dev/null || echo 0)
     dyn=$(jq -r 'if .evidence_kind == "dynamic" then "1" else "0" end' "$f" 2>/dev/null || echo 0)
     exercised=$(jq -r 'if .exercised == true then "1" else "0" end' "$f" 2>/dev/null || echo 0)
-    printf '%s|%s|%s|%s|%s|%s|%s\n' "$agent" "$status" "$crit" "$high" "$mt" "$dyn" "$exercised" >> "$RAW"
+    # Novo = fingerprint que nao aparece no arquivo de aceite. Sem `fp`, o
+    # achado conta como novo: o default do desconhecido nao e "ja aceito".
+    critn=$(jq -r --rawfile acc "$ACCEPTED_FPS" '[.findings[]? | select(.severity=="crit") | select((.fp // "") as $x | ($acc | split("\n") | index($x)) == null)] | length' "$f" 2>/dev/null || echo "$crit")
+    highn=$(jq -r --rawfile acc "$ACCEPTED_FPS" '[.findings[]? | select(.severity=="high") | select((.fp // "") as $x | ($acc | split("\n") | index($x)) == null)] | length' "$f" 2>/dev/null || echo "$high")
+    printf '%s|%s|%s|%s|%s|%s|%s|%s|%s\n' "$agent" "$status" "$crit" "$high" "$mt" "$dyn" "$exercised" "${critn:-$crit}" "${highn:-$high}" >> "$RAW"
   done
 fi
 
 ROWS=$(mktemp)
-while IFS='|' read -r agent status crit high mt dyn exercised; do
+while IFS='|' read -r agent status crit high mt dyn exercised critn highn; do
   [ -z "${agent:-}" ] && continue
-  printf '%s|%s|%s|%s|%s|%s|%s|%s\n' "$(gate_of "$agent")" "$agent" "$status" "$crit" "$high" "$mt" "${dyn:-0}" "${exercised:-0}" >> "$ROWS"
+  printf '%s|%s|%s|%s|%s|%s|%s|%s|%s|%s\n' "$(gate_of "$agent")" "$agent" "$status" "$crit" "$high" "$mt" "${dyn:-0}" "${exercised:-0}" "${critn:-$crit}" "${highn:-$high}" >> "$ROWS"
 done < "$RAW"
 rm -f "$RAW"
 
@@ -253,13 +297,27 @@ for g in $GATES; do
     nhigh=$(awk -F'|' -v g="$g" '$1==g {s+=$5} END{print s+0}' "$ROWS")
     nfail=$(awk -F'|' -v g="$g" '$1==g && $3=="failed"' "$ROWS" | wc -l | tr -d ' ')
     nunver=$(awk -F'|' -v g="$g" '$1==g && $6=="1"' "$ROWS" | wc -l | tr -d ' ')
+    # Um awk para os dois: no Windows cada subprocesso custa mais que a conta,
+    # e são 11 gates × cada chamada.
+    read -r ncritn nhighn <<< "$(awk -F'|' -v g="$g" '$1==g {c+=$9; h+=$10} END{print c+0, h+0}' "$ROWS")"
+    ncrita=$((ncrit - ncritn)); nhigha=$((nhigh - nhighn))
 
-    if [ "$ncrit" -gt 0 ]; then
-      status="BLOCKED"; evid="$ncrit crit em $n check(s)"
+    if [ "$ncritn" -gt 0 ]; then
+      status="BLOCKED"; evid="$ncritn crit NOVO em $n check(s)"
+      [ "$ncrita" -gt 0 ] && evid="$evid (+$ncrita aceito)"
+    elif [ "$ncrita" -gt 0 ]; then
+      # Crit existe e está assinado. Não bloqueia — e também não passa limpo:
+      # aceite é decisão registrada, não ausência de risco.
+      status="PASS WITH WARNINGS"; evid="$ncrita crit aceito em $ACCEPT_FILE, 0 novo"
     elif [ "$nunver" -gt 0 ]; then
       status="PASS WITH WARNINGS"; evid="$nunver check(s) não verificados (ferramenta ausente)"
     elif [ "$nfail" -gt 0 ]; then
-      status="PASS WITH WARNINGS"; evid="$nfail check(s) com finding, $nhigh high"
+      status="PASS WITH WARNINGS"
+      if [ "$nhigh" -ne "$nhighn" ]; then
+        evid="$nfail check(s) com finding, $nhighn high NOVO (+$nhigha aceito)"
+      else
+        evid="$nfail check(s) com finding, $nhigh high"
+      fi
     else
       status="PASS"; evid="$n check(s), 0 finding"
     fi
@@ -381,6 +439,20 @@ JSON_OOG="${JSON_OOG%,}"
 JSON_UNMAPPED=$(awk -F'|' '$1=="UNMAPPED" {print $2}' "$ROWS" | sort -u | awk '{printf "\"%s\",", $1}')
 JSON_UNMAPPED="${JSON_UNMAPPED%,}"
 
+# Totais do ciclo: o headline passa a ser "novo", com o baseline aceito ao lado.
+TOT_CRIT=$(awk -F'|' '{s+=$4} END{print s+0}' "$ROWS")
+TOT_HIGH=$(awk -F'|' '{s+=$5} END{print s+0}' "$ROWS")
+TOT_CRIT_NOVO=$(awk -F'|' '{s+=$9}  END{print s+0}' "$ROWS")
+TOT_HIGH_NOVO=$(awk -F'|' '{s+=$10} END{print s+0}' "$ROWS")
+TOT_CRIT_ACEITO=$((TOT_CRIT - TOT_CRIT_NOVO))
+TOT_HIGH_ACEITO=$((TOT_HIGH - TOT_HIGH_NOVO))
+
+# GO limpo exige que não haja crit nenhum, nem aceito. Um crit assinado é uma
+# decisão viva com data de reavaliação — merece CONDITIONAL, não verde.
+if [ "$VERDICT" = "GO" ] && [ "$TOT_CRIT_ACEITO" -gt 0 ]; then
+  VERDICT="CONDITIONAL GO"; EXIT_CODE=1
+fi
+
 mkdir -p "$BLINDAR_DIR"
 cat > "$GATES_OUT" <<EOF
 {
@@ -389,6 +461,12 @@ cat > "$GATES_OUT" <<EOF
   "verdict": "$VERDICT",
   "blocked_gates": $BLOCKED_N,
   "warning_gates": $WARN_N,
+  "findings": {
+    "crit": $TOT_CRIT, "high": $TOT_HIGH,
+    "crit_novo": $TOT_CRIT_NOVO, "high_novo": $TOT_HIGH_NOVO,
+    "crit_aceito": $TOT_CRIT_ACEITO, "high_aceito": $TOT_HIGH_ACEITO,
+    "accept_file": "$ACCEPT_FILE"
+  },
   "gates": [${JSON_GATES%,}],
   "out_of_gate": [${JSON_OOG}],
   "unmapped": [${JSON_UNMAPPED}]
@@ -398,10 +476,11 @@ EOF
 echo ""
 echo "══════════════════════════════════════════════════════════════════════"
 echo "  VEREDITO: $VERDICT   (BLOCKED=$BLOCKED_N  WARNINGS=$WARN_N)"
+echo "  Neste ciclo: $TOT_CRIT_NOVO crit NOVO, $TOT_HIGH_NOVO high NOVO   |   baseline aceito: $TOT_CRIT_ACEITO crit, $TOT_HIGH_ACEITO high"
 echo "══════════════════════════════════════════════════════════════════════"
 [ "$VERDICT" = "CONDITIONAL GO" ] && echo "  Cada WARNING precisa de aceite assinado em .accept-risk.md."
 [ "$VERDICT" = "NO-GO" ] && echo "  Gate BLOCKED bloqueia release independente da contagem de crit/high."
 echo "  Detalhe: $GATES_OUT"
 
-rm -f "$ROWS"
+rm -f "$ROWS" "$ACCEPTED_FPS"
 exit $EXIT_CODE

@@ -3,6 +3,63 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.83.0] — 2026-09-09
+
+Fecha os dois itens que faltavam do relatório de campo do FastList.
+
+### O gate passa a distinguir novo de baseline aceito
+
+O `.accept-risk.md` sempre existiu, com cada falso positivo triado e a evidência
+escrita ao lado — e **nada o lia**. A cada rodada o blindar re-listava tudo como
+se fosse novo, e separar "entrou neste ciclo" de "já aceito" era trabalho manual
+do operador. É a única pergunta que decide o GO, e era a única que a skill não
+respondia.
+
+Agora cada finding carrega uma impressão digital (`fp`), montada no
+`add_finding` a partir de agente + arquivo + mensagem normalizada — com dígitos
+colapsados, para que número de linha e contagem não gerem impressão nova a cada
+rodada. Basta a linha do aceite conter `fp:xxxxxxxx` e o gate casa as duas
+pontas. Por caminho seria pior: um segundo achado no mesmo arquivo herdaria o
+aceite do primeiro.
+
+O `gates.json` ganha `findings` com `crit_novo` / `high_novo` /
+`crit_aceito` / `high_aceito`, e o headline do veredito vira
+`0 crit NOVO, 0 high NOVO | baseline aceito: N crit, M high`.
+
+Três garantias que impedem o arquivo de aceite de virar esconderijo:
+
+- **Achado sem `fp` conta como NOVO.** Result de versão anterior, ou gravado
+  por subagente que ignorou o schema, nunca casa aceite — o default do
+  desconhecido não é "já foi aceito".
+- **Crit aceito não vira verde limpo.** Sai de `BLOCKED`, mas fica em
+  `PASS WITH WARNINGS` e derruba o veredito global para `CONDITIONAL GO`.
+- **O aceite morre com o achado.** Mudou o código, mudou a mensagem, mudou a
+  impressão digital: volta como novo. O aceite valia para aquele achado, não
+  para aquele arquivo.
+
+### Deferred incremental, sem adivinhar escopo
+
+Numa 2ª rodada sobre um delta pequeno, os 53 playbooks `deferred`
+re-derivavam o mesmo baseline. Ou o operador queimava tokens reconfirmando
+falso positivo conhecido, ou desobedecia a sequência obrigatória — e aí a
+sequência perde autoridade.
+
+`blindar-run.sh --reuse-unchanged`: agente `playbook-only` cujo result anterior
+foi medido no MESMO código (`git_sha` ancestral do HEAD, diff vazio, working
+tree limpa) herda o veredito com nota, nos dois modos de execução.
+
+O que **não** foi feito, de propósito: inferir o escopo do playbook a partir
+dos arquivos onde ele achou algo antes, para reusar quando "só o alvo dele não
+mudou". Nenhum agente declara os arquivos que cobre, e um agente acha em
+arquivo onde nunca tinha achado — herdar veredito por escopo adivinhado seria
+transformar "não sei" em "está tudo bem". Mudou qualquer arquivo, roda.
+
+### Verificação
+
+`tests/accept-risk-reconcile.test.mjs` (novo, na CI): 20 ok, 0 fail — exercita o
+gate de verdade em quatro cenários (sem aceite, com aceite por `fp`, aceite sem
+`fp`, e a estabilidade da impressão digital entre linhas e arquivos).
+
 ## [0.82.0] — 2026-09-09
 
 Relatório de campo do FastList (183 commits em 7 dias, blindar 0.80 rodado 2×

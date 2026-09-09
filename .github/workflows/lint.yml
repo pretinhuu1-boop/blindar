@@ -112,6 +112,12 @@ jobs:
         # voltar a acusar o próprio .blindar/, ou se um matcher voltar a dar
         # crit por linha de comentário.
         run: node tests/severity-rollup.test.mjs
+
+      - name: Novo × baseline aceito
+        # Falha se o aceite por fingerprint parar de casar, se achado sem fp
+        # começar a contar como aceito, ou se crit aceito voltar a sair como GO
+        # limpo — aceite assinado não é ausência de risco.
+        run: node tests/accept-risk-reconcile.test.mjs
       - name: Paridade ripgrep real × fallback de grep
         # Falha se alguém reintroduzir --type inválido, glob sem -g, ou se as
         # duas implementações divergirem no veredito. Foi essa divergência que
