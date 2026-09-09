@@ -1,0 +1,7 @@
+{
+  "name": "fixture-transfint",
+  "dependencies": {
+    "stripe": "^17.0.0",
+    "openai": "^4.70.0"
+  }
+}

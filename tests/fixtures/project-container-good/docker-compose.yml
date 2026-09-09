@@ -1,0 +1,12 @@
+services:
+  api:
+    build: .
+    read_only: true
+    mem_limit: 512m
+    cpus: 0.5
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    ports:
+      - "3000:3000"

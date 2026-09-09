@@ -83,6 +83,37 @@ FULL_CHECKS=(
   check-chaos-run.sh                  # congela dependencia e mede
   check-load-curve.sh                 # rampa + joelho de saturacao
   check-redteam-origin.sh             # origem externa (exige .accept-authorization)
+
+  # ─── v0.80: operacionais e compliance que EXECUTAM (eram playbook advisory) ───
+  # Vários são condicionais e saem 'skipped' com motivo quando não se aplicam.
+  # Isso é intencional: a dimensão aparece como NÃO VERIFICADA, não some.
+  check-observability-present.sh      # métrica exposta + alguém sendo paginado
+  check-backup-restore-tested.sh      # restore exercitado, não só backup agendado
+  check-deps-auto-update.sh           # dependabot/renovate — CVE contínua
+  check-npm-ci-lockfile.sh            # build travado no lockfile
+  check-image-scan.sh                 # CVE da IMAGEM (base de sistema)
+  check-container-hardening.sh        # root, limites de recurso, privilégio
+  check-pii-in-logs.sh                # dado pessoal no arquivo de log
+  check-synthetic-uptime.sh           # ping de fora — o /healthz não sabe que caiu
+  check-rollback-ready.sh             # tag versionada + rollback escrito
+  check-graceful-shutdown.sh          # SIGTERM drena o que está em voo
+  check-idempotency-keys.sh           # retry do cliente não duplica pedido
+  check-outbound-queue-readiness.sh   # e-mail/webhook fora da requisição
+  check-mfa-readiness.sh              # segundo fator disponível
+  check-metered-external-cost-guard.sh # cota por origem em serviço cobrado por uso
+  check-security-headers-completo.sh  # Permissions-Policy + COOP/COEP/CORP
+  check-prompt-untrusted-delimiting.sh # texto do usuário delimitado no prompt
+  check-llm-latency-observability.sh  # p95 do provedor de LLM instrumentado
+  check-frontend-perf-budget.sh       # orçamento de bytes MEDIDO (+ Lighthouse)
+  check-image-optimization.sh         # formato moderno, srcset, dimensão (CLS)
+  check-resource-hints.sh             # preconnect/preload de terceiro crítico
+  check-a11y-executado.sh             # axe-core + contraste calculado
+  check-geo-readiness.sh              # citação por motor generativo (condicional)
+  check-lgpd-transferencia-internacional.sh # base legal p/ dado saindo do país
+  check-dsr-automation.sh             # titular consegue exportar e eliminar
+  check-retention-job-agendado.sh     # config de retenção com job que executa
+  check-breach-runbook.sh             # 3 dias úteis (ANPD) / 72h (GDPR)
+  check-feature-flags-killswitch.sh   # desligar sem deploy
 )
 
 FAST_CHECKS=(

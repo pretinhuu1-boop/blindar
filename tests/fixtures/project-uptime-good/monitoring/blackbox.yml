@@ -1,0 +1,5 @@
+# Prometheus blackbox_exporter: ping de fora, a cada 60s, com alerta.
+modules:
+  http_2xx:
+    prober: http
+    timeout: 5s

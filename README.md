@@ -5,8 +5,8 @@ otimiza e prepara projetos para produção** — e também sabe criar projetos
 novos do zero, gerar/refazer frontend lendo o backend, e entregar pacote
 completo (DEPLOY/MANUAL/API/Postman/diagramas/SLA) ao final.
 
-**v0.48 — 117 agentes em 19 módulos numerados, com camada determinística
-(95 checks executáveis) que garante cobertura independente da diligência do LLM.**
+**v0.80 — 170 agentes em 19 módulos numerados, com camada determinística
+(144 checks executáveis) que garante cobertura independente da diligência do LLM.**
 
 Comportamento: **launcher curto** no início (4 perguntas + menu de
 19 módulos, ≤30s) → roda autônomo até termination conforme modo escolhido:
@@ -36,11 +36,11 @@ selecionados completos em modo ESCOLHIDOS).
   estragar) · EVOLVE (já em produção) · RECOVERY (quebrado) · COLLAB (o
   repositório é o problema: git, CI, docs, equipe)
 - **19 módulos numerados** — "tudo", "defaults", "1,3,5", "1-8" ou "tudo menos 13,14"
-- **119 agentes** com `lead` e `authority` declarados; `chief-architect` arbitra
+- **170 agentes** com `lead` e `authority` declarados; `chief-architect` arbitra
   conflito entre especialistas por precedência (perda de dado > segurança >
   reversibilidade > simplicidade > o que já existe)
-- **Camada determinística** — 107 checks executáveis + gate `check-selftest`
-  (**74/74 pares** fixture-verificados) que provam que cada check dispara no
+- **Camada determinística** — 144 checks executáveis + gate `check-selftest`
+  (**114 pares** fixture-verificados) que provam que cada check dispara no
   vulnerável e cala no limpo
 - **11 release gates** com veredito **GO / CONDITIONAL GO / NO-GO**. Dimensão sem
   check executado conta como `NOT VERIFIED`, **nunca** como aprovação
@@ -227,9 +227,9 @@ blindar/
 │   ├── 07-final-report.md
 │   ├── 08-maintenance.md        (opcional)
 │   ├── 09-drift-detection.md    (opcional)
-│   └── MODULE-MAP.json          ⭐ fonte da verdade módulo→agentes (117 agentes em 19 módulos)
+│   └── MODULE-MAP.json          ⭐ fonte da verdade módulo→agentes (170 agentes em 19 módulos)
 │
-├── agents/               ← 117 especialistas em 19 módulos numerados
+├── agents/               ← 170 especialistas em 19 módulos numerados
 │   │                       Roster completo em SKILL.md ou MODULE-MAP.json.
 │   │                       Categorias (frontmatter `category:`):
 │   │                       security · frontend · ops · data · compliance ·

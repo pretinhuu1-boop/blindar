@@ -18,7 +18,7 @@ bash ~/.claude/skills/blindar/scripts/install-deterministic-checks.sh
 ```
 
 Resultado no projeto-alvo:
-- `scripts/blindar/*.sh` — **117 checks executáveis** (103 shell puro + 14
+- `scripts/blindar/*.sh` — **144 checks executáveis** (130 shell puro + 14
   `.api.sh`). O instalador copia `templates/checks/*.sh` inteiro, então a conta
   cresce com o repositório em vez de ficar congelada aqui.
 

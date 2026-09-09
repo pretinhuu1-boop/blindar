@@ -1,0 +1,5 @@
+{
+  "name": "fx-perfbudget",
+  "dependencies": { "react-dom": "^19.2.4" },
+  "blindar": { "perfBudgetPageKb": 1 }
+}

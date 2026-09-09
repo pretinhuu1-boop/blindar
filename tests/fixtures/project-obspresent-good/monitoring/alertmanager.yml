@@ -1,0 +1,6 @@
+route:
+  receiver: plantao
+receivers:
+  - name: plantao
+    pagerduty_configs:
+      - service_key: ${PAGERDUTY_KEY}
