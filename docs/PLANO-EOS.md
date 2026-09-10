@@ -3,6 +3,12 @@
 > Base: v0.50.0 (dev e instalada em sync). Alvo: v0.58.
 > Origem: proposta externa de reestruturação + auditoria do estado real do repo.
 > Regra de ouro: **delta, não reescrita**. Nada que já funciona é destruído para reorganizar.
+>
+> **As contagens deste documento são de v0.50 e ficam como estavam.** "109
+> agentes", "`templates/checks/` (101)" e afins descrevem o repo no dia em que
+> o diagnóstico foi escrito — atualizá-los apagaria o ponto de partida que o
+> plano existe para registrar. Para o número de hoje: `pipeline/MODULE-MAP.json`
+> e `ls templates/checks/` (em 0.83: 170 agentes, 144 checks).
 
 ---
 
