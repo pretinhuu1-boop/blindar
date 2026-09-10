@@ -3,6 +3,36 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.83.1] — 2026-09-09
+
+### O número escrito na doc apodreceu por três versões
+
+`docs/TOKEN-SPEED.md` anunciava "~100 agentes" com o `MODULE-MAP.json` já em
+170 — e ninguém tropeçou, porque documentação não quebra build. O efeito é o
+de sempre aqui: quem lê acredita no texto, e o texto está errado sem dizer que
+está.
+
+Corrigido para 170 agentes / 144 checks (130 shell + 14 `.api.sh`), com a nota
+de que a fonte da verdade é o `MODULE-MAP.json` e o `ls templates/checks/`,
+não o texto.
+
+`docs/PLANO-EOS.md` **não** foi corrigido de propósito: "109 agentes" e
+"`templates/checks/` (101)" são o diagnóstico datado de v0.50, e reescrevê-los
+apagaria o ponto de partida que o plano existe para registrar. Ganhou nota no
+cabeçalho dizendo que são snapshots e onde ver o número de hoje.
+
+### A guarda, e por que ela é estreita
+
+`tests/doc-counts.test.mjs` compara com a fonte da verdade só os documentos que
+**declaram o total**, arquivo por arquivo.
+
+A primeira versão varria todo `"N checks"` de todo `.md` e acusou 22
+divergências — quase todas legítimas: "16 checks do módulo 2", "64 checks
+auditados naquela rodada", "22 agentes ativados neste perfil". Verificador que
+não distingue total de recorte produz exatamente o ruído que a 0.82 passou a
+combater nos checks, e ruído ensina o operador a ignorar o verificador. Melhor
+estreito e crível do que amplo e ignorado.
+
 ## [0.83.0] — 2026-09-09
 
 Fecha os dois itens que faltavam do relatório de campo do FastList.

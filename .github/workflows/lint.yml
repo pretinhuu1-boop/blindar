@@ -118,6 +118,12 @@ jobs:
         # começar a contar como aceito, ou se crit aceito voltar a sair como GO
         # limpo — aceite assinado não é ausência de risco.
         run: node tests/accept-risk-reconcile.test.mjs
+
+      - name: Contagem anunciada na doc × fonte da verdade
+        # O TOKEN-SPEED.md anunciou "~100 agentes" por várias versões com o
+        # MODULE-MAP já em 170: documentação não quebra build, então o número
+        # apodrece sem ninguém tropeçar.
+        run: node tests/doc-counts.test.mjs
       - name: Paridade ripgrep real × fallback de grep
         # Falha se alguém reintroduzir --type inválido, glob sem -g, ou se as
         # duas implementações divergirem no veredito. Foi essa divergência que

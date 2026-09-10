@@ -1,6 +1,12 @@
-# Token, velocidade e escala do próprio blindar (v0.45)
+# Token, velocidade e escala do próprio blindar
 
-Como o blindar mantém custo baixo e velocidade alta mesmo com ~100 agentes.
+Como o blindar mantém custo baixo e velocidade alta com **170 agentes** no
+`MODULE-MAP.json` — dos quais **144 checks** têm materialização em `templates/checks/`
+(130 shell puro, zero token, e 14 `.api.sh`).
+
+> As contagens desta página são do estado atual do repo. Se divergirem, a
+> fonte da verdade é `pipeline/MODULE-MAP.json` e `ls templates/checks/`, não
+> este texto.
 
 ## 1. Determinístico-primeiro (o maior ganho de token)
 
@@ -57,5 +63,5 @@ Telemetria em `.blindar/cost.log`.
 ## Resumo
 
 Determinístico-primeiro + grafo reusado + lazy nos pesados + governor por stake
-= cobertura de ~100 agentes sem estourar custo nem tempo. A regra de ouro:
+= cobertura de 170 agentes sem estourar custo nem tempo. A regra de ouro:
 **gaste LLM só onde exige julgamento; todo o resto é determinístico e barato.**
