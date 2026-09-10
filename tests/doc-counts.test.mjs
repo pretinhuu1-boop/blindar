@@ -23,6 +23,7 @@
 //
 // Roda: node tests/doc-counts.test.mjs
 
+import { execFileSync } from 'node:child_process';
 import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -75,6 +76,39 @@ for (const [rel, tipo] of DECLARAM_TOTAL) {
 // "130 shell puro + 14 .api.sh" tem de somar o total, senão um dos três mente.
 t('o recorte shell + api fecha com o total de checks', N_SHELL + N_API === N_CHECKS,
   `${N_SHELL} + ${N_API} != ${N_CHECKS}`);
+
+// ─── A versão é o número mais visível de todos ───
+// A primeira versão deste arquivo cobria só as contagens, e deu a impressão de
+// cobrir "número na doc". Não cobria a VERSÃO — e o README anunciou "v0.80" por
+// quatro releases, na linha 8, que é a primeira coisa que alguém lê ao abrir o
+// repositório. Verificador que passa verde sobre dimensão que não mede é o
+// mesmo defeito que o rollup tinha antes da v0.82.
+const VERSION = readFileSync(join(ROOT, 'VERSION'), 'utf8').trim();
+t('VERSION tem forma de versão semântica', /^\d+\.\d+\.\d+$/.test(VERSION), VERSION);
+
+const readme = readFileSync(join(ROOT, 'README.md'), 'utf8');
+const anunciada = readme.match(/\*\*v(\d+\.\d+(?:\.\d+)?)\s+—/);
+t('README anuncia alguma versão em destaque', !!anunciada,
+  'o padrão "**vX.Y.Z — " sumiu do README; ajuste este teste junto');
+t(`README anuncia a versão do VERSION (${VERSION})`,
+  !!anunciada && anunciada[1] === VERSION,
+  anunciada ? `README diz v${anunciada[1]}, VERSION diz ${VERSION}` : '');
+
+// Tag: versão sem tag não aparece para quem chega pelo GitHub, e o
+// check-update compara contra a tag remota. Só avisa quando há git e tags —
+// clone raso ou tarball não têm, e ausência de tag aí não é regressão.
+try {
+  const tags = execFileSync('git', ['tag', '--list'], { cwd: ROOT, encoding: 'utf8' })
+    .split('\n').map((x) => x.trim()).filter(Boolean);
+  if (tags.length) {
+    t(`existe tag v${VERSION} para a versão atual`, tags.includes(`v${VERSION}`),
+      `última tag: ${tags[tags.length - 1]}`);
+  } else {
+    console.log('  --  - sem tags neste clone; contrato de tag não verificado');
+  }
+} catch (e) {
+  console.log('  --  - git indisponível; contrato de tag não verificado');
+}
 
 console.log(`\n  fonte da verdade: ${N_AGENTES} agentes, ${N_CHECKS} checks (${N_SHELL} shell + ${N_API} api)`);
 console.log(`\n${ok} ok, ${fail} fail`);

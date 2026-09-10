@@ -3,6 +3,35 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.83.2] — 2026-09-10
+
+### A versão não aparecia para quem chegava pelo GitHub
+
+Três coisas, com a mesma raiz:
+
+- **O README anunciava "v0.80"** na linha 8 — a primeira coisa que alguém lê ao
+  abrir o repositório — com o `VERSION` já em 0.83.1. Quatro releases de
+  atraso num número escrito à mão.
+- **As tags pararam na `v0.78.0`.** As versões 0.79, 0.80, 0.81, 0.82, 0.83 e
+  0.83.1 nunca foram tageadas, então nada de novo aparecia na página do
+  repositório — e o `check-update`, que compara contra a tag remota, tinha o
+  que comparar congelado em 0.78. Criadas as seis, cada uma no commit que fez o
+  bump.
+- **A última release publicada era de junho** (v0.7.0), o que fazia a barra
+  lateral exibir aquela como "Latest".
+
+### O guard que passava verde sobre o que não media
+
+O `tests/doc-counts.test.mjs` da 0.83.1 verificava contagem de agentes e de
+checks, e dava a impressão de cobrir "número na documentação". Não cobria a
+versão — justamente o número mais visível do projeto. É o mesmo defeito que o
+relatório de campo apontou no rollup da 0.80: o verificador dizia "ok" sobre
+uma dimensão em que ninguém tinha olhado.
+
+Agora ele exige que o README anuncie a versão do `VERSION` e que exista tag
+`v<VERSION>`. Onde não há git ou não há tag nenhuma (clone raso, tarball), diz
+"não verificado" em vez de passar calado.
+
 ## [0.83.1] — 2026-09-09
 
 ### O número escrito na doc apodreceu por três versões
