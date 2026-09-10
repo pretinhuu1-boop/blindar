@@ -5,7 +5,7 @@ otimiza e prepara projetos para produção** — e também sabe criar projetos
 novos do zero, gerar/refazer frontend lendo o backend, e entregar pacote
 completo (DEPLOY/MANUAL/API/Postman/diagramas/SLA) ao final.
 
-**v0.80 — 170 agentes em 19 módulos numerados, com camada determinística
+**v0.83.2 — 170 agentes em 19 módulos numerados, com camada determinística
 (144 checks executáveis) que garante cobertura independente da diligência do LLM.**
 
 Comportamento: **launcher curto** no início (4 perguntas + menu de
